@@ -75,6 +75,8 @@ export * from './user/inventory/subscription';
 export * from './user/wardrobe';
 export * from './userclassification';
 
+export * from './reactions';
+export * from './interactions';
 export * from './inventorylock';
 export * from './subastas';
 export * from './hologrid';

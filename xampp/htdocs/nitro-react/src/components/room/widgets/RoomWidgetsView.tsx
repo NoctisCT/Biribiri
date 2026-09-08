@@ -3,6 +3,8 @@ import { FC } from 'react';
 import { DispatchUiEvent, GetRoomEngine, LocalizeText, NotificationAlertType, RoomWidgetUpdateRoomObjectEvent } from '../../../api';
 import { useNotification, useRoom, useRoomEngineEvent, useRoomSessionManagerEvent } from '../../../hooks';
 import { AvatarInfoWidgetView } from './avatar-info/AvatarInfoWidgetView';
+import { AvatarReactionsView } from './reactions/AvatarReactionsView';
+import { SocialInteractionsView } from './interactions/SocialInteractionsView';
 import { ChatInputView } from './chat-input/ChatInputView';
 import { ChatWidgetView } from './chat/ChatWidgetView';
 import { FurniChooserWidgetView } from './choosers/FurniChooserWidgetView';
@@ -150,6 +152,8 @@ export const RoomWidgetsView: FC<{}> = props => {
     return (
         <>
             <AvatarInfoWidgetView />
+            <AvatarReactionsView />
+            <SocialInteractionsView />
             <ChatWidgetView />
             <ChatInputView />
             <DoorbellWidgetView />

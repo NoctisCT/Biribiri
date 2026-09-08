@@ -486,6 +486,17 @@ export class IncomingHeader {
     public static ESTADO_BLOQUEO_INVENTARIO = 5031;
     public static RESULTADO_PATRON_INVENTARIO = 5033;
     public static RESULTADO_CONFIGURAR_PATRON = 5035;
+    public static AVATAR_REACTION = 5048;
+    public static REACTION_PROFILE = 5056;
+    public static DUEL_INVITE = 5060;
+    public static DUEL_STATE = 5062;
+    public static DUEL_RESULT = 5064;
+    public static DUEL_PUBLIC = 5065;
+    public static FOLLOW_STATE = 5067;
+    public static COIN_RESULT = 5069;
+    public static PARTY_INVITE_EVENT = 5072;
+    public static PARTY_STATE = 5074;
+    public static PARTY_RALLY = 5078;
     public static HOLO_GRID_WALKABILITY = 5041;
     public static RPG_ENGINE_RESULT = 5051;
     public static HOLO_SLOT_OPEN = 5043;

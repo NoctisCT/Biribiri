@@ -1,0 +1,140 @@
+.biribiri-duel-location {
+    z-index: 520;
+    pointer-events: auto;
+}
+
+.biribiri-duel-passive-location {
+    pointer-events: none;
+}
+
+/*
+ * IMPORTANTE:
+ * La caja y el modo flotante NO se definen aqui.
+ * Los aporta directamente AvatarReactionsView.scss mediante:
+ *
+ *   .avatar-reaction-bubble
+ *   .avatar-reaction-bubble.is-floating
+ *
+ * Por tanto Duelo y Reacciones comparten literalmente el mismo diseño.
+ */
+
+.biribiri-duel-reaction.biribiri-duel-static {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    will-change: auto;
+}
+
+.biribiri-duel-inline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.biribiri-duel-choice-row {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+button.biribiri-duel-choice {
+    appearance: none;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+button.biribiri-duel-choice:hover {
+    transform: translateY(-2px) scale(1.08);
+}
+
+button.biribiri-duel-choice:active {
+    transform: translateY(0) scale(0.96);
+}
+
+.biribiri-duel-round-action {
+    width: 25px;
+    height: 25px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 2px solid rgba(255, 255, 255, 0.94);
+    border-radius: 50%;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.26);
+    color: #fff;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.biribiri-duel-round-action.is-accept {
+    background: #3d9955;
+}
+
+.biribiri-duel-round-action.is-reject {
+    background: #a94848;
+}
+
+.biribiri-duel-round-action:hover {
+    transform: translateY(-1px) scale(1.08);
+}
+
+.biribiri-duel-result {
+    position: relative;
+}
+
+.biribiri-duel-result.is-winner {
+    overflow: visible;
+}
+
+.biribiri-duel-trophy {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.biribiri-coin-visual {
+    position: relative;
+}
+
+.biribiri-coin-spin {
+    display: inline-block;
+    line-height: 1;
+    animation: biribiri-coin-flip 420ms ease-in-out infinite;
+}
+
+.biribiri-coin-side {
+    display: inline-block;
+    padding: 0 2px;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.biribiri-coin-visual.is-winner {
+    overflow: visible;
+}
+
+@keyframes biribiri-coin-flip {
+    0% {
+        transform: translateY(1px) scaleX(1);
+    }
+
+    50% {
+        transform: translateY(-5px) scaleX(0.35);
+    }
+
+    100% {
+        transform: translateY(1px) scaleX(1);
+    }
+}
+
+.biribiri-coin-result-emoji {
+    display: inline-block;
+    font-size: 24px;
+    line-height: 1;
+}

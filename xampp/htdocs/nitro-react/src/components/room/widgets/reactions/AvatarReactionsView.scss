@@ -1,0 +1,145 @@
+.avatar-reaction-location {
+    pointer-events: none;
+    z-index: 500;
+}
+
+.avatar-reaction-bubble {
+    min-width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 7px;
+    border-radius: 18px;
+    background: rgba(20, 20, 24, 0.88);
+    border: 2px solid rgba(255, 255, 255, 0.92);
+    box-shadow: 0 3px 0 rgba(0, 0, 0, 0.28);
+    font-size: 22px;
+    line-height: 1;
+    transform-origin: 50% 100%;
+    will-change: transform, opacity;
+    animation: biribiri-avatar-reaction 2.2s ease-out forwards;
+}
+
+.avatar-reaction-bubble.is-floating {
+    min-width: 0;
+    height: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    font-size: 27px;
+
+    filter:
+        drop-shadow(1px 0 0 rgba(255, 255, 255, 0.95))
+        drop-shadow(-1px 0 0 rgba(255, 255, 255, 0.95))
+        drop-shadow(0 1px 0 rgba(255, 255, 255, 0.95))
+        drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.95))
+        drop-shadow(0 2px 1px rgba(0, 0, 0, 0.72));
+}
+
+@keyframes biribiri-avatar-reaction {
+    0% {
+        opacity: 0;
+        transform: translateY(8px) scale(0.35) rotate(-8deg);
+    }
+
+    13% {
+        opacity: 1;
+        transform: translateY(-2px) scale(1.20) rotate(4deg);
+    }
+
+    27% {
+        transform: translateY(-5px) scale(0.98) rotate(0deg);
+    }
+
+    68% {
+        opacity: 1;
+        transform: translateY(-13px) scale(1);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(-30px) scale(0.92);
+    }
+}
+
+/* Acceso rapido del menu contextual: 3 columnas x 4 filas */
+.avatar-reactions-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2px;
+    padding: 3px;
+
+    > * {
+        min-width: 34px;
+        height: 32px;
+        padding: 0 !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        line-height: 1;
+    }
+}
+
+.reaction-customizer-window {
+    width: 330px;
+}
+
+.reaction-customizer-slots {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+}
+
+.reaction-customizer-slot,
+.reaction-customizer-owned {
+    border: 1px solid #9b9b9b;
+    background: #e8e8e8;
+    box-shadow: inset 0 1px rgba(255, 255, 255, 0.8), 0 1px rgba(0, 0, 0, 0.18);
+    border-radius: 3px;
+    cursor: pointer;
+    color: #222;
+}
+
+.reaction-customizer-slot {
+    height: 36px;
+    font-size: 21px;
+}
+
+.reaction-customizer-slot:hover,
+.reaction-customizer-owned:hover {
+    background: #f5f5f5;
+}
+
+.reaction-customizer-slot.is-selected {
+    position: relative;
+    border: 2px solid #0874b5;
+    background: #ccecff;
+    box-shadow:
+        inset 0 0 0 1px #ffffff,
+        0 0 0 2px rgba(35, 145, 207, 0.65),
+        0 2px 2px rgba(0, 0, 0, 0.25);
+    transform: translateY(-1px);
+}
+
+.reaction-customizer-collection {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+    max-height: 170px;
+    overflow-y: auto;
+    padding: 2px;
+}
+
+.reaction-customizer-owned {
+    height: 36px;
+    font-size: 20px;
+    opacity: 0.92;
+}
+
+.reaction-customizer-owned.is-equipped {
+    box-shadow: inset 0 0 0 2px rgba(38, 129, 194, 0.75);
+}

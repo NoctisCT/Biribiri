@@ -8,6 +8,7 @@ import { useRoom } from '../../../../../hooks';
 import { ContextMenuHeaderView } from '../../context-menu/ContextMenuHeaderView';
 import { ContextMenuListItemView } from '../../context-menu/ContextMenuListItemView';
 import { ContextMenuView } from '../../context-menu/ContextMenuView';
+import { GetQuickReactions, OpenReactionCustomizer, SendReaction, useReactionProfile } from '../../reactions/ReactionState';
 
 interface AvatarInfoWidgetOwnAvatarViewProps
 {
@@ -22,12 +23,15 @@ const MODE_CLUB_DANCES = 1;
 const MODE_NAME_CHANGE = 2;
 const MODE_EXPRESSIONS = 3;
 const MODE_SIGNS = 4;
+const MODE_REACTIONS = 5;
 
 export const AvatarInfoWidgetOwnAvatarView: FC<AvatarInfoWidgetOwnAvatarViewProps> = props =>
 {
     const { avatarInfo = null, isDancing = false, setIsDecorating = null, onClose = null } = props;
     const [ mode, setMode ] = useState((isDancing && HasHabboClub()) ? MODE_CLUB_DANCES : MODE_NORMAL);
     const { roomSession = null } = useRoom();
+    const reactionProfile = useReactionProfile();
+    const quickReactions = GetQuickReactions(reactionProfile);
 
     const processAction = (name: string) =>
     {
@@ -35,7 +39,13 @@ export const AvatarInfoWidgetOwnAvatarView: FC<AvatarInfoWidgetOwnAvatarViewProp
 
         if(name)
         {
-            if(name.startsWith('sign_'))
+            if(name.startsWith('reaction_'))
+            {
+                const reaction = parseInt(name.split('_')[1]);
+
+                SendReaction(reaction);
+            }
+            else if(name.startsWith('sign_'))
             {
                 const sign = parseInt(name.split('_')[1]);
 
@@ -150,6 +160,10 @@ export const AvatarInfoWidgetOwnAvatarView: FC<AvatarInfoWidgetOwnAvatarViewProp
                         <FaChevronRight className="right fa-icon" />
                         { LocalizeText('infostand.link.expressions') }
                     </ContextMenuListItemView>
+                    <ContextMenuListItemView onClick={ event => setMode(MODE_REACTIONS) }>
+                        <FaChevronRight className="right fa-icon" />
+                        Reacciones
+                    </ContextMenuListItemView>
                     <ContextMenuListItemView onClick={ event => processAction('signs') }>
                         <FaChevronRight className="right fa-icon" />
                         { LocalizeText('infostand.show.signs') }
@@ -214,7 +228,32 @@ export const AvatarInfoWidgetOwnAvatarView: FC<AvatarInfoWidgetOwnAvatarViewProp
                         { LocalizeText('generic.back') }
                     </ContextMenuListItemView>
                 </> }
-            { (mode === MODE_SIGNS) &&
+            { (mode === MODE_REACTIONS) &&
+                <>
+                    <div className="avatar-reactions-grid">
+                        { quickReactions.map(reaction =>
+                            <ContextMenuListItemView
+                                key={ reaction.id }
+                                onClick={ event => processAction(`reaction_${ reaction.id }`) }>
+                                { reaction.glyph }
+                            </ContextMenuListItemView>
+                        ) }
+                    </div>
+
+                    <ContextMenuListItemView onClick={ event =>
+                    {
+                        OpenReactionCustomizer();
+                        onClose();
+                    } }>
+                        Personalizar
+                    </ContextMenuListItemView>
+
+                    <ContextMenuListItemView onClick={ event => processAction('back') }>
+                        <FaChevronLeft className="left fa-icon" />
+                        { LocalizeText('generic.back') }
+                    </ContextMenuListItemView>
+                </> }
+{ (mode === MODE_SIGNS) &&
                 <>
                     <Flex className="menu-list-split-3">
                         <ContextMenuListItemView onClick={ event => processAction('sign_1') }>

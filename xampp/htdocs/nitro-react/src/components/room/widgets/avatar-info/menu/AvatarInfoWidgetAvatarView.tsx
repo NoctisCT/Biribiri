@@ -1,4 +1,5 @@
 import { RoomControllerLevel, RoomObjectCategory, RoomObjectVariable, RoomUnitGiveHandItemComposer, SetRelationshipStatusComposer, TradingOpenComposer } from '@nitrots/nitro-renderer';
+import { CoinTossComposer, DuelChallengeComposer, FollowUserComposer } from '@nitrots/nitro-renderer';
 import { FC, useEffect, useMemo, useState } from 'react';
 import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { AvatarInfoUser, CreateLinkEvent, DispatchUiEvent, GetOwnRoomObject, GetSessionDataManager, GetUserProfile, LocalizeText, MessengerFriend, ReportType, RoomWidgetUpdateChatInputContentEvent, SendMessageComposer } from '../../../../../api';
@@ -7,6 +8,9 @@ import { useFriends, useHelp, useRoom, useSessionInfo } from '../../../../../hoo
 import { ContextMenuHeaderView } from '../../context-menu/ContextMenuHeaderView';
 import { ContextMenuListItemView } from '../../context-menu/ContextMenuListItemView';
 import { ContextMenuView } from '../../context-menu/ContextMenuView';
+import { GetFollowInteractionState, SubscribeFollowInteractionState } from '../../interactions/InteractionState';
+import { PartyInviteComposer } from '@nitrots/nitro-renderer';
+import { GetPartyMenuState, SubscribePartyMenuState } from '../../party/PartyState';
 
 interface AvatarInfoWidgetAvatarViewProps
 {
@@ -21,11 +25,15 @@ const MODE_MODERATE_MUTE = 3;
 const MODE_AMBASSADOR = 4;
 const MODE_AMBASSADOR_MUTE = 5;
 const MODE_RELATIONSHIP = 6;
+const MODE_INTERACT = 7;
+const MODE_PARTY = 8;
 
 export const AvatarInfoWidgetAvatarView: FC<AvatarInfoWidgetAvatarViewProps> = props =>
 {
     const { avatarInfo = null, onClose = null } = props;
     const [ mode, setMode ] = useState(MODE_NORMAL);
+    const [ partyMenuState, setPartyMenuState ] = useState(GetPartyMenuState());
+    const [ followInteractionState, setFollowInteractionState ] = useState(GetFollowInteractionState());
     const { canRequestFriend = null } = useFriends();
     const { report = null } = useHelp();
     const { roomSession = null } = useRoom();
@@ -70,6 +78,35 @@ export const AvatarInfoWidgetAvatarView: FC<AvatarInfoWidgetAvatarViewProps> = p
         {
             switch(name)
             {
+                case 'interact':
+                    hideMenu = false;
+                    setMode(MODE_INTERACT);
+                    break;
+                case 'hug':
+                    roomSession.sendChatMessage(`:hug ${ avatarInfo.name }`, 0, '');
+                    break;
+                case 'push':
+                    roomSession.sendChatMessage(`:push ${ avatarInfo.name }`, 0, '');
+                    break;
+                case 'pull':
+                    roomSession.sendChatMessage(`:pull ${ avatarInfo.name }`, 0, '');
+                    break;
+                case 'follow':
+                    SendMessageComposer(new FollowUserComposer(avatarInfo.webID));
+                    break;
+                case 'coin':
+                    SendMessageComposer(new CoinTossComposer(avatarInfo.webID));
+                    break;
+                case 'party':
+                    hideMenu = false;
+                    setMode(MODE_PARTY);
+                    break;
+                case 'party_invite':
+                    SendMessageComposer(new PartyInviteComposer(avatarInfo.webID));
+                    break;
+                case 'duel':
+                    SendMessageComposer(new DuelChallengeComposer(avatarInfo.webID));
+                    break;
                 case 'moderate':
                     hideMenu = false;
                     setMode(MODE_MODERATE);
@@ -198,6 +235,16 @@ export const AvatarInfoWidgetAvatarView: FC<AvatarInfoWidgetAvatarViewProps> = p
 
     useEffect(() =>
     {
+        return SubscribeFollowInteractionState(setFollowInteractionState);
+    }, []);
+
+    useEffect(() =>
+    {
+        return SubscribePartyMenuState(setPartyMenuState);
+    }, []);
+
+    useEffect(() =>
+    {
         setMode(MODE_NORMAL);
     }, [ avatarInfo ]);
 
@@ -216,6 +263,19 @@ export const AvatarInfoWidgetAvatarView: FC<AvatarInfoWidgetAvatarViewProps> = p
                     <ContextMenuListItemView onClick={ event => processAction('whisper') }>
                         { LocalizeText('infostand.button.whisper') }
                     </ContextMenuListItemView>
+                    <ContextMenuListItemView onClick={ event => processAction('interact') }>
+                        Interactuar
+                        <FaChevronRight className="right fa-icon" />
+                    </ContextMenuListItemView>
+                    { (
+                        (!partyMenuState.active || partyMenuState.leaderUserId === partyMenuState.selfUserId)
+                        && (!partyMenuState.active || partyMenuState.memberIds.length < 8)
+                        && !partyMenuState.memberIds.includes(avatarInfo.webID)
+                    ) &&
+                        <ContextMenuListItemView onClick={ event => processAction('party') }>
+                            Equipo
+                            <FaChevronRight className="right fa-icon" />
+                        </ContextMenuListItemView> }
                     { (userRespectRemaining > 0) &&
                         <ContextMenuListItemView onClick={ event => processAction('respect') }>
                             { LocalizeText('infostand.button.respect', [ 'count' ], [ userRespectRemaining.toString() ]) }
@@ -249,6 +309,49 @@ export const AvatarInfoWidgetAvatarView: FC<AvatarInfoWidgetAvatarViewProps> = p
                     { canGiveHandItem && <ContextMenuListItemView onClick={ event => processAction('pass_hand_item') }>
                         { LocalizeText('avatar.widget.pass_hand_item') }
                     </ContextMenuListItemView> }
+                </> }
+            { (mode === MODE_INTERACT) &&
+                <>
+                    <ContextMenuListItemView onClick={ event => processAction('hug') }>
+                        Abrazar
+                    </ContextMenuListItemView>
+
+                    <ContextMenuListItemView onClick={ event => processAction('push') }>
+                        Empujar
+                    </ContextMenuListItemView>
+
+                    <ContextMenuListItemView onClick={ event => processAction('pull') }>
+                        Atraer
+                    </ContextMenuListItemView>
+
+                    <ContextMenuListItemView onClick={ event => processAction('follow') }>
+                        { (followInteractionState.active && followInteractionState.targetUserId === avatarInfo.webID)
+                            ? 'Dejar de seguir'
+                            : 'Seguir' }
+                    </ContextMenuListItemView>
+
+                    <ContextMenuListItemView onClick={ event => processAction('coin') }>
+                        Tirar Moneda
+                    </ContextMenuListItemView>
+
+                    <ContextMenuListItemView onClick={ event => processAction('duel') }>
+                        Duelo
+                    </ContextMenuListItemView>
+
+                    <ContextMenuListItemView onClick={ event => processAction('back') }>
+                        <FaChevronLeft className="left fa-icon" />
+                        { LocalizeText('generic.back') }
+                    </ContextMenuListItemView>
+                </> }
+            { (mode === MODE_PARTY) &&
+                <>
+                    <ContextMenuListItemView onClick={ event => processAction('party_invite') }>
+                        Invitar
+                    </ContextMenuListItemView>
+                    <ContextMenuListItemView onClick={ event => processAction('back') }>
+                        <FaChevronLeft className="left fa-icon" />
+                        { LocalizeText('generic.back') }
+                    </ContextMenuListItemView>
                 </> }
             { (mode === MODE_MODERATE) &&
                 <>

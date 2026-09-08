@@ -1,7 +1,7 @@
-import { NewConsoleMessageEvent, RoomInviteErrorEvent, RoomInviteEvent, SendMessageComposer as SendMessageComposerPacket } from '@nitrots/nitro-renderer';
+import { NewConsoleMessageEvent, RoomInviteErrorEvent, RoomInviteEvent, SendMessageComposer as SendMessageComposerPacket, PartyChatComposer, PartyStateEvent } from '@nitrots/nitro-renderer';
 import { useEffect, useMemo, useState } from 'react';
 import { useBetween } from 'use-between';
-import { CloneObject, GetSessionDataManager, LocalizeText, MessengerIconState, MessengerThread, MessengerThreadChat, NotificationAlertType, PlaySound, SendMessageComposer, SoundNames } from '../../api';
+import { CloneObject, GetSessionDataManager, LocalizeText, MessengerIconState, MessengerThread, MessengerThreadChat, NotificationAlertType, PlaySound, SendMessageComposer, SoundNames, MessengerFriend } from '../../api';
 import { useMessageEvent } from '../events';
 import { useNotification } from '../notification';
 import { useFriends } from './useFriends';
@@ -85,6 +85,19 @@ const useMessengerState = () =>
 
         const ownMessage = (senderId === GetSessionDataManager().userId);
 
+        if(ownMessage && thread.participant && thread.participant.id <= -1000001)
+        {
+            if(messageText.length <= 255)
+            {
+                const partyId = (-thread.participant.id) - 1000000;
+                SendMessageComposer(new PartyChatComposer(partyId, messageText));
+            }
+
+            // El servidor devuelve el mensaje a todos, incluido el emisor,
+            // mediante FriendChatMessageComposer GROUP_CHAT. No duplicar localmente.
+            return;
+        }
+
         if(ownMessage && (messageText.length <= 255)) SendMessageComposer(new SendMessageComposerPacket(thread.participant.id, messageText));
 
         setMessageThreads(prevValue =>
@@ -118,6 +131,35 @@ const useMessengerState = () =>
         if(!thread) return;
 
         sendMessage(thread, parser.senderId, parser.messageText, parser.secondsSinceSent, parser.extraData);
+    });
+
+    useMessageEvent<PartyStateEvent>(PartyStateEvent, event =>
+    {
+        const parser = event.getParser();
+
+        if(!parser.active)
+        {
+            setMessageThreads(prevValue => prevValue.filter(thread => !(thread.participant && thread.participant.id <= -1000001)));
+            return;
+        }
+
+        setMessageThreads(prevValue =>
+        {
+            const existing = prevValue.find(thread => thread.participant && thread.participant.id === parser.threadKey);
+            if(existing) return prevValue;
+
+            const leader = parser.members.find(member => member.userId === parser.leaderUserId);
+            const participant = new MessengerFriend();
+            participant.id = parser.threadKey;
+            participant.name = 'Equipo';
+            participant.online = true;
+            participant.figure = leader?.figure || parser.members[0]?.figure || '';
+
+            const thread = new MessengerThread(participant);
+            thread.setRead();
+
+            return [ ...prevValue.filter(item => !(item.participant && item.participant.id <= -1000001)), thread ];
+        });
     });
 
     useMessageEvent<RoomInviteEvent>(RoomInviteEvent, event =>

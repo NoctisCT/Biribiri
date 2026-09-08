@@ -1,0 +1,191 @@
+.biribiri-equipo-card {
+    width: 332px;
+    min-width: 332px;
+    max-width: 332px;
+    resize: none !important;
+}
+
+/* DraggableWindow mueve el wrapper; no añadimos posicionamiento propio. */
+.draggable-window:has(.biribiri-equipo-card) {
+    width: max-content;
+    height: max-content;
+    background: transparent !important;
+    box-shadow: none !important;
+    filter: none !important;
+}
+
+.biribiri-equipo-header {
+    min-height: 30px;
+}
+
+.biribiri-equipo-header-controls {
+    gap: 4px;
+}
+
+.biribiri-equipo-count {
+    min-width: 28px;
+    padding: 1px 5px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.14);
+    color: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: center;
+}
+
+.biribiri-equipo-collapse {
+    width: 24px;
+    min-width: 24px;
+    height: 21px;
+    min-height: 21px;
+    padding: 0 !important;
+    font-size: 8px;
+    line-height: 1;
+}
+
+.biribiri-equipo-content {
+    gap: 8px;
+    padding: 8px !important;
+}
+
+.biribiri-equipo-rally {
+    width: 100%;
+    padding: 7px;
+    border: 1px solid rgba(0, 0, 0, 0.14);
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.045);
+}
+
+.biribiri-equipo-members {
+    width: 100%;
+    max-height: 244px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.biribiri-equipo-member {
+    width: 100%;
+    min-height: 58px;
+    padding: 6px 7px;
+    border: 1px solid rgba(0, 0, 0, 0.13);
+    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.045);
+}
+
+.biribiri-equipo-member.is-self {
+    background: rgba(54, 107, 140, 0.065);
+}
+
+.biribiri-equipo-member.is-clickable {
+    cursor: pointer;
+}
+
+.biribiri-equipo-member.is-clickable:hover {
+    border-color: rgba(54, 107, 140, 0.38);
+    background: rgba(54, 107, 140, 0.09);
+}
+
+.biribiri-equipo-avatar-frame {
+    width: 50px;
+    height: 50px;
+    flex: 0 0 50px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(0, 0, 0, 0.16);
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.45);
+}
+
+.biribiri-equipo-avatar-image {
+    width: 48px !important;
+    height: 48px !important;
+    min-width: 48px !important;
+    min-height: 48px !important;
+    transform: none !important;
+    background-repeat: no-repeat !important;
+    background-position: calc(50% + 4px) calc(50% + 7px) !important;
+    background-size: auto !important;
+}
+
+.biribiri-equipo-member-copy {
+    min-width: 0;
+    flex: 1;
+}
+
+.biribiri-equipo-member-name {
+    max-width: 112px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.biribiri-equipo-role {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 5px;
+    border: 1px solid rgba(54, 107, 140, 0.32);
+    border-radius: 8px;
+    background: rgba(54, 107, 140, 0.08);
+    color: #366b8c;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+.biribiri-equipo-room {
+    margin-top: 3px;
+    color: #707981;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.biribiri-equipo-room.is-here {
+    color: #36824f;
+}
+
+.biribiri-equipo-room.is-visit {
+    color: #366b8c;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.biribiri-equipo-member-controls {
+    flex: 0 0 auto;
+}
+
+.biribiri-equipo-member-action {
+    min-width: 54px;
+    min-height: 25px;
+    padding: 3px 6px !important;
+    font-size: 9px !important;
+    line-height: 1 !important;
+}
+
+.biribiri-equipo-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 6px;
+}
+
+.biribiri-equipo-actions > .btn {
+    width: 100%;
+    min-width: 0;
+    min-height: 31px;
+    padding-left: 7px;
+    padding-right: 7px;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.15;
+}
+
+.biribiri-equipo-disband {
+    grid-column: 1 / -1;
+}
