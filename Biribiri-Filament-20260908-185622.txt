@@ -1,0 +1,951 @@
+BIRIBIRI - AUDITORIA EXACTA FILAMENT
+SOLO LECTURA
+
+Proyecto: C:\Users\erale\Desktop\Habbo
+APP_LOCALE: es
+
+==============================================================================================================
+PAQUETES FILAMENT INSTALADOS (composer.lock)
+==============================================================================================================
+- filament/actions: v3.3.3
+- filament/filament: v3.3.3
+- filament/forms: v3.3.3
+- filament/infolists: v3.3.3
+- filament/notifications: v3.3.3
+- filament/support: v3.3.3
+- filament/tables: v3.3.3
+- filament/widgets: v3.3.3
+
+==============================================================================================================
+TRADUCCIONES ES FILAMENT DISPONIBLES
+==============================================================================================================
+- [published] xampp\htdocs\lang\vendor\filament
+- [vendor] xampp\htdocs\vendor\filament\actions\resources\lang\es
+- [vendor] xampp\htdocs\vendor\filament\filament\resources\lang\es
+- [vendor] xampp\htdocs\vendor\filament\forms\resources\lang\es
+- [vendor] xampp\htdocs\vendor\filament\infolists\resources\lang\es
+- [vendor] xampp\htdocs\vendor\filament\notifications\resources\lang\es
+- [vendor] xampp\htdocs\vendor\filament\support\resources\lang\es
+- [vendor] xampp\htdocs\vendor\filament\tables\resources\lang\es
+
+==============================================================================================================
+SOURCES FILAMENT
+==============================================================================================================
+Total: 128
+- FILTERS: 1
+- PAGES: 6
+- PROVIDERS: 2
+- RESOURCES: 99
+- TABLES: 2
+- TRAITS: 1
+- VIEWS: 15
+- WIDGETS: 2
+
+==============================================================================================================
+TEXTOS VISIBLES HARDCODEADOS
+==============================================================================================================
+Total: 201
+[INGLES] xampp\htdocs\app\Filament\Pages\Applications.php:15 [$navigationGroup] -> Hotel
+[REVISAR] xampp\htdocs\app\Filament\Pages\Applications.php:18 [$navigationLabel] -> Solicitudes
+[REVISAR] xampp\htdocs\app\Filament\Pages\BadgePage.php:71 [placeholder] -> ...
+[REVISAR] xampp\htdocs\app\Filament\Pages\BadgePage.php:91 [placeholder] -> ...
+[REVISAR] xampp\htdocs\app\Filament\Pages\BadgePage.php:96 [placeholder] -> ...
+[REVISAR] xampp\htdocs\app\Filament\Pages\BadgePage.php:106 [placeholder] -> ...
+[REVISAR] xampp\htdocs\app\Filament\Pages\BadgePage.php:111 [placeholder] -> ...
+[INGLES] xampp\htdocs\app\Filament\Pages\BadgePage.php:29 [$navigationGroup] -> Hotel
+[REVISAR] xampp\htdocs\app\Filament\Pages\Dashboard.php:12 [$navigationGroup] -> Dashboard
+[REVISAR] xampp\htdocs\app\Filament\Pages\Dashboard.php:14 [$navigationLabel] -> Homepage
+[REVISAR] xampp\htdocs\app\Filament\Pages\EconomicIncidents.php:14 [$navigationGroup] -> Auditor\u{00ED}a
+[REVISAR] xampp\htdocs\app\Filament\Pages\EconomicIncidents.php:17 [$navigationLabel] -> Incidencias econ\u{00F3}micas
+[INGLES] xampp\htdocs\app\Filament\Resources\Atom\ArticleResource.php:33 [$navigationGroup] -> Website
+[INGLES] xampp\htdocs\app\Filament\Resources\Atom\ArticleResource\RelationManagers\TagsRelationManager.php:19 [$recordTitleAttribute] -> name
+[INGLES] xampp\htdocs\app\Filament\Resources\Atom\CameraWebResource.php:23 [$navigationGroup] -> Website
+[REVISAR] xampp\htdocs\app\Filament\Resources\Atom\CameraWebResource.php:27 [$pluralModelLabel] -> photos
+[INGLES] xampp\htdocs\app\Filament\Resources\Atom\CameraWebResource.php:28 [$navigationLabel] -> Web Camera
+[INGLES] xampp\htdocs\app\Filament\Resources\Atom\CmsSettingResource.php:24 [$navigationGroup] -> Website
+[INGLES] xampp\htdocs\app\Filament\Resources\Atom\HelpQuestionCategoryResource\RelationManagers\QuestionsRelationManager.php:18 [$recordTitleAttribute] -> title
+[INGLES] xampp\htdocs\app\Filament\Resources\Atom\HelpQuestionResource\RelationManagers\CategoriesRelationManager.php:18 [$recordTitleAttribute] -> name
+[INGLES] xampp\htdocs\app\Filament\Resources\Atom\HousekeepingPermissionResource.php:25 [$navigationGroup] -> Website
+[INGLES] xampp\htdocs\app\Filament\Resources\Atom\HousekeepingPermissionResource.php:29 [$navigationLabel] -> Housekeeping permissions
+[REVISAR] xampp\htdocs\app\Filament\Resources\Atom\NavigationResource\RelationManagers\SubNavigationsRelationManager.php:18 [$recordTitleAttribute] -> label
+[INGLES] xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:39 [$navigationGroup] -> Website
+[REVISAR] xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:45 [$recordTitleAttribute] -> rank_name
+[INGLES] xampp\htdocs\app\Filament\Resources\Atom\TagResource.php:28 [$navigationGroup] -> Website
+[INGLES] xampp\htdocs\app\Filament\Resources\Atom\TagResource\RelationManagers\ArticlesRelationManager.php:19 [$recordTitleAttribute] -> title
+[INGLES] xampp\htdocs\app\Filament\Resources\Atom\TeamResource.php:30 [$navigationGroup] -> Website
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:85 [label] -> Fecha
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:92 [label] -> Administrador
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:99 [label] -> Personaje
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:104 [label] -> Ajuste
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:124 [label] -> Saldo
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:160 [label] -> Motivo
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:170 [label] -> Canal
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:181 [label] -> Estado
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:200 [label] -> UUID
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:209 [label] -> Administrador
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:218 [label] -> Personaje
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:227 [label] -> Estado
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:240 [label] -> Fecha
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:243 [label] -> Desde
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:245 [label] -> Hasta
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:282 [label] -> Ver
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:298 [label] -> Fecha
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:307 [label] -> Administrador
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:312 [label] -> Personaje
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:315 [label] -> Ajuste
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:337 [label] -> Saldo anterior
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:353 [label] -> Saldo posterior
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:367 [label] -> Estado
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:390 [label] -> Canal
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:404 [label] -> Completado
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:409 [placeholder] -> -
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:417 [label] -> Motivo
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:420 [label] -> UUID del ajuste
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:426 [label] -> UUID de CreditBridge
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:430 [placeholder] -> No utilizado
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:437 [label] -> C\u{00F3}digo de error
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:440 [placeholder] -> Sin errores
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:28 [$navigationGroup] -> Auditor\u{00ED}a
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:31 [$navigationLabel] -> Historial de cr\u{00E9}ditos
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:34 [$modelLabel] -> ajuste de cr\u{00E9}ditos
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\AdminCreditAdjustmentResource.php:37 [$pluralModelLabel] -> historial de cr\u{00E9}ditos
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:30 [$navigationGroup] -> Hotel
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:74 [label] -> Placa
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:86 [label] -> Nombre
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:98 [label] -> Creador
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:107 [label] -> Pagador
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:117 [label] -> Estado
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:157 [label] -> Enviada
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:174 [label] -> Código
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:175 [placeholder] -> —
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:184 [label] -> Motivo
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:185 [placeholder] -> —
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:194 [label] -> Estado
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:210 [label] -> Aprobar
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:216 [modalHeading] -> Aprobar placa
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:219 [modalDescription] -> Publicará la placa en el hotel y se la entregará al personaje creador.
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:271 [title] -> No se pudo aprobar la placa
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:288 [label] -> Rechazar
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:302 [label] -> Motivo del rechazo
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:305 [helperText] -> El usuario verá este motivo. Al confirmar se devolverán automáticamente los 10 créditos.
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:313 [modalHeading] -> Rechazar placa
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:316 [modalSubmitActionLabel] -> Rechazar y devolver 10 créditos
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:335 [title] -> Placa rechazada
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:351 [title] -> Reembolso no completado
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:369 [label] -> Reintentar reembolso
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:377 [modalHeading] -> Reintentar reembolso
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:380 [modalDescription] -> Volverá a intentar devolver los 10 créditos usando el mismo refund_id. No puede generar un doble reembolso.
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:403 [title] -> Reembolso completado
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:419 [title] -> El reembolso sigue pendiente
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:28 [$navigationGroup] -> Hotel
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:30 [$navigationLabel] -> Placas de usuarios
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:31 [$modelLabel] -> Solicitud de placa
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeSubmissionResource.php:32 [$pluralModelLabel] -> Solicitudes de placas
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource.php:31 [label] -> Badge Key - You must add badge_desc_
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource.php:33 [placeholder] -> e.g., badge_desc_XXXX
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource.php:36 [label] -> Badge Name
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource.php:37 [placeholder] -> e.g., XXXX
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource.php:40 [label] -> Badge Description
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource.php:41 [placeholder] -> Please add a description for the badge.
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource.php:53 [label] -> Badge Image
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource.php:62 [label] -> Badge Name
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource.php:66 [label] -> Badge Description
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource.php:19 [$navigationGroup] -> Hotel
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource.php:21 [$navigationLabel] -> Badge Editor
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource.php:22 [$modelLabel] -> Badge Text
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource\Pages\EditBadgeTextEditor.php:38 [title] -> Duplicate Badge Key
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource\Pages\ListBadgeTextEditors.php:21 [label] -> Add Badge
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource\Pages\ListBadgeTextEditors.php:23 [modalHeading] -> Add a New Badge
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource\Pages\ListBadgeTextEditors.php:27 [title] -> Badge Created
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource\Pages\ListBadgeTextEditors.php:33 [label] -> Export to JSON
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource\Pages\ListBadgeTextEditors.php:36 [label] -> Create Backup
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource\Pages\ListBadgeTextEditors.php:48 [title] -> Export Failed
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource\Pages\ListBadgeTextEditors.php:57 [title] -> Export Failed
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource\Pages\ListBadgeTextEditors.php:82 [title] -> Export Successful
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource\Pages\ListBadgeTextEditors.php:94 [title] -> Backup Failed
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource\Pages\ListBadgeTextEditors.php:103 [title] -> Backup Failed
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource\Pages\ListBadgeTextEditors.php:114 [title] -> Backup Successful
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource\Pages\ListBadgeTextEditors.php:120 [title] -> Backup Failed
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\BadgeUploadResource.php:23 [label] -> Upload Badge
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\BadgeUploadResource.php:40 [label] -> File Name
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\BadgeUploadResource.php:43 [label] -> File Path
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\BadgeUploadResource.php:14 [$navigationGroup] -> Hotel
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\BadgeUploadResource\Pages\ManageBadgeUploads.php:28 [label] -> Upload Badge
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\BadgeUploadResource\Pages\ManageBadgeUploads.php:42 [title] -> Badge uploaded successfully!
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:25 [$navigationGroup] -> Hotel
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:23 [label] -> Furniture Item
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:34 [label] -> Sprite ID
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:119 [label] -> Catalog Name
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:128 [label] -> Cost Credits
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:135 [label] -> Cost Points
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:145 [label] -> Points Type
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:152 [label] -> Amount
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:162 [label] -> Limited Stack
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:166 [label] -> Limited Sells
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:191 [label] -> Extra Data
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:199 [label] -> Have Offer
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:204 [label] -> Club Only
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:213 [recordTitleAttribute] -> catalog_name
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:219 [label] -> Icon
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:223 [label] -> Furniture Name
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:228 [label] -> Catalog Name
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:233 [label] -> Credits
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:237 [label] -> Points
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:241 [label] -> Limited
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:245 [label] -> HC Only
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:249 [label] -> Type
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:253 [label] -> Width
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:257 [label] -> Length
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:261 [label] -> Order
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:287 [label] -> HC Only
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:290 [label] -> Limited
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:297 [label] -> Edit Catalog Item
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:300 [label] -> Edit Item base
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:303 [modalHeading] -> Edit Item Base
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:339 [label] -> Sprite ID
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:344 [label] -> Public Name
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:349 [label] -> Item Name
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\ChatlogPrivateResource.php:24 [$navigationGroup] -> Logs
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\ChatlogRoomResource.php:25 [$navigationGroup] -> Logs
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\CommandLogResource.php:22 [$navigationGroup] -> Logs
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\EmulatorSettingResource.php:24 [$navigationGroup] -> Hotel
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\EmulatorTextResource.php:23 [$navigationGroup] -> Hotel
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\WebsiteAdResource.php:31 [label] -> Image
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\WebsiteAdResource.php:53 [label] -> 
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\WebsiteAdResource.php:57 [label] -> 
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\WebsiteAdResource.php:22 [$navigationGroup] -> Hotel
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\WebsiteAdResource.php:23 [$navigationLabel] -> ADS Images
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\WebsiteAdResource\Pages\ListWebsiteAds.php:20 [label] -> Create new ADS
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\WebsiteAdResource\Pages\ListWebsiteAds.php:23 [label] -> Import ADS Images from folder
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\WebsiteAdResource\Pages\ListWebsiteAds.php:30 [modalHeading] -> Import ADS Data
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\WebsiteAdResource\Pages\ListWebsiteAds.php:31 [modalDescription] -> Are you sure you want to import ADS data? This action cannot be undone.
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\WebsiteAdResource\Pages\ListWebsiteAds.php:34 [label] -> Empty Database Table
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\WebsiteAdResource\Pages\ListWebsiteAds.php:41 [modalHeading] -> Empty Table
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\WebsiteAdResource\Pages\ListWebsiteAds.php:42 [modalDescription] -> Are you sure you want to empty the table? This action cannot be undone and will delete all records.
+[INGLES] xampp\htdocs\app\Filament\Resources\Hotel\WordFilterResource.php:25 [$navigationGroup] -> Hotel
+[INGLES] xampp\htdocs\app\Filament\Resources\User\BanResource.php:26 [$navigationGroup] -> User Management
+[REVISAR] xampp\htdocs\app\Filament\Resources\User\UserResource.php:112 [label] -> Teams / cargos
+[REVISAR] xampp\htdocs\app\Filament\Resources\User\UserResource.php:113 [helperText] -> Puedes asignar varios cargos compatibles. No modifican el rango de autoridad.
+[INGLES] xampp\htdocs\app\Filament\Resources\User\UserResource.php:37 [$navigationGroup] -> User Management
+[REVISAR] xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\EditUser.php:27 [label] -> Ajustar créditos
+[REVISAR] xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\EditUser.php:61 [label] -> Ajuste
+[REVISAR] xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\EditUser.php:62 [helperText] -> Usa un número positivo para añadir y negativo para retirar. Ejemplo: 53 o -53.
+[REVISAR] xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\EditUser.php:76 [label] -> Motivo
+[REVISAR] xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\EditUser.php:77 [helperText] -> Quedará guardado permanentemente en el registro económico.
+[REVISAR] xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\EditUser.php:85 [modalHeading] -> Ajustar créditos
+[REVISAR] xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\EditUser.php:86 [modalDescription] -> Esta operación modifica créditos premium y quedará auditada.
+[REVISAR] xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\EditUser.php:89 [modalSubmitActionLabel] -> Aplicar ajuste
+[REVISAR] xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\EditUser.php:96 [title] -> No autorizado
+[REVISAR] xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\EditUser.php:140 [title] -> Créditos ajustados
+[REVISAR] xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\EditUser.php:154 [title] -> No se pudo ajustar el saldo
+[INGLES] xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\BadgesRelationManager.php:79 [title] -> RCON is not enabled!
+[INGLES] xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\BadgesRelationManager.php:113 [title] -> RCON is not enabled!
+[REVISAR] xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\BadgesRelationManager.php:25 [$recordTitleAttribute] -> badge_code
+[INGLES] xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:172 [label] -> Settings Tip
+[INGLES] xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:174 [tooltip] -> You can only change the offline user settings.
+[INGLES] xampp\htdocs\app\Providers\Filament\AdminFilamentPanelProvider.php:63 [label] -> Log
+[REVISAR] xampp\htdocs\app\Providers\Filament\AdminFilamentPanelProvider.php:65 [navigationGroup] -> Audit
+[REVISAR] xampp\htdocs\app\Filament\Resources\Audit\UserAuditResource.php:25 [getNavigationLabel] -> Registros
+
+==============================================================================================================
+KEYS DE TRADUCCION USADAS
+==============================================================================================================
+Keys unicas totales: 222
+filament:: keys: 199
+Namespaces filament:: no localizados: 0
+- :m minutes
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:148
+- Notification sent successfully.
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\ListUsers.php:74
+- RCON is not enabled!
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\EditUser.php:213
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\EditUser.php:263
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\EditUser.php:298
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\EditUser.php:325
+- Send notifications
+    uso: xampp\htdocs\app\Filament\Resources\Atom\ArticleResource\Pages\ViewArticle.php:20
+- Visible
+    uso: xampp\htdocs\app\Filament\Resources\Atom\CameraWebResource.php:35
+    uso: xampp\htdocs\app\Filament\Resources\Atom\CameraWebResource.php:60
+- You cannot edit this user!
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\EditUser.php:194
+- You cannot edit users because RCON is not enabled and the user is online.
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\EditUser.php:214
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\EditUser.php:264
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\EditUser.php:299
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\EditUser.php:326
+- You cannot edit users with a higher rank than yours.
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\EditUser.php:195
+- You have been disconnected because your rank has been changed. Please re-enter the hotel.
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\EditUser.php:311
+- Your motto has been changed by a staff member.
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\EditUser.php:339
+- activitylog::tables.columns.causer.label
+    uso: xampp\htdocs\app\Filament\Resources\Audit\UserAuditResource.php:38
+- filament-log-manager::translations.delete
+    uso: xampp\htdocs\resources\views\filament\pages\logs-manager.blade.php:14
+- filament-log-manager::translations.download
+    uso: xampp\htdocs\resources\views\filament\pages\logs-manager.blade.php:26
+- filament-log-manager::translations.modal_delete_action_cancel
+    uso: xampp\htdocs\resources\views\filament\pages\logs-manager.blade.php:80
+- filament-log-manager::translations.modal_delete_action_confirm
+    uso: xampp\htdocs\resources\views\filament\pages\logs-manager.blade.php:89
+- filament-log-manager::translations.modal_delete_heading
+    uso: xampp\htdocs\resources\views\filament\pages\logs-manager.blade.php:67
+- filament-log-manager::translations.modal_delete_subheading
+    uso: xampp\htdocs\resources\views\filament\pages\logs-manager.blade.php:70
+- filament-log-manager::translations.no_logs
+    uso: xampp\htdocs\resources\views\filament\pages\logs-manager.blade.php:60
+- filament-log-manager::translations.search_placeholder
+    uso: xampp\htdocs\app\Filament\Pages\LogsManager.php:35
+- filament-panels::pages/auth/login.messages.failed
+    uso: xampp\htdocs\app\Filament\Pages\Login.php:64
+- filament-panels::pages/auth/login.notifications.throttled
+    uso: xampp\htdocs\app\Filament\Pages\Login.php:29
+- filament-panels::pages/auth/login.notifications.throttled.body
+    uso: xampp\htdocs\app\Filament\Pages\Login.php:29
+- filament-panels::pages/auth/login.notifications.throttled.title
+    uso: xampp\htdocs\app\Filament\Pages\Login.php:25
+- filament::login.fields.password.label
+    uso: xampp\htdocs\app\Filament\Pages\Login.php:76
+- filament::login.fields.remember.label
+    uso: xampp\htdocs\app\Filament\Pages\Login.php:80
+- filament::login.fields.username.label
+    uso: xampp\htdocs\app\Filament\Pages\Login.php:72
+    uso: xampp\htdocs\app\Filament\Pages\Login.php:87
+- filament::resources.actions.send_notifications
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\ListUsers.php:23
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\ListUsers.php:26
+- filament::resources.columns.achievement_score
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:139
+- filament::resources.columns.allow_comments
+    uso: xampp\htdocs\app\Filament\Resources\Atom\ArticleResource.php:174
+- filament::resources.columns.avatar
+    uso: xampp\htdocs\app\Filament\Resources\User\BanResource.php:73
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:229
+- filament::resources.columns.background_color
+    uso: xampp\htdocs\app\Filament\Resources\Atom\TagResource.php:93
+- filament::resources.columns.badge
+    uso: xampp\htdocs\app\Filament\Resources\Atom\TeamResource.php:111
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:111
+- filament::resources.columns.badge_code
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\BadgesRelationManager.php:54
+- filament::resources.columns.banned_at
+    uso: xampp\htdocs\app\Filament\Resources\User\BanResource.php:113
+- filament::resources.columns.by
+    uso: xampp\htdocs\app\Filament\Resources\Atom\ArticleResource.php:164
+    uso: xampp\htdocs\app\Filament\Resources\User\BanResource.php:81
+- filament::resources.columns.can_change_name
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:160
+- filament::resources.columns.can_trade
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:152
+- filament::resources.columns.category
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:123
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:142
+- filament::resources.columns.command
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\CommandLogResource.php:43
+- filament::resources.columns.comment
+    uso: xampp\htdocs\app\Filament\Resources\Atom\CmsSettingResource.php:77
+- filament::resources.columns.created_at
+    uso: xampp\htdocs\app\Filament\Resources\Atom\CameraWebResource.php:53
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:259
+- filament::resources.columns.description
+    uso: xampp\htdocs\app\Filament\Resources\Atom\HousekeepingPermissionResource.php:80
+- filament::resources.columns.email
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:237
+- filament::resources.columns.equipped
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\BadgesRelationManager.php:58
+- filament::resources.columns.executed_at
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\ChatlogPrivateResource.php:82
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\ChatlogRoomResource.php:96
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\CommandLogResource.php:56
+- filament::resources.columns.expires_at
+    uso: xampp\htdocs\app\Filament\Resources\User\BanResource.php:117
+- filament::resources.columns.hideable
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\WordFilterResource.php:84
+- filament::resources.columns.id
+    uso: xampp\htdocs\app\Filament\Resources\Atom\ArticleResource.php:149
+    uso: xampp\htdocs\app\Filament\Resources\Atom\CameraWebResource.php:46
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:202
+    uso: xampp\htdocs\app\Filament\Resources\Atom\TagResource.php:85
+    uso: xampp\htdocs\app\Filament\Resources\Atom\TeamResource.php:102
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:108
+    uso: xampp\htdocs\app\Filament\Resources\User\BanResource.php:68
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:224
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\BadgesRelationManager.php:47
+- filament::resources.columns.image
+    uso: xampp\htdocs\app\Filament\Resources\Atom\ArticleResource.php:155
+    uso: xampp\htdocs\app\Filament\Resources\Atom\CameraWebResource.php:56
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:206
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\BadgesRelationManager.php:51
+- filament::resources.columns.is_hidden
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:226
+    uso: xampp\htdocs\app\Filament\Resources\Atom\TeamResource.php:138
+- filament::resources.columns.key
+    uso: xampp\htdocs\app\Filament\Resources\Atom\CmsSettingResource.php:68
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\EmulatorSettingResource.php:55
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\EmulatorTextResource.php:51
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\WordFilterResource.php:76
+- filament::resources.columns.level
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:118
+- filament::resources.columns.message
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\ChatlogPrivateResource.php:77
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\ChatlogRoomResource.php:91
+- filament::resources.columns.min_rank
+    uso: xampp\htdocs\app\Filament\Resources\Atom\HousekeepingPermissionResource.php:75
+- filament::resources.columns.motto
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:243
+- filament::resources.columns.mute_time
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\WordFilterResource.php:100
+- filament::resources.columns.name
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:209
+    uso: xampp\htdocs\app\Filament\Resources\Atom\TagResource.php:88
+    uso: xampp\htdocs\app\Filament\Resources\Atom\TeamResource.php:120
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:114
+- filament::resources.columns.new_tab
+    uso: xampp\htdocs\app\Filament\Resources\Atom\NavigationResource\RelationManagers\SubNavigationsRelationManager.php:43
+    uso: xampp\htdocs\app\Filament\Resources\Atom\NavigationResource\RelationManagers\SubNavigationsRelationManager.php:63
+- filament::resources.columns.online
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:249
+- filament::resources.columns.online_time
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:147
+- filament::resources.columns.order
+    uso: xampp\htdocs\app\Filament\Resources\Atom\NavigationResource\RelationManagers\SubNavigationsRelationManager.php:37
+    uso: xampp\htdocs\app\Filament\Resources\Atom\NavigationResource\RelationManagers\SubNavigationsRelationManager.php:66
+- filament::resources.columns.permission
+    uso: xampp\htdocs\app\Filament\Resources\Atom\HousekeepingPermissionResource.php:71
+- filament::resources.columns.prefix
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:221
+- filament::resources.columns.reason
+    uso: xampp\htdocs\app\Filament\Resources\User\BanResource.php:85
+- filament::resources.columns.receiver
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\ChatlogPrivateResource.php:72
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\ChatlogRoomResource.php:86
+- filament::resources.columns.replacement
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\WordFilterResource.php:80
+- filament::resources.columns.reportable
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\WordFilterResource.php:92
+- filament::resources.columns.respects_received
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:143
+- filament::resources.columns.room
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\ChatlogRoomResource.php:76
+- filament::resources.columns.room_id
+    uso: xampp\htdocs\app\Filament\Resources\Atom\CameraWebResource.php:51
+- filament::resources.columns.sender
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\ChatlogPrivateResource.php:67
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\ChatlogRoomResource.php:81
+- filament::resources.columns.slug
+    uso: xampp\htdocs\app\Filament\Resources\Atom\NavigationResource\RelationManagers\SubNavigationsRelationManager.php:57
+- filament::resources.columns.success
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\CommandLogResource.php:52
+- filament::resources.columns.title
+    uso: xampp\htdocs\app\Filament\Resources\Atom\ArticleResource.php:158
+- filament::resources.columns.type
+    uso: xampp\htdocs\app\Filament\Resources\User\BanResource.php:98
+- filament::resources.columns.user_id
+    uso: xampp\htdocs\app\Filament\Resources\Atom\CameraWebResource.php:49
+- filament::resources.columns.username
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\CommandLogResource.php:39
+    uso: xampp\htdocs\app\Filament\Resources\User\BanResource.php:77
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:233
+- filament::resources.columns.value
+    uso: xampp\htdocs\app\Filament\Resources\Atom\CmsSettingResource.php:72
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\EmulatorSettingResource.php:59
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\EmulatorTextResource.php:55
+- filament::resources.columns.visible
+    uso: xampp\htdocs\app\Filament\Resources\Atom\ArticleResource.php:167
+    uso: xampp\htdocs\app\Filament\Resources\Atom\NavigationResource\RelationManagers\SubNavigationsRelationManager.php:40
+    uso: xampp\htdocs\app\Filament\Resources\Atom\NavigationResource\RelationManagers\SubNavigationsRelationManager.php:60
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:127
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:137
+- filament::resources.common.Account
+    uso: xampp\htdocs\app\Filament\Resources\User\BanResource.php:47
+    uso: xampp\htdocs\app\Filament\Resources\User\BanResource.php:100
+- filament::resources.common.All
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:138
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:143
+- filament::resources.common.Create
+    uso: xampp\htdocs\app\Filament\Pages\BadgePage.php:300
+- filament::resources.common.Credits
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:135
+- filament::resources.common.Diamonds
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:148
+- filament::resources.common.Duckets
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:142
+- filament::resources.common.Female
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:68
+- filament::resources.common.IP
+    uso: xampp\htdocs\app\Filament\Resources\User\BanResource.php:48
+    uso: xampp\htdocs\app\Filament\Resources\User\BanResource.php:101
+- filament::resources.common.Machine
+    uso: xampp\htdocs\app\Filament\Resources\User\BanResource.php:49
+    uso: xampp\htdocs\app\Filament\Resources\User\BanResource.php:102
+- filament::resources.common.Male
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:67
+- filament::resources.common.Never
+    uso: xampp\htdocs\app\Filament\Resources\User\BanResource.php:118
+- filament::resources.common.No
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:73
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:135
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:48
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:57
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:66
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:75
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:98
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:107
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:116
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:125
+- filament::resources.common.Open link
+    uso: xampp\htdocs\app\Filament\Pages\BadgePage.php:78
+- filament::resources.common.Points
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:154
+- filament::resources.common.Sucessfull
+    uso: xampp\htdocs\app\Filament\Resources\Atom\TagResource.php:96
+- filament::resources.common.Super
+    uso: xampp\htdocs\app\Filament\Resources\User\BanResource.php:50
+    uso: xampp\htdocs\app\Filament\Resources\User\BanResource.php:103
+- filament::resources.common.Update
+    uso: xampp\htdocs\app\Filament\Pages\BadgePage.php:294
+- filament::resources.common.Yes
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:72
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:134
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:49
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:58
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:67
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:76
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:99
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:108
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:117
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:126
+- filament::resources.filters.success
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\CommandLogResource.php:62
+- filament::resources.helpers.achievement_points
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:88
+- filament::resources.helpers.achievement_progress_needed
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:94
+- filament::resources.helpers.badge_code_helper
+    uso: xampp\htdocs\app\Filament\Pages\BadgePage.php:61
+- filament::resources.helpers.change_password_description
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:179
+- filament::resources.helpers.change_username_description
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:164
+- filament::resources.inputs.achievement_score
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:35
+- filament::resources.inputs.allow_change_username
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:167
+- filament::resources.inputs.allow_comments
+    uso: xampp\htdocs\app\Filament\Resources\Atom\ArticleResource.php:114
+- filament::resources.inputs.as_staff
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\ListUsers.php:47
+- filament::resources.inputs.auto_credits_amount
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:172
+- filament::resources.inputs.auto_gotw_amount
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:180
+- filament::resources.inputs.auto_pixels_amount
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:176
+- filament::resources.inputs.auto_points_amount
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:184
+- filament::resources.inputs.background_color
+    uso: xampp\htdocs\app\Filament\Resources\Atom\TagResource.php:56
+- filament::resources.inputs.badge_code
+    uso: xampp\htdocs\app\Filament\Pages\BadgePage.php:60
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:90
+    uso: xampp\htdocs\app\Filament\Resources\Atom\TeamResource.php:73
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\BadgesRelationManager.php:34
+- filament::resources.inputs.badge_description
+    uso: xampp\htdocs\app\Filament\Pages\BadgePage.php:95
+    uso: xampp\htdocs\app\Filament\Pages\BadgePage.php:110
+- filament::resources.inputs.badge_image
+    uso: xampp\htdocs\app\Filament\Pages\BadgePage.php:70
+- filament::resources.inputs.badge_title
+    uso: xampp\htdocs\app\Filament\Pages\BadgePage.php:90
+    uso: xampp\htdocs\app\Filament\Pages\BadgePage.php:105
+- filament::resources.inputs.block_camera_follow
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:105
+- filament::resources.inputs.block_following
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:55
+- filament::resources.inputs.block_friendrequests
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:64
+- filament::resources.inputs.block_roominvites
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:73
+- filament::resources.inputs.can_trade
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:46
+- filament::resources.inputs.category
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:61
+- filament::resources.inputs.comment
+    uso: xampp\htdocs\app\Filament\Resources\Atom\CmsSettingResource.php:50
+- filament::resources.inputs.content
+    uso: xampp\htdocs\app\Filament\Resources\Atom\ArticleResource.php:73
+- filament::resources.inputs.created_at
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:77
+- filament::resources.inputs.description
+    uso: xampp\htdocs\app\Filament\Resources\Atom\ArticleResource.php:61
+    uso: xampp\htdocs\app\Filament\Resources\Atom\HousekeepingPermissionResource.php:53
+    uso: xampp\htdocs\app\Filament\Resources\Atom\TeamResource.php:63
+    uso: xampp\htdocs\app\Filament\Resources\Atom\TeamResource.php:129
+- filament::resources.inputs.email
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:173
+- filament::resources.inputs.expires_at
+    uso: xampp\htdocs\app\Filament\Resources\User\BanResource.php:55
+- filament::resources.inputs.gender
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:65
+- filament::resources.inputs.hideable
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\WordFilterResource.php:48
+- filament::resources.inputs.ignore_bots
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:114
+- filament::resources.inputs.ignore_pets
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:123
+- filament::resources.inputs.image
+    uso: xampp\htdocs\app\Filament\Resources\Atom\ArticleResource.php:68
+- filament::resources.inputs.ip_current
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:98
+- filament::resources.inputs.ip_register
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:94
+- filament::resources.inputs.is_hidden
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:160
+    uso: xampp\htdocs\app\Filament\Resources\Atom\TeamResource.php:83
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:204
+- filament::resources.inputs.key
+    uso: xampp\htdocs\app\Filament\Resources\Atom\CmsSettingResource.php:37
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\EmulatorSettingResource.php:37
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\EmulatorTextResource.php:34
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\WordFilterResource.php:36
+- filament::resources.inputs.label
+    uso: xampp\htdocs\app\Filament\Resources\Atom\NavigationResource\RelationManagers\SubNavigationsRelationManager.php:25
+- filament::resources.inputs.last_login
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:84
+- filament::resources.inputs.last_online
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:91
+- filament::resources.inputs.level
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:95
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:53
+- filament::resources.inputs.log_commands
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:143
+- filament::resources.inputs.max_friends
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:86
+- filament::resources.inputs.max_rooms
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:81
+- filament::resources.inputs.message
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\ChatlogPrivateResource.php:45
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\ChatlogRoomResource.php:52
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\ListUsers.php:38
+- filament::resources.inputs.min_rank
+    uso: xampp\htdocs\app\Filament\Resources\Atom\HousekeepingPermissionResource.php:47
+- filament::resources.inputs.motto
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:59
+- filament::resources.inputs.mute_time
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\WordFilterResource.php:65
+- filament::resources.inputs.name
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:85
+    uso: xampp\htdocs\app\Filament\Resources\Atom\TagResource.php:49
+    uso: xampp\htdocs\app\Filament\Resources\Atom\TeamResource.php:53
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:46
+- filament::resources.inputs.new_password
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:182
+- filament::resources.inputs.new_password_confirmation
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:189
+- filament::resources.inputs.old_chat
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:96
+- filament::resources.inputs.permission
+    uso: xampp\htdocs\app\Filament\Resources\Atom\HousekeepingPermissionResource.php:40
+- filament::resources.inputs.points
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:87
+- filament::resources.inputs.prefix
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:151
+- filament::resources.inputs.prefix_color
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:156
+- filament::resources.inputs.progress_needed
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:93
+- filament::resources.inputs.rank
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:200
+- filament::resources.inputs.reason
+    uso: xampp\htdocs\app\Filament\Resources\User\BanResource.php:39
+- filament::resources.inputs.receiver
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\ChatlogPrivateResource.php:42
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\ChatlogRoomResource.php:47
+- filament::resources.inputs.referral_code
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:102
+- filament::resources.inputs.referrer_code
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:106
+- filament::resources.inputs.replacement
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\WordFilterResource.php:42
+- filament::resources.inputs.reportable
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\WordFilterResource.php:57
+- filament::resources.inputs.respects_received
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:40
+- filament::resources.inputs.reward_amount
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:82
+- filament::resources.inputs.reward_type
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:78
+- filament::resources.inputs.room
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\ChatlogRoomResource.php:36
+- filament::resources.inputs.room_effect
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:99
+- filament::resources.inputs.sender
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\ChatlogPrivateResource.php:37
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\ChatlogRoomResource.php:42
+- filament::resources.inputs.slug
+    uso: xampp\htdocs\app\Filament\Resources\Atom\NavigationResource\RelationManagers\SubNavigationsRelationManager.php:31
+- filament::resources.inputs.title
+    uso: xampp\htdocs\app\Filament\Resources\Atom\ArticleResource.php:54
+- filament::resources.inputs.type
+    uso: xampp\htdocs\app\Filament\Resources\User\BanResource.php:44
+- filament::resources.inputs.url
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\ListUsers.php:43
+- filament::resources.inputs.username
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:52
+- filament::resources.inputs.users
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\Pages\ListUsers.php:30
+- filament::resources.inputs.value
+    uso: xampp\htdocs\app\Filament\Resources\Atom\CmsSettingResource.php:44
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\EmulatorSettingResource.php:43
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\EmulatorTextResource.php:40
+- filament::resources.inputs.visible
+    uso: xampp\htdocs\app\Filament\Resources\Atom\ArticleResource.php:85
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:70
+- filament::resources.navigations.Logs
+    uso: xampp\htdocs\app\Filament\Pages\LogsManager.php:25
+- filament::resources.notifications.badge_code_required
+    uso: xampp\htdocs\app\Filament\Pages\BadgePage.php:123
+    uso: xampp\htdocs\app\Filament\Pages\BadgePage.php:194
+- filament::resources.notifications.badge_found
+    uso: xampp\htdocs\app\Filament\Pages\BadgePage.php:135
+- filament::resources.notifications.badge_image_required
+    uso: xampp\htdocs\app\Filament\Pages\BadgePage.php:193
+- filament::resources.notifications.badge_image_upload_failed
+    uso: xampp\htdocs\app\Filament\Pages\BadgePage.php:272
+- filament::resources.notifications.badge_texts_required
+    uso: xampp\htdocs\app\Filament\Pages\BadgePage.php:213
+- filament::resources.notifications.badge_update_failed
+    uso: xampp\htdocs\app\Filament\Pages\BadgePage.php:231
+- filament::resources.notifications.badge_updated
+    uso: xampp\htdocs\app\Filament\Pages\BadgePage.php:244
+- filament::resources.notifications.create_badge
+    uso: xampp\htdocs\app\Filament\Pages\BadgePage.php:156
+- filament::resources.options.no
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:66
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:146
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\CommandLogResource.php:65
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\WordFilterResource.php:51
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\WordFilterResource.php:60
+- filament::resources.options.rights
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:70
+- filament::resources.options.yes
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:67
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:147
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\CommandLogResource.php:64
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\WordFilterResource.php:52
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\WordFilterResource.php:61
+- filament::resources.options.{$state}
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\CommandLogResource.php:53
+- filament::resources.sections.permissions.description
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:106
+- filament::resources.sections.permissions.title
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:105
+- filament::resources.stats.articles_chart.description
+    uso: xampp\htdocs\app\Filament\Widgets\ArticlesAggregateChart.php:26
+- filament::resources.stats.articles_chart.label
+    uso: xampp\htdocs\app\Filament\Widgets\ArticlesAggregateChart.php:39
+- filament::resources.stats.articles_chart.title
+    uso: xampp\htdocs\app\Filament\Widgets\ArticlesAggregateChart.php:21
+- filament::resources.stats.furniture_count.description
+    uso: xampp\htdocs\app\Filament\Widgets\TopDashboardOverview.php:29
+- filament::resources.stats.furniture_count.title
+    uso: xampp\htdocs\app\Filament\Widgets\TopDashboardOverview.php:28
+- filament::resources.stats.orders_chart.cancelled
+    uso: xampp\htdocs\app\Filament\Resources\DashboardResource\Widgets\OrdersAggregateChart.php:46
+- filament::resources.stats.orders_chart.completed
+    uso: xampp\htdocs\app\Filament\Resources\DashboardResource\Widgets\OrdersAggregateChart.php:47
+- filament::resources.stats.orders_chart.description
+    uso: xampp\htdocs\app\Filament\Resources\DashboardResource\Widgets\OrdersAggregateChart.php:24
+- filament::resources.stats.orders_chart.pending
+    uso: xampp\htdocs\app\Filament\Resources\DashboardResource\Widgets\OrdersAggregateChart.php:45
+- filament::resources.stats.orders_chart.title
+    uso: xampp\htdocs\app\Filament\Resources\DashboardResource\Widgets\OrdersAggregateChart.php:19
+- filament::resources.stats.photos_count.description
+    uso: xampp\htdocs\app\Filament\Widgets\TopDashboardOverview.php:41
+- filament::resources.stats.photos_count.title
+    uso: xampp\htdocs\app\Filament\Widgets\TopDashboardOverview.php:40
+- filament::resources.stats.rooms_count.description
+    uso: xampp\htdocs\app\Filament\Widgets\TopDashboardOverview.php:35
+- filament::resources.stats.rooms_count.title
+    uso: xampp\htdocs\app\Filament\Widgets\TopDashboardOverview.php:34
+- filament::resources.stats.users_count.description
+    uso: xampp\htdocs\app\Filament\Widgets\TopDashboardOverview.php:23
+- filament::resources.stats.users_count.title
+    uso: xampp\htdocs\app\Filament\Widgets\TopDashboardOverview.php:22
+- filament::resources.tabs.Account Data
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:32
+- filament::resources.tabs.Change Email
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:170
+- filament::resources.tabs.Change Password
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:178
+- filament::resources.tabs.Change Rank
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:196
+- filament::resources.tabs.Change Username
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:163
+- filament::resources.tabs.Configurations
+    uso: xampp\htdocs\app\Filament\Resources\Atom\ArticleResource.php:81
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:138
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:65
+- filament::resources.tabs.Currencies
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:132
+- filament::resources.tabs.Extra Settings
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource\RelationManagers\SettingsRelationManager.php:92
+- filament::resources.tabs.General Information
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:82
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:49
+- filament::resources.tabs.Home
+    uso: xampp\htdocs\app\Filament\Resources\Atom\ArticleResource.php:50
+    uso: xampp\htdocs\app\Filament\Resources\Atom\TagResource.php:45
+    uso: xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php:42
+- filament::resources.tabs.In-game Permissions
+    uso: xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php:103
+- filament::resources.tabs.Main
+    uso: xampp\htdocs\app\Filament\Pages\BadgePage.php:57
+- filament::resources.tabs.Security
+    uso: xampp\htdocs\app\Filament\Resources\User\UserResource.php:161
+
+[FILAMENT:: NAMESPACE NO LOCALIZADO]
+
+==============================================================================================================
+CAMPOS/COLUMNAS CON AUTO-LABEL
+==============================================================================================================
+Estos no son necesariamente errores; Filament genera una etiqueta automáticamente si no hay ->label().
+[REVISAR] xampp\htdocs\app\Filament\Filters\DateRangeFilter.php:15 DatePicker::make('{$name}_from') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Filters\DateRangeFilter.php:16 DatePicker::make('{$name}_until') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Pages\BadgePage.php:76 Action::make('visit') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Pages\LogsManager.php:31 Select::make('logFile') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Atom\ArticleResource\RelationManagers\TagsRelationManager.php:27 TextInput::make('name') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:35 TextInput::make('parent_id') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:39 TextInput::make('caption_save') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:42 TextInput::make('caption') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:45 TextInput::make('page_layout') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:48 TextInput::make('icon_color') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:52 TextInput::make('icon_image') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:56 TextInput::make('min_rank') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:60 TextInput::make('order_num') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:64 TextInput::make('visible') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:67 TextInput::make('enabled') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:70 TextInput::make('club_only') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:73 TextInput::make('vip_only') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:76 TextInput::make('page_headline') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:79 TextInput::make('page_teaser') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:82 TextInput::make('page_special') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:84 TextInput::make('page_text1') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:86 TextInput::make('page_text2') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:88 TextInput::make('page_text_details') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:90 TextInput::make('page_text_teaser') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:92 TextInput::make('room_id') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:101 TextColumn::make('parent_id') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:103 TextColumn::make('caption_save') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:105 TextColumn::make('caption') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:109 TextColumn::make('page_layout') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:111 TextColumn::make('icon_color') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:113 ImageColumn::make('icon_image') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:115 TextColumn::make('min_rank') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:117 TextColumn::make('order_num') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:119 TextColumn::make('visible') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:121 TextColumn::make('enabled') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:123 TextColumn::make('club_only') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:125 TextColumn::make('vip_only') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:127 TextColumn::make('page_headline') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:129 TextColumn::make('page_teaser') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:131 TextColumn::make('page_special') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:133 TextColumn::make('page_text1') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:135 TextColumn::make('page_text2') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:137 TextColumn::make('room_id') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php:139 TextColumn::make('includes') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:37 TextInput::make('public_name') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:39 TextInput::make('item_name') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:42 TextInput::make('type') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:47 TextInput::make('width') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:50 TextInput::make('length') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:53 TextInput::make('stack_height') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:59 Toggle::make('allow_stack') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:61 Toggle::make('allow_sit') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:63 Toggle::make('allow_lay') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:68 Toggle::make('allow_walk') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:70 Toggle::make('allow_gift') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:72 Toggle::make('allow_trade') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:77 Toggle::make('allow_recycle') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:79 Toggle::make('allow_marketplace_sell') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:81 Toggle::make('allow_inventory_stack') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:84 TextInput::make('interaction_type') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:89 TextInput::make('interaction_modes_count') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:92 TextInput::make('vending_ids') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:98 TextInput::make('multiheight') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:101 TextInput::make('customparams') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:106 TextInput::make('effect_id_male') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:172 TextInput::make('order_number') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:178 TextInput::make('offer_id') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:266 SelectFilter::make('type') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:352 TextInput::make('type') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:358 TextInput::make('width') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:362 TextInput::make('length') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:366 TextInput::make('stack_height') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:373 Toggle::make('allow_stack') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:374 Toggle::make('allow_sit') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:375 Toggle::make('allow_lay') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:379 Toggle::make('allow_walk') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:380 Toggle::make('allow_gift') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:381 Toggle::make('allow_trade') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:385 Toggle::make('allow_recycle') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:386 Toggle::make('allow_marketplace_sell') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:387 Toggle::make('allow_inventory_stack') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:389 TextInput::make('interaction_type') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:395 TextInput::make('interaction_modes_count') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:399 TextInput::make('vending_ids') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:406 TextInput::make('multiheight') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:410 TextInput::make('customparams') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:417 TextInput::make('effect_id_male') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:421 TextInput::make('effect_id_female') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource\RelationManagers\CatalogItemsRelationManager.php:426 TextInput::make('clothing_on_walk') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\EmulatorTextResource\Pages\ManageEmulatorTexts.php:16 CreateAction::make('create') -> sin ->label() cercano
+[REVISAR] xampp\htdocs\app\Filament\Resources\Hotel\WebsiteAdResource.php:61 TextColumn::make('created_at') -> sin ->label() cercano
+
+==============================================================================================================
+RESOURCES CON NOMBRES AUTOMATICOS
+==============================================================================================================
+Si faltan model/navigation labels, Filament deriva nombres desde la clase/modelo.
+- xampp\htdocs\app\Filament\Resources\Atom\ArticleResource.php | ArticleResource | faltan: navigationLabel, modelLabel, pluralModelLabel
+- xampp\htdocs\app\Filament\Resources\Atom\CameraWebResource.php | CameraWebResource | faltan: modelLabel
+- xampp\htdocs\app\Filament\Resources\Atom\CmsSettingResource.php | CmsSettingResource | faltan: navigationLabel, modelLabel, pluralModelLabel
+- xampp\htdocs\app\Filament\Resources\Atom\HousekeepingPermissionResource.php | HousekeepingPermissionResource | faltan: modelLabel, pluralModelLabel
+- xampp\htdocs\app\Filament\Resources\Atom\PermissionResource.php | PermissionResource | faltan: navigationLabel, modelLabel, pluralModelLabel
+- xampp\htdocs\app\Filament\Resources\Atom\TagResource.php | TagResource | faltan: navigationLabel, modelLabel, pluralModelLabel
+- xampp\htdocs\app\Filament\Resources\Atom\TeamResource.php | TeamResource | faltan: navigationLabel, modelLabel, pluralModelLabel
+- xampp\htdocs\app\Filament\Resources\Hotel\AchievementResource.php | AchievementResource | faltan: navigationLabel, modelLabel, pluralModelLabel
+- xampp\htdocs\app\Filament\Resources\Hotel\BadgeTextEditorResource.php | BadgeTextEditorResource | faltan: pluralModelLabel
+- xampp\htdocs\app\Filament\Resources\Hotel\BadgeUploadResource.php | BadgeUploadResource | faltan: navigationLabel, modelLabel, pluralModelLabel
+- xampp\htdocs\app\Filament\Resources\Hotel\CatalogPageResource.php | CatalogPageResource | faltan: navigationLabel, modelLabel, pluralModelLabel
+- xampp\htdocs\app\Filament\Resources\Hotel\ChatlogPrivateResource.php | ChatlogPrivateResource | faltan: navigationLabel, modelLabel, pluralModelLabel
+- xampp\htdocs\app\Filament\Resources\Hotel\ChatlogRoomResource.php | ChatlogRoomResource | faltan: navigationLabel, modelLabel, pluralModelLabel
+- xampp\htdocs\app\Filament\Resources\Hotel\CommandLogResource.php | CommandLogResource | faltan: navigationLabel, modelLabel, pluralModelLabel
+- xampp\htdocs\app\Filament\Resources\Hotel\EmulatorSettingResource.php | EmulatorSettingResource | faltan: navigationLabel, modelLabel, pluralModelLabel
+- xampp\htdocs\app\Filament\Resources\Hotel\EmulatorTextResource.php | EmulatorTextResource | faltan: navigationLabel, modelLabel, pluralModelLabel
+- xampp\htdocs\app\Filament\Resources\Hotel\WebsiteAdResource.php | WebsiteAdResource | faltan: modelLabel, pluralModelLabel
+- xampp\htdocs\app\Filament\Resources\Hotel\WordFilterResource.php | WordFilterResource | faltan: navigationLabel, modelLabel, pluralModelLabel
+- xampp\htdocs\app\Filament\Resources\User\BanResource.php | BanResource | faltan: navigationLabel, modelLabel, pluralModelLabel
+- xampp\htdocs\app\Filament\Resources\User\UserResource.php | UserResource | faltan: navigationLabel, modelLabel, pluralModelLabel
+
+==============================================================================================================
+BRANDING LEGACY CANDIDATO
+==============================================================================================================
+Total: 2
+- xampp\htdocs\app\Filament\Tables\Columns\HabboBadgeColumn.php:10 [habbo] -> umn implements HasBadge { protected string $view = 'filament.tables.columns.habbo-badge-column'; public function getBadgePath(): string { $record = $this->getRecord(); if (!me
+- xampp\htdocs\app\Providers\AppServiceProvider.php:51 [habbo] -> on services. */ public function boot(): void { if (config('habbo.site.force_https')) { URL::forceScheme('https'); } Table::configureUsing(function (Table $tabl
+
+==============================================================================================================
+RESUMEN
+==============================================================================================================
+Sources: 128
+Hardcodes visibles: 201
+Hardcodes aparentemente ingleses: 69
+Keys traduccion: 222
+Keys filament::: 199
+Campos relevantes sin label explicito: 91
+Resources con labels automaticos: 20
+Branding legacy candidato: 2
+
+No se modifico ningun archivo ni tabla.
