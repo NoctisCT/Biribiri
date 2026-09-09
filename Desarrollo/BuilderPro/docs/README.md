@@ -104,25 +104,27 @@ MOVE_GROUP mantiene `requestId` de extremo a extremo.
 
 Las trazas se conservan por ahora para desarrollo y depuraci?n.
 
-## Limitaci?n conocida: Girar furnis
+### Orientaci?n local / Girar furnis
 
-La orientaci?n local todav?a NO est? terminada.
+La orientaci?n local est? implementada y validada.
 
-Comportamiento deseado:
+`Girar furnis` reproduce la sem?ntica de giro nativa de Nitro/Holo:
 
 - cada furni conserva exactamente X/Y/Z;
-- un clic equivale exactamente a pulsar una vez el bot?n nativo de girar de Holo;
-- cada furni avanza una sola posici?n dentro de sus direcciones permitidas;
-- si un furni admite diagonales, las diagonales no se saltan;
-- todos los seleccionados deben girar en una ?nica operaci?n.
+- un clic equivale a un ?nico giro nativo;
+- cada furni avanza exactamente a su siguiente direcci?n permitida;
+- se respetan las direcciones diagonales cuando existen;
+- todos los furnis seleccionados giran dentro de una ?nica operaci?n;
+- Nitro calcula la orientaci?n destino exacta de cada furni;
+- el servidor recibe y aplica esas orientaciones exactas;
+- el servidor mantiene la validaci?n autoritativa y el rollback grupal.
 
-Problema actual observado:
+`ORIENT` es independiente de `ROTATE_STRUCTURE`.
 
-- una selecci?n de furnis iguales puede girar por grupos alternos;
-- furnis con m?s direcciones pueden saltarse estados diagonales.
+`ORIENT` cambia ?nicamente la orientaci?n de cada furni en su posici?n actual.
 
-No debe confundirse con `Rotar estructura`, cuya intenci?n s? es realizar una
-rotaci?n geom?trica de 90 grados alrededor de un pivote.
+`ROTATE_STRUCTURE` rota f?sicamente la construcci?n en X/Y alrededor de un
+pivote y usa una rotaci?n geom?trica de 90 grados.
 
 ## Build
 

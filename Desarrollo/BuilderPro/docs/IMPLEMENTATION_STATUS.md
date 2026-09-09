@@ -21,7 +21,7 @@
 | Pivote autom?tico | HECHO | Primer furni ordenado |
 | Pivote manual | HECHO | Selecci?n expl?cita |
 | Indicador de pivote | HECHO | ?mbar |
-| Girar furnis localmente | PARCIAL | Sem?ntica nativa a?n incorrecta |
+| Girar furnis localmente | HECHO | Giro nativo Nitro/Holo; diagonales y X/Y/Z preservados |
 | RequestId trace | HECHO DEV | Pendiente limpieza futura |
 | Copy / Paste | PENDIENTE | Debe consumir inventario real |
 | Duplicar | PENDIENTE | Misma regla de inventario |
@@ -53,9 +53,13 @@
 
 ### ORIENT
 
-`ORIENT` debe conservar X/Y/Z y cambiar ?nicamente la direcci?n.
+`ORIENT` conserva exactamente X/Y/Z y cambia ?nicamente la direcci?n.
 
-Actualmente es la operaci?n pendiente de corregir.
+Est? implementado y validado manualmente.
+
+Nitro calcula para cada furni su siguiente direcci?n permitida usando la
+sem?ntica nativa de giro. El servidor recibe la orientaci?n destino exacta y
+la aplica dentro de la operaci?n grupal autoritativa.
 
 ### ROTATE_STRUCTURE
 

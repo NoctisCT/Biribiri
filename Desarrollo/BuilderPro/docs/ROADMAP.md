@@ -1,28 +1,12 @@
 # Builder Pro - Roadmap
 
-## P0 - Corregir ORIENT
+## P0 - Cerrar Transform Core
 
-Prioridad inmediata.
+`ORIENT`, `ROTATE_STRUCTURE`, altura Z, pivote manual y pivote autom?tico ya
+est?n implementados.
 
-`Girar furnis` debe reutilizar exactamente la sem?ntica del giro nativo de
-Holo/Nitro.
-
-Requisitos:
-
-- un clic = un giro nativo;
-- no asumir 90 grados;
-- respetar todas las direcciones permitidas;
-- respetar diagonales;
-- todos los seleccionados cambian en la misma operaci?n;
-- X/Y/Z no cambian;
-- servidor autoritativo;
-- rollback grupal ante cualquier fallo.
-
-No mezclar esta l?gica con `ROTATE_STRUCTURE`.
-
-## P1 - Cerrar Transform Core
-
-Despu?s de corregir ORIENT:
+Antes de cerrar definitivamente el bloque de transformaciones, completar la
+matriz final de regresi?n:
 
 - smoke exhaustivo de Z;
 - smoke de rotaci?n estructural;
@@ -36,7 +20,7 @@ Despu?s de corregir ORIENT:
 
 Cuando pase esta matriz, Transform Core puede considerarse cerrado.
 
-## P2 - Copy / Duplicate / Paste
+## P1 - Copy / Duplicate / Paste
 
 Implementar representaci?n r?gida relativa de una selecci?n.
 
@@ -57,7 +41,7 @@ Sin inventario suficiente:
 - indicar d?ficit exacto;
 - cero colocaciones parciales.
 
-## P3 - Undo / Redo at?mico
+## P2 - Undo / Redo at?mico
 
 Crear historial de operaciones Builder Pro.
 
@@ -70,7 +54,7 @@ Objetivo:
 Undo y redo deben usar las mismas garant?as de rollback que las operaciones
 normales.
 
-## P4 - Precisi?n
+## P3 - Precisi?n
 
 A?adir:
 
@@ -83,7 +67,7 @@ A?adir:
 
 La UI no debe obligar a repetir clics cuando el usuario ya conoce el valor.
 
-## P5 - Align / Distribute
+## P4 - Align / Distribute
 
 Align:
 
@@ -103,7 +87,7 @@ Distribute:
 
 Definir claramente qu? furni act?a como referencia y c?mo se conserva Z.
 
-## P6 - Grupos y bloqueo
+## P5 - Grupos y bloqueo
 
 Permitir guardar una selecci?n como grupo l?gico.
 
@@ -118,7 +102,7 @@ Funciones:
 
 El bloqueo debe impedir modificaciones accidentales desde Builder Pro.
 
-## P7 - Blueprints
+## P6 - Blueprints
 
 Guardar una construcci?n como plantilla reutilizable.
 
@@ -132,7 +116,7 @@ Al colocar un blueprint:
 - comprobar l?mites;
 - aplicar todo o nada.
 
-## P8 - Selecci?n avanzada
+## P7 - Selecci?n avanzada
 
 A?adir:
 
@@ -144,7 +128,7 @@ A?adir:
 - informaci?n del bounding box;
 - mejor feedback de cantidad y estado.
 
-## P9 - Preview y UX profesional
+## P8 - Preview y UX profesional
 
 A?adir:
 
@@ -156,7 +140,7 @@ A?adir:
 - mejor feedback de errores;
 - controles compactos para workflows frecuentes.
 
-## P10 - Limpieza t?cnica
+## P9 - Limpieza t?cnica
 
 Cuando Builder Pro est? estable:
 
