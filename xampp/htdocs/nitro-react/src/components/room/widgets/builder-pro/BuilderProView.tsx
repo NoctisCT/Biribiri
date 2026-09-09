@@ -1,6 +1,6 @@
 import { BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomObjectCategory } from '@nitrots/nitro-renderer';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
-import { BuilderProSelectionVisualizer, CanManipulateFurniture, GetSessionDataManager, SendMessageComposer, SetBuilderProSelectionModeActive } from '../../../../api';
+import { BuilderProSelectionVisualizer, CanManipulateFurniture, GetRoomEngine, GetSessionDataManager, SendMessageComposer, SetBuilderProSelectionModeActive } from '../../../../api';
 import { useMessageEvent, useRoom, useRoomEngineEvent } from '../../../../hooks';
 import './BuilderProView.scss';
 
@@ -15,9 +15,24 @@ export const BuilderProView: FC<{}> = props =>
     const [ pending, setPending ] = useState(false);
     const [ status, setStatus ] = useState('');
     const [ moveStep, setMoveStep ] = useState(1);
+    const [ areaMode, setAreaMode ] = useState(false);
+    const [ selectionBox, setSelectionBox ] = useState<{
+        left: number;
+        top: number;
+        width: number;
+        height: number;
+    } | null>(null);
 
     const activeRef = useRef(false);
     const pendingRef = useRef(false);
+    const areaModeRef = useRef(false);
+    const areaStartRef = useRef<{
+        canvas: HTMLCanvasElement;
+        startClientX: number;
+        startClientY: number;
+        startCanvasX: number;
+        startCanvasY: number;
+    } | null>(null);
     const selectedIdsRef = useRef<number[]>([]);
     const roomSessionRef = useRef(roomSession);
 
@@ -73,6 +88,8 @@ export const BuilderProView: FC<{}> = props =>
     {
         activeRef.current = false;
         pendingRef.current = false;
+        areaModeRef.current = false;
+        areaStartRef.current = null;
 
         SetBuilderProSelectionModeActive(false);
 
@@ -80,6 +97,8 @@ export const BuilderProView: FC<{}> = props =>
 
         setActive(false);
         setPending(false);
+        setAreaMode(false);
+        setSelectionBox(null);
         setStatus('');
     }, [ clearSelection ]);
 
@@ -91,11 +110,15 @@ export const BuilderProView: FC<{}> = props =>
 
         activeRef.current = true;
         pendingRef.current = false;
+        areaModeRef.current = false;
+        areaStartRef.current = null;
 
         SetBuilderProSelectionModeActive(true);
 
         setActive(true);
         setPending(false);
+        setAreaMode(false);
+        setSelectionBox(null);
         setStatus(
             'Haz clic en los furnis para a?adirlos o quitarlos.'
         );
@@ -112,10 +135,426 @@ export const BuilderProView: FC<{}> = props =>
         activate();
     }, [ activate, deactivate ]);
 
+    const toggleAreaMode = useCallback(() =>
+    {
+        if(!activeRef.current) return;
+        if(pendingRef.current) return;
+
+        const next = !areaModeRef.current;
+
+        areaModeRef.current = next;
+        areaStartRef.current = null;
+
+        setAreaMode(next);
+        setSelectionBox(null);
+
+        setStatus(
+            next
+                ? 'Seleccion por area activa. Arrastra sobre la sala.'
+                : 'Seleccion por clic activa.'
+        );
+    }, []);
+
+    const selectObjectsInArea = useCallback((
+        canvas: HTMLCanvasElement,
+        startCanvasX: number,
+        startCanvasY: number,
+        endClientX: number,
+        endClientY: number
+    ) =>
+    {
+        const currentRoomSession =
+            roomSessionRef.current;
+
+        if(!currentRoomSession) return;
+
+        const canvasRect =
+            canvas.getBoundingClientRect();
+
+        if(
+            canvasRect.width <= 0 ||
+            canvasRect.height <= 0
+        )
+        {
+            return;
+        }
+
+        const scaleX =
+            canvas.width / canvasRect.width;
+
+        const scaleY =
+            canvas.height / canvasRect.height;
+
+        const endCanvasX =
+            (endClientX - canvasRect.left) *
+            scaleX;
+
+        const endCanvasY =
+            (endClientY - canvasRect.top) *
+            scaleY;
+
+        const minX = Math.min(
+            startCanvasX,
+            endCanvasX
+        );
+
+        const maxX = Math.max(
+            startCanvasX,
+            endCanvasX
+        );
+
+        const minY = Math.min(
+            startCanvasY,
+            endCanvasY
+        );
+
+        const maxY = Math.max(
+            startCanvasY,
+            endCanvasY
+        );
+
+        const roomEngine =
+            GetRoomEngine();
+
+        if(!roomEngine) return;
+
+        const next = [
+            ...selectedIdsRef.current
+        ];
+
+        const nextSet =
+            new Set(next);
+
+        const count =
+            roomEngine.getRoomObjectCount(
+                currentRoomSession.roomId,
+                RoomObjectCategory.FLOOR
+            );
+
+        let added = 0;
+
+        for(
+            let index = 0;
+            index < count;
+            index++
+        )
+        {
+            if(next.length >= MAX_SELECTION)
+            {
+                break;
+            }
+
+            const roomObject =
+                roomEngine.getRoomObjectByIndex(
+                    currentRoomSession.roomId,
+                    index,
+                    RoomObjectCategory.FLOOR
+                );
+
+            if(!roomObject) continue;
+
+            if(nextSet.has(roomObject.id))
+            {
+                continue;
+            }
+
+            if(!CanManipulateFurniture(
+                currentRoomSession,
+                roomObject.id,
+                RoomObjectCategory.FLOOR
+            ))
+            {
+                continue;
+            }
+
+            const bounds =
+                roomEngine
+                    .getRoomObjectBoundingRectangle(
+                        currentRoomSession.roomId,
+                        roomObject.id,
+                        RoomObjectCategory.FLOOR,
+                        1
+                    );
+
+            if(!bounds) continue;
+
+            const boundsRight =
+                bounds.x + bounds.width;
+
+            const boundsBottom =
+                bounds.y + bounds.height;
+
+            const intersects =
+                bounds.x <= maxX &&
+                boundsRight >= minX &&
+                bounds.y <= maxY &&
+                boundsBottom >= minY;
+
+            if(!intersects) continue;
+
+            next.push(roomObject.id);
+            nextSet.add(roomObject.id);
+            added++;
+        }
+
+        applySelection(next);
+
+        if(
+            next.length >= MAX_SELECTION &&
+            added > 0
+        )
+        {
+            setStatus(
+                `Area: ${ added } anadidos. Limite ${ MAX_SELECTION } alcanzado.`
+            );
+
+            return;
+        }
+
+        setStatus(
+            `Area: ${ added } anadidos. ${ next.length } seleccionados.`
+        );
+    }, [ applySelection ]);
+
+    useEffect(() =>
+    {
+        if(!active) return;
+        if(!areaMode) return;
+
+        const stopNativeEvent = (
+            event: globalThis.MouseEvent
+        ) =>
+        {
+            if(event.cancelable)
+            {
+                event.preventDefault();
+            }
+
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+        };
+
+        const onMouseDown = (
+            event: globalThis.MouseEvent
+        ) =>
+        {
+            if(!activeRef.current) return;
+            if(!areaModeRef.current) return;
+            if(pendingRef.current) return;
+            if(event.button !== 0) return;
+
+            if(
+                !(event.target instanceof
+                    HTMLCanvasElement)
+            )
+            {
+                return;
+            }
+
+            const canvas =
+                event.target;
+
+            const rect =
+                canvas.getBoundingClientRect();
+
+            if(
+                rect.width <= 0 ||
+                rect.height <= 0
+            )
+            {
+                return;
+            }
+
+            const scaleX =
+                canvas.width / rect.width;
+
+            const scaleY =
+                canvas.height / rect.height;
+
+            areaStartRef.current = {
+                canvas,
+                startClientX: event.clientX,
+                startClientY: event.clientY,
+                startCanvasX:
+                    (event.clientX - rect.left) *
+                    scaleX,
+                startCanvasY:
+                    (event.clientY - rect.top) *
+                    scaleY
+            };
+
+            setSelectionBox({
+                left: event.clientX,
+                top: event.clientY,
+                width: 0,
+                height: 0
+            });
+
+            stopNativeEvent(event);
+        };
+
+        const onMouseMove = (
+            event: globalThis.MouseEvent
+        ) =>
+        {
+            const start =
+                areaStartRef.current;
+
+            if(!start) return;
+
+            const left = Math.min(
+                start.startClientX,
+                event.clientX
+            );
+
+            const top = Math.min(
+                start.startClientY,
+                event.clientY
+            );
+
+            setSelectionBox({
+                left,
+                top,
+                width: Math.abs(
+                    event.clientX -
+                    start.startClientX
+                ),
+                height: Math.abs(
+                    event.clientY -
+                    start.startClientY
+                )
+            });
+
+            stopNativeEvent(event);
+        };
+
+        const onMouseUp = (
+            event: globalThis.MouseEvent
+        ) =>
+        {
+            const start =
+                areaStartRef.current;
+
+            if(!start) return;
+
+            areaStartRef.current = null;
+            setSelectionBox(null);
+
+            const dragWidth = Math.abs(
+                event.clientX -
+                start.startClientX
+            );
+
+            const dragHeight = Math.abs(
+                event.clientY -
+                start.startClientY
+            );
+
+            stopNativeEvent(event);
+
+            if(
+                dragWidth < 4 &&
+                dragHeight < 4
+            )
+            {
+                setStatus(
+                    'Arrastra para trazar un area de seleccion.'
+                );
+
+                return;
+            }
+
+            selectObjectsInArea(
+                start.canvas,
+                start.startCanvasX,
+                start.startCanvasY,
+                event.clientX,
+                event.clientY
+            );
+        };
+
+        const onClick = (
+            event: globalThis.MouseEvent
+        ) =>
+        {
+            if(!areaModeRef.current) return;
+
+            if(
+                !(event.target instanceof
+                    HTMLCanvasElement)
+            )
+            {
+                return;
+            }
+
+            stopNativeEvent(event);
+        };
+
+        window.addEventListener(
+            'mousedown',
+            onMouseDown,
+            true
+        );
+
+        window.addEventListener(
+            'mousemove',
+            onMouseMove,
+            true
+        );
+
+        window.addEventListener(
+            'mouseup',
+            onMouseUp,
+            true
+        );
+
+        window.addEventListener(
+            'click',
+            onClick,
+            true
+        );
+
+        return () =>
+        {
+            window.removeEventListener(
+                'mousedown',
+                onMouseDown,
+                true
+            );
+
+            window.removeEventListener(
+                'mousemove',
+                onMouseMove,
+                true
+            );
+
+            window.removeEventListener(
+                'mouseup',
+                onMouseUp,
+                true
+            );
+
+            window.removeEventListener(
+                'click',
+                onClick,
+                true
+            );
+
+            areaStartRef.current = null;
+            setSelectionBox(null);
+        };
+    }, [
+        active,
+        areaMode,
+        selectObjectsInArea
+    ]);
+
     useEffect(() =>
     {
         activeRef.current = false;
         pendingRef.current = false;
+        areaModeRef.current = false;
+        areaStartRef.current = null;
 
         SetBuilderProSelectionModeActive(false);
 
@@ -123,6 +562,8 @@ export const BuilderProView: FC<{}> = props =>
 
         setActive(false);
         setPending(false);
+        setAreaMode(false);
+        setSelectionBox(null);
         setStatus('');
     }, [ roomSession?.roomId, clearSelection ]);
 
@@ -140,6 +581,8 @@ export const BuilderProView: FC<{}> = props =>
         {
             activeRef.current = false;
             pendingRef.current = false;
+            areaModeRef.current = false;
+            areaStartRef.current = null;
 
             SetBuilderProSelectionModeActive(false);
 
@@ -355,6 +798,22 @@ export const BuilderProView: FC<{}> = props =>
                         { status }
                     </div>
 
+                    <div className="builder-pro-selection-tools">
+                        <button
+                            type="button"
+                            className={
+                                areaMode
+                                    ? 'is-selected'
+                                    : ''
+                            }
+                            disabled={ pending }
+                            onClick={ toggleAreaMode }>
+                            { areaMode
+                                ? 'Area: activa'
+                                : 'Seleccion por area' }
+                        </button>
+                    </div>
+
                     <div className="builder-pro-step">
                         <span>Paso</span>
 
@@ -442,6 +901,11 @@ export const BuilderProView: FC<{}> = props =>
                         Limpiar selecci?n
                     </button>
                 </div> }
+
+            { selectionBox &&
+                <div
+                    className="builder-pro-selection-box"
+                    style={ selectionBox } /> }
         </div>
     );
 }
