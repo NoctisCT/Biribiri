@@ -17,4 +17,7 @@ public final class BuilderProPackets
 
     public static final int PASTE_GROUP_REQUEST = 6306;
     public static final int PASTE_GROUP_RESULT = 6307;
+
+    public static final int HISTORY_REQUEST = 6308;
+    public static final int HISTORY_RESULT = 6309;
 }

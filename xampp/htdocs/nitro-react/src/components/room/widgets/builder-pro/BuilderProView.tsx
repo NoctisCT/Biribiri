@@ -1,4 +1,4 @@
-import { RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomObjectCategory, Vector3d, RoomObjectVariable} from '@nitrots/nitro-renderer';
+import { RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomObjectCategory, Vector3d, RoomObjectVariable} from '@nitrots/nitro-renderer';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { BuilderProSelectionVisualizer, CanManipulateFurniture, GetRoomEngine, GetSessionDataManager, SendMessageComposer, SetBuilderProSelectionModeActive } from '../../../../api';
 import { useMessageEvent, useRoom, useRoomEngineEvent } from '../../../../hooks';
@@ -54,6 +54,8 @@ export const BuilderProView: FC<{}> = props =>
     const [ status, setStatus ] = useState('');
     const [ pasteMode, setPasteMode ] = useState(false);
     const [ duplicateMode, setDuplicateMode ] = useState(false);
+    const [ canUndo, setCanUndo ] = useState(false);
+    const [ canRedo, setCanRedo ] = useState(false);
     const [ moveStep, setMoveStep ] = useState(1);
     const [ heightStep, setHeightStep ] = useState(0.1);
     const [ highlightSelection, setHighlightSelection ] =
@@ -742,7 +744,7 @@ export const BuilderProView: FC<{}> = props =>
                         360;
                 }
 
-                else
+                else if(operation !== TRANSFORM_HEIGHT)
                 {
                     return false;
                 }
@@ -1751,6 +1753,9 @@ export const BuilderProView: FC<{}> = props =>
                     pendingDragPreviewRef.current =
                         null;
                 }
+                setCanUndo(true);
+                setCanRedo(false);
+
                 setStatus(
                     `Movimiento completado: ${ parser.movedCount } furnis.`
                 );
@@ -1856,6 +1861,78 @@ export const BuilderProView: FC<{}> = props =>
         }
     );
 
+    useMessageEvent<BuilderProHistoryResultEvent>(
+        BuilderProHistoryResultEvent,
+        event =>
+        {
+            const parser =
+                event.getParser();
+
+            if(!parser) return;
+
+            const requestId =
+                parser.requestId;
+
+            if(
+                pendingRequestIdRef.current !==
+                requestId
+            )
+            {
+                return;
+            }
+
+            if(!pendingRef.current)
+            {
+                return;
+            }
+
+            if(pendingTimeoutRef.current !== null)
+            {
+                window.clearTimeout(
+                    pendingTimeoutRef.current
+                );
+
+                pendingTimeoutRef.current = null;
+            }
+
+            pendingRef.current = false;
+            pendingRequestIdRef.current = null;
+            pendingStartedAtRef.current = 0;
+
+            setPending(false);
+
+            setCanUndo(
+                parser.canUndo
+            );
+
+            setCanRedo(
+                parser.canRedo
+            );
+
+            if(parser.success)
+            {
+                setStatus(
+                    parser.message
+                );
+
+                window.requestAnimationFrame(
+                    () =>
+                    {
+                        BuilderProSelectionVisualizer.refresh(
+                            selectedIdsRef.current
+                        );
+                    }
+                );
+
+                return;
+            }
+
+            setStatus(
+                `Error ${ parser.code }: ${ parser.message }`
+            );
+        }
+    );
+
     useMessageEvent<BuilderProTransformGroupResultEvent>(
         BuilderProTransformGroupResultEvent,
         event =>
@@ -1912,6 +1989,9 @@ export const BuilderProView: FC<{}> = props =>
 
             if(parser.success)
             {
+                setCanUndo(true);
+                setCanRedo(false);
+
                 setStatus(
                     `Transformacion completada: ${ parser.affectedCount } furnis.`
                 );
@@ -2355,6 +2435,9 @@ export const BuilderProView: FC<{}> = props =>
                     pastedIds
                 );
 
+                setCanUndo(true);
+                setCanRedo(false);
+
                 setStatus(
                     duplicateModeRef.current
                         ? `Duplicados ${ parser.placedCount } furnis. Mueve el cursor para seguir duplicando.`
@@ -2564,6 +2647,132 @@ export const BuilderProView: FC<{}> = props =>
         },
         [ applyPreviewLocations ]
     );
+
+    const historyAction = useCallback((
+        action: number
+    ) =>
+    {
+        if(!activeRef.current) return;
+        if(pendingRef.current) return;
+
+        if(
+            action !== 1 &&
+            action !== 2
+        )
+        {
+            return;
+        }
+
+        duplicateRequestedRef.current = false;
+        duplicateModeRef.current = false;
+        setDuplicateMode(false);
+
+        clearPastePreview();
+
+        pasteModeRef.current = false;
+        setPasteMode(false);
+
+        heldArrowRef.current = null;
+
+        if(keyboardRepeatTimerRef.current !== null)
+        {
+            window.clearTimeout(
+                keyboardRepeatTimerRef.current
+            );
+
+            keyboardRepeatTimerRef.current = null;
+        }
+
+        requestIdRef.current++;
+
+        if(requestIdRef.current > 2000000000)
+        {
+            requestIdRef.current = 1;
+        }
+
+        const requestId =
+            requestIdRef.current;
+
+        pendingRef.current = true;
+        pendingRequestIdRef.current =
+            requestId;
+
+        pendingStartedAtRef.current =
+            performance.now();
+
+        setPending(true);
+
+        setStatus(
+            action === 1
+                ? 'Deshaciendo...'
+                : 'Rehaciendo...'
+        );
+
+        try
+        {
+            SendMessageComposer(
+                new BuilderProHistoryComposer(
+                    action,
+                    requestId
+                )
+            );
+
+            if(pendingTimeoutRef.current !== null)
+            {
+                window.clearTimeout(
+                    pendingTimeoutRef.current
+                );
+            }
+
+            pendingTimeoutRef.current =
+                window.setTimeout(
+                    () =>
+                    {
+                        pendingTimeoutRef.current =
+                            null;
+
+                        if(!pendingRef.current)
+                        {
+                            return;
+                        }
+
+                        pendingRef.current = false;
+                        pendingRequestIdRef.current =
+                            null;
+
+                        pendingStartedAtRef.current =
+                            0;
+
+                        setPending(false);
+
+                        setStatus(
+                            'Undo/Redo sin confirmacion del servidor.'
+                        );
+                    },
+                    MOVE_CONFIRM_TIMEOUT_MS
+                );
+        }
+        catch(error)
+        {
+            console.error(
+                `[BuilderProTrace] CLIENT HISTORY_SEND_ERROR #${ requestId }`,
+                error
+            );
+
+            pendingRef.current = false;
+            pendingRequestIdRef.current =
+                null;
+
+            pendingStartedAtRef.current =
+                0;
+
+            setPending(false);
+
+            setStatus(
+                'No se pudo enviar Undo/Redo al servidor.'
+            );
+        }
+    }, [ clearPastePreview ]);
 
     const copyGroup = useCallback(() =>
     {
@@ -3667,6 +3876,32 @@ export const BuilderProView: FC<{}> = props =>
                                 () => moveGroup(0, moveStep)
                             }>
                             Y +
+                        </button>
+                    </div>
+
+                    <div className="builder-pro-actions">
+                        <button
+                            type="button"
+                            disabled={
+                                pending ||
+                                !canUndo
+                            }
+                            onClick={
+                                () => historyAction(1)
+                            }>
+                            Deshacer
+                        </button>
+
+                        <button
+                            type="button"
+                            disabled={
+                                pending ||
+                                !canRedo
+                            }
+                            onClick={
+                                () => historyAction(2)
+                            }>
+                            Rehacer
                         </button>
                     </div>
 

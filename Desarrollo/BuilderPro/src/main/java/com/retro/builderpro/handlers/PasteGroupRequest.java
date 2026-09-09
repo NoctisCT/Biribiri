@@ -2,6 +2,7 @@ package com.retro.builderpro.handlers;
 
 import com.eu.habbo.messages.ServerMessage;
 import com.eu.habbo.messages.incoming.MessageHandler;
+import com.retro.builderpro.BuilderProHistoryService;
 import com.retro.builderpro.BuilderProPackets;
 import com.retro.builderpro.PasteGroupService;
 
@@ -39,6 +40,32 @@ public class PasteGroupRequest
                         anchorY,
                         requestId
                 );
+
+        if(result.success)
+        {
+            java.util.List<BuilderProHistoryService.ItemState> placedStates =
+                    BuilderProHistoryService.capture(
+                            this.client.getHabbo(),
+                            result.itemIds
+                    );
+
+            if(placedStates != null
+                    && placedStates.size()
+                    == result.itemIds.size())
+            {
+                BuilderProHistoryService.recordPlacement(
+                        this.client.getHabbo(),
+                        placedStates,
+                        "Pegado"
+                );
+            }
+            else
+            {
+                BuilderProHistoryService.invalidate(
+                        this.client.getHabbo()
+                );
+            }
+        }
 
         sendResult(
                 requestId,

@@ -13,6 +13,7 @@ import com.retro.builderpro.handlers.CopyGroupRequest;
 import com.retro.builderpro.handlers.PasteGroupRequest;
 import com.retro.builderpro.handlers.MoveGroupRequest;
 import com.retro.builderpro.handlers.TransformGroupRequest;
+import com.retro.builderpro.handlers.HistoryRequest;
 
 public class BuilderProPlugin
         extends HabboPlugin
@@ -56,6 +57,13 @@ public class BuilderProPlugin
                 .registerHandler(
                         BuilderProPackets.PASTE_GROUP_REQUEST,
                         PasteGroupRequest.class
+                );
+
+        Emulator.getGameServer()
+                .getPacketManager()
+                .registerHandler(
+                        BuilderProPackets.HISTORY_REQUEST,
+                        HistoryRequest.class
                 );
 
         System.out.println(
@@ -153,6 +161,7 @@ public class BuilderProPlugin
     public void onDisable()
     {
         CopyGroupService.clearAll();
+        BuilderProHistoryService.clearAll();
         BuilderProContext.clear();
     }
 

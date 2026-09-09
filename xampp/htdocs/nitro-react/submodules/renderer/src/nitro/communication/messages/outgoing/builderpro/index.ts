@@ -2,3 +2,4 @@ export * from './BuilderProCopyGroupComposer';
 export * from './BuilderProMoveGroupComposer';
 export * from './BuilderProTransformGroupComposer';
 export * from './BuilderProPasteGroupComposer';
+export * from './BuilderProHistoryComposer';

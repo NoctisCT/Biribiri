@@ -2,6 +2,7 @@ package com.retro.builderpro.handlers;
 
 import com.eu.habbo.messages.ServerMessage;
 import com.eu.habbo.messages.incoming.MessageHandler;
+import com.retro.builderpro.BuilderProHistoryService;
 import com.retro.builderpro.BuilderProPackets;
 import com.retro.builderpro.GroupTransformService;
 
@@ -144,6 +145,12 @@ public class TransformGroupRequest
             return;
         }
 
+        List<BuilderProHistoryService.ItemState> historyBefore =
+                BuilderProHistoryService.capture(
+                        this.client.getHabbo(),
+                        itemIds
+                );
+
         GroupTransformService.Result result =
                 GroupTransformService.transform(
                         this.client.getHabbo(),
@@ -153,6 +160,26 @@ public class TransformGroupRequest
                         targetRotations,
                         requestId
                 );
+
+        if(result.success
+                && historyBefore != null)
+        {
+            List<BuilderProHistoryService.ItemState> historyAfter =
+                    BuilderProHistoryService.capture(
+                            this.client.getHabbo(),
+                            itemIds
+                    );
+
+            if(historyAfter != null)
+            {
+                BuilderProHistoryService.record(
+                        this.client.getHabbo(),
+                        historyBefore,
+                        historyAfter,
+                        "Transformacion"
+                );
+            }
+        }
 
         System.out.println(
                 "[BuilderProTrace] SERVER TRANSFORM_RESULT #"

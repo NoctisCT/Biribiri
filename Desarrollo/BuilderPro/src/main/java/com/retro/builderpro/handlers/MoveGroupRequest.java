@@ -2,6 +2,7 @@ package com.retro.builderpro.handlers;
 
 import com.eu.habbo.messages.ServerMessage;
 import com.eu.habbo.messages.incoming.MessageHandler;
+import com.retro.builderpro.BuilderProHistoryService;
 import com.retro.builderpro.BuilderProPackets;
 import com.retro.builderpro.GroupMoveService;
 
@@ -80,6 +81,12 @@ public class MoveGroupRequest
                         .readInt()
                         .intValue();
 
+        List<BuilderProHistoryService.ItemState> historyBefore =
+                BuilderProHistoryService.capture(
+                        this.client.getHabbo(),
+                        itemIds
+                );
+
         GroupMoveService.Result result =
                 GroupMoveService.move(
                         this.client.getHabbo(),
@@ -88,6 +95,26 @@ public class MoveGroupRequest
                         deltaY,
                         requestId
                 );
+
+        if(result.success
+                && historyBefore != null)
+        {
+            List<BuilderProHistoryService.ItemState> historyAfter =
+                    BuilderProHistoryService.capture(
+                            this.client.getHabbo(),
+                            itemIds
+                    );
+
+            if(historyAfter != null)
+            {
+                BuilderProHistoryService.record(
+                        this.client.getHabbo(),
+                        historyBefore,
+                        historyAfter,
+                        "Movimiento"
+                );
+            }
+        }
 
         long totalMs =
                 (System.nanoTime()

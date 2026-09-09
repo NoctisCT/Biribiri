@@ -28,11 +28,11 @@ import { GetReactionProfileComposer, SaveReactionDisplayModeComposer, SaveReacti
 import { AvatarReactionComposer } from './messages/outgoing/reactions';
 import { EstadoBloqueoInventarioEvent, ResultadoConfigurarPatronEvent, ResultadoPatronInventarioEvent } from './messages/incoming/inventorylock';
 import { HoloGridWalkabilityEvent } from './messages/incoming/hologrid';
-import { BuilderProCopyGroupResultEvent, BuilderProPasteGroupResultEvent, BuilderProMoveGroupResultEvent, BuilderProTransformGroupResultEvent } from './messages/incoming/builderpro';
+import { BuilderProCopyGroupResultEvent, BuilderProPasteGroupResultEvent, BuilderProMoveGroupResultEvent, BuilderProTransformGroupResultEvent, BuilderProHistoryResultEvent } from './messages/incoming/builderpro';
 import { RpgEngineResultEvent } from './messages/incoming/rpgengine';
 import { CerrarSesionInventarioComposer, ConfigurarPatronInventarioComposer, ConsultarBloqueoInventarioComposer, VerificarPatronInventarioComposer } from './messages/outgoing/inventorylock';
 import { GetHoloGridWalkabilityComposer } from './messages/outgoing/hologrid';
-import { BuilderProCopyGroupComposer, BuilderProPasteGroupComposer, BuilderProMoveGroupComposer, BuilderProTransformGroupComposer } from './messages/outgoing/builderpro';
+import { BuilderProCopyGroupComposer, BuilderProPasteGroupComposer, BuilderProMoveGroupComposer, BuilderProTransformGroupComposer, BuilderProHistoryComposer } from './messages/outgoing/builderpro';
 import { RpgEngineCommandComposer } from './messages/outgoing/rpgengine';
 import { ObtenerRecordsSubastasComposer } from './messages/outgoing/subastas';
 import { RecordsSubastasEvent } from './messages/incoming/subastas';
@@ -126,6 +126,7 @@ export class NitroMessages implements IMessageConfiguration {
         this._events.set(IncomingHeader.BUILDER_PRO_TRANSFORM_GROUP_RESULT, BuilderProTransformGroupResultEvent);
         this._events.set(IncomingHeader.BUILDER_PRO_COPY_GROUP_RESULT, BuilderProCopyGroupResultEvent);
         this._events.set(IncomingHeader.BUILDER_PRO_PASTE_GROUP_RESULT, BuilderProPasteGroupResultEvent);
+        this._events.set(IncomingHeader.BUILDER_PRO_HISTORY_RESULT, BuilderProHistoryResultEvent);
         this._events.set(IncomingHeader.RPG_ENGINE_RESULT, RpgEngineResultEvent);
         this._events.set(IncomingHeader.ROOM_AD_ERROR, RoomAdErrorEvent);
 
@@ -739,6 +740,7 @@ export class NitroMessages implements IMessageConfiguration {
         this._composers.set(OutgoingHeader.BUILDER_PRO_TRANSFORM_GROUP, BuilderProTransformGroupComposer);
         this._composers.set(OutgoingHeader.BUILDER_PRO_COPY_GROUP, BuilderProCopyGroupComposer);
         this._composers.set(OutgoingHeader.BUILDER_PRO_PASTE_GROUP, BuilderProPasteGroupComposer);
+        this._composers.set(OutgoingHeader.BUILDER_PRO_HISTORY, BuilderProHistoryComposer);
         this._composers.set(OutgoingHeader.RPG_ENGINE_COMMAND, RpgEngineCommandComposer);
 
         // SUBASTAS
