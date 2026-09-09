@@ -257,6 +257,119 @@ public final class BaseDatosRpgEngine
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 
 
+        String projectRequests =
+                "CREATE TABLE IF NOT EXISTS rpg_engine_project_requests (" +
+                "id BIGINT NOT NULL AUTO_INCREMENT," +
+                "user_id INT NOT NULL," +
+                "requested_name VARCHAR(80) NOT NULL," +
+                "reason VARCHAR(500) NOT NULL DEFAULT ''," +
+                "status VARCHAR(16) NOT NULL DEFAULT 'pending'," +
+                "reviewed_by_user_id INT NULL," +
+                "requested_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP," +
+                "reviewed_at TIMESTAMP NULL," +
+                "consumed_at TIMESTAMP NULL," +
+                "PRIMARY KEY (id)," +
+                "KEY idx_rpg_engine_project_requests_user (user_id, status)," +
+                "KEY idx_rpg_engine_project_requests_status (status, requested_at)" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
+
+        String sheetSections =
+                "CREATE TABLE IF NOT EXISTS rpg_engine_sheet_sections (" +
+                "id INT NOT NULL AUTO_INCREMENT," +
+                "rpg_id INT NOT NULL," +
+                "title VARCHAR(80) NOT NULL," +
+                "sort_order INT NOT NULL DEFAULT 1," +
+                "enabled TINYINT(1) NOT NULL DEFAULT 1," +
+                "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP," +
+                "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP," +
+                "PRIMARY KEY (id)," +
+                "KEY idx_rpg_engine_sheet_sections_rpg (rpg_id, enabled, sort_order)" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
+        String sheetFields =
+                "CREATE TABLE IF NOT EXISTS rpg_engine_sheet_fields (" +
+                "id INT NOT NULL AUTO_INCREMENT," +
+                "rpg_id INT NOT NULL," +
+                "section_id INT NOT NULL," +
+                "label VARCHAR(80) NOT NULL," +
+                "field_type VARCHAR(24) NOT NULL," +
+                "required TINYINT(1) NOT NULL DEFAULT 0," +
+                "visibility VARCHAR(16) NOT NULL DEFAULT 'public'," +
+                "control_mode VARCHAR(16) NOT NULL DEFAULT 'player'," +
+                "sort_order INT NOT NULL DEFAULT 1," +
+                "options_text TEXT NULL," +
+                "enabled TINYINT(1) NOT NULL DEFAULT 1," +
+                "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP," +
+                "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP," +
+                "PRIMARY KEY (id)," +
+                "KEY idx_rpg_engine_sheet_fields_section (section_id, enabled, sort_order)," +
+                "KEY idx_rpg_engine_sheet_fields_rpg (rpg_id, enabled)" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+        String characters =
+                "CREATE TABLE IF NOT EXISTS rpg_engine_characters (" +
+                "id INT NOT NULL AUTO_INCREMENT," +
+                "rpg_id INT NOT NULL," +
+                "user_id INT NOT NULL," +
+                "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP," +
+                "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP," +
+                "PRIMARY KEY (id)," +
+                "UNIQUE KEY uq_rpg_engine_character (rpg_id, user_id)," +
+                "KEY idx_rpg_engine_characters_rpg (rpg_id)," +
+                "KEY idx_rpg_engine_characters_user (user_id)" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
+        String characterFieldValues =
+                "CREATE TABLE IF NOT EXISTS rpg_engine_character_field_values (" +
+                "character_id INT NOT NULL," +
+                "field_id INT NOT NULL," +
+                "value_text MEDIUMTEXT NULL," +
+                "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP," +
+                "PRIMARY KEY (character_id, field_id)," +
+                "KEY idx_rpg_engine_character_values_field (field_id)" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+        String projectGuilds =
+                "CREATE TABLE IF NOT EXISTS rpg_engine_project_guilds (" +
+                "rpg_id INT NOT NULL," +
+                "guild_id INT NOT NULL," +
+                "linked_by_user_id INT NOT NULL," +
+                "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP," +
+                "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP," +
+                "PRIMARY KEY (rpg_id)," +
+                "UNIQUE KEY uq_rpg_engine_project_guild (guild_id)" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+        String characterSheetDesigns =
+                "CREATE TABLE IF NOT EXISTS rpg_engine_character_sheet_designs (" +
+                "character_id INT NOT NULL," +
+                "background_color CHAR(7) NOT NULL DEFAULT '#1f1f26'," +
+                "background_image_url VARCHAR(1000) NULL," +
+                "primary_color CHAR(7) NOT NULL DEFAULT '#6f5bd3'," +
+                "secondary_color CHAR(7) NOT NULL DEFAULT '#292633'," +
+                "text_color CHAR(7) NOT NULL DEFAULT '#f5f5f5'," +
+                "panel_color CHAR(7) NOT NULL DEFAULT '#17171d'," +
+                "panel_opacity TINYINT NOT NULL DEFAULT 90," +
+                "banner_image_url VARCHAR(1000) NULL," +
+                "banner_height SMALLINT NOT NULL DEFAULT 180," +
+                "content_width SMALLINT NOT NULL DEFAULT 760," +
+                "border_radius TINYINT NOT NULL DEFAULT 8," +
+                "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP," +
+                "PRIMARY KEY (character_id)" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
+        String characterSheetBlocks =
+                "CREATE TABLE IF NOT EXISTS rpg_engine_character_sheet_blocks (" +
+                "character_id INT NOT NULL," +
+                "block_type VARCHAR(16) NOT NULL," +
+                "source_id INT NOT NULL," +
+                "sort_order INT NOT NULL," +
+                "width_span TINYINT NOT NULL DEFAULT 12," +
+                "alignment VARCHAR(16) NOT NULL DEFAULT 'left'," +
+                "image_width_pct TINYINT NOT NULL DEFAULT 100," +
+                "image_max_height SMALLINT NOT NULL DEFAULT 300," +
+                "label_visible TINYINT(1) NOT NULL DEFAULT 1," +
+                "PRIMARY KEY (character_id, block_type, source_id)," +
+                "KEY idx_rpg_engine_sheet_blocks_order (character_id, sort_order)" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
         String encounterConfig =
                 "CREATE TABLE IF NOT EXISTS rpg_engine_encounter_config (" +
                 "rpg_id INT NOT NULL," +
@@ -316,6 +429,22 @@ public final class BaseDatosRpgEngine
             statement.executeUpdate(stats);
             statement.executeUpdate(playerStats);
             statement.executeUpdate(modifiers);
+            statement.executeUpdate(projectRequests);
+            statement.executeUpdate(sheetSections);
+            statement.executeUpdate(sheetFields);
+            statement.executeUpdate(characters);
+            statement.executeUpdate(characterFieldValues);
+            statement.executeUpdate(projectGuilds);
+            statement.executeUpdate(characterSheetDesigns);
+            statement.executeUpdate(characterSheetBlocks);
+
+            if(!columnExists(connection, "rpg_engine_character_sheet_designs", "advanced_json"))
+            {
+                statement.executeUpdate(
+                        "ALTER TABLE rpg_engine_character_sheet_designs " +
+                        "ADD COLUMN advanced_json MEDIUMTEXT NULL AFTER border_radius"
+                );
+            }
             statement.executeUpdate(encounterConfig);
             statement.executeUpdate(encounters);
             statement.executeUpdate(encounterParticipants);

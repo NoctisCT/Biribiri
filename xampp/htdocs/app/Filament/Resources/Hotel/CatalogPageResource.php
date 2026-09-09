@@ -23,6 +23,9 @@ class CatalogPageResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     protected static ?string $navigationGroup = 'Hotel';
+    protected static ?string $pluralModelLabel = 'páginas del catálogo';
+    protected static ?string $modelLabel = 'página del catálogo';
+    protected static ?string $navigationLabel = 'Páginas del catálogo';
 
     public static string $translateIdentifier = 'catalog-pages';
 

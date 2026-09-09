@@ -1,3 +1,13 @@
+import { SpaceInvadersView } from '../space-invaders/SpaceInvadersView';
+import { DuckHuntView } from '../duck-hunt/DuckHuntView';
+import { BlockDropView } from '../block-drop/BlockDropView';
+import { PacManView } from '../pac-man/PacManView';
+import { LiftShiftView } from '../lift-shift/LiftShiftView';
+import { SnakeView } from '../snake/SnakeView';
+import { RooftopRescueView } from '../rooftop-rescue/RooftopRescueView';
+import { ArkanoidView } from '../arkanoid/ArkanoidView';
+import { PinballView } from '../pinball/PinballView';
+import { AsteroidsView } from '../asteroids/AsteroidsView';
 import { HabboWebTools, ILinkEventTracker, RoomSessionEvent } from '@nitrots/nitro-renderer';
 import { FC, useEffect, useState } from 'react';
 import { AddEventLinkTracker, GetCommunication, RemoveLinkEventTracker } from '../../api';
@@ -6,6 +16,7 @@ import { useRoomSessionManagerEvent } from '../../hooks';
 import { AchievementsView } from '../achievements/AchievementsView';
 import { SubastasView } from '../subastas/SubastasView';
 import { SlotMachineView } from '../tragaperras/SlotMachineView';
+import { AirHockeyView } from '../air-hockey/AirHockeyView';
 import { AvatarEditorView } from '../avatar-editor/AvatarEditorView';
 import { CameraWidgetView } from '../camera/CameraWidgetView';
 import { CampaignView } from '../campaign/CampaignView';
@@ -108,6 +119,17 @@ export const MainView: FC<{}> = props => {
             <AchievementsView />
  <SubastasView />
             <SlotMachineView />
+            <AirHockeyView />
+            <SpaceInvadersView />
+            <DuckHuntView />
+            <BlockDropView />
+            <PacManView />
+            <LiftShiftView />
+            <SnakeView />
+            <RooftopRescueView />
+            <ArkanoidView />
+            <PinballView />
+            <AsteroidsView />
             <NavigatorView />
             <NitrobubbleHiddenView />
             <InventoryView />

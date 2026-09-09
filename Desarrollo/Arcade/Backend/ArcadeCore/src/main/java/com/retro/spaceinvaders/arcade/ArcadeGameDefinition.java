@@ -3,6 +3,12 @@ package com.retro.spaceinvaders.arcade;
 import com.eu.habbo.habbohotel.users.HabboItem;
 import com.retro.spaceinvaders.InteractionBlockDrop;
 import com.retro.spaceinvaders.InteractionPacMan;
+import com.retro.spaceinvaders.InteractionLiftShift;
+import com.retro.spaceinvaders.InteractionSnake;
+import com.retro.spaceinvaders.InteractionRooftopRescue;
+import com.retro.spaceinvaders.InteractionArkanoid;
+import com.retro.spaceinvaders.InteractionPinball;
+import com.retro.spaceinvaders.InteractionAsteroids;
 import com.retro.spaceinvaders.InteractionDuckHunt;
 import com.retro.spaceinvaders.InteractionSpaceInvaders;
 import com.retro.spaceinvaders.SpaceInvadersPlugin;
@@ -67,6 +73,97 @@ public enum ArcadeGameDefinition
             100,
             250,
             12000
+    ),
+
+    SNAKE(
+            "snake",
+            InteractionSnake.class,
+            SpaceInvadersPlugin.PACKET_SNAKE_OPEN,
+            0,
+            500,
+            500,
+            400,
+            100,
+            100,
+            100,
+            250,
+            1500
+    ),
+
+    LIFT_SHIFT(
+            "room_rush",
+            InteractionLiftShift.class,
+            SpaceInvadersPlugin.PACKET_LIFT_SHIFT_OPEN,
+            0,
+            0,
+            5000000,
+            5000000,
+            99,
+            1,
+            5000,
+            100,
+            1000
+
+    ),
+
+    ROOFTOP_RESCUE(
+            "rooftop_rescue",
+            InteractionRooftopRescue.class,
+            SpaceInvadersPlugin.PACKET_ROOFTOP_RESCUE_OPEN,
+            0,
+            600,
+            20000,
+            20000,
+            50,
+            10,
+            50,
+            20,
+            2500
+    ),
+
+    ARKANOID(
+            "arkanoid",
+            InteractionArkanoid.class,
+            SpaceInvadersPlugin.PACKET_ARKANOID_OPEN,
+            0,
+            600,
+            20000,
+            20000,
+            50,
+            10,
+            50,
+            20,
+            2500
+    ),
+
+    PINBALL(
+            "pinball",
+            InteractionPinball.class,
+            SpaceInvadersPlugin.PACKET_PINBALL_OPEN,
+            2,
+            600,
+            20000,
+            20000,
+            50,
+            10,
+            50,
+            20,
+            2500
+    ),
+
+    ASTEROIDS(
+            "asteroids",
+            InteractionAsteroids.class,
+            SpaceInvadersPlugin.PACKET_ASTEROIDS_OPEN,
+            0,
+            1500,
+            12000,
+            20000,
+            50,
+            10,
+            100,
+            70,
+            2200
     );
 
     private final String key;

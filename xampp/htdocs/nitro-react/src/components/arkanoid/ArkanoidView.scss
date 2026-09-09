@@ -1,0 +1,1399 @@
+/* BIRIBIRI_ARKANOID_VISUAL_V2 */
+
+.nitro-arkanoid {
+    .arkanoid-content {
+        padding: 6px;
+        background: #c9c1a8;
+    }
+
+    .arkanoid-shell {
+        position: relative;
+        width: 100%;
+        padding: 10px;
+        overflow: hidden;
+        border: 2px solid #18324a;
+        border-radius: 4px;
+        background:
+            linear-gradient(
+                to bottom,
+                #f1d154 0,
+                #d4ad35 8px,
+                #1c5e8b 9px,
+                #174b73 48%,
+                #0e324f 100%
+            );
+        box-shadow:
+            inset 1px 1px 0 rgba(255, 255, 255, .34),
+            inset -1px -1px 0 rgba(0, 0, 0, .58),
+            inset 0 0 22px rgba(63, 153, 209, .16);
+    }
+
+    .arkanoid-cabinet-screw {
+        position: absolute;
+        z-index: 8;
+        width: 5px;
+        height: 5px;
+        border: 1px solid #756128;
+        background: #dfcf83;
+        box-shadow:
+            inset 1px 1px 0 rgba(255, 255, 255, .72),
+            inset -1px -1px 0 rgba(36, 39, 28, .42);
+
+        &.is-top-left {
+            top: 5px;
+            left: 5px;
+        }
+
+        &.is-top-right {
+            top: 5px;
+            right: 5px;
+        }
+
+        &.is-bottom-left {
+            bottom: 5px;
+            left: 5px;
+        }
+
+        &.is-bottom-right {
+            right: 5px;
+            bottom: 5px;
+        }
+    }
+
+    .arkanoid-hud {
+        display: grid;
+        grid-template-columns: 1.25fr .65fr 1fr .72fr 1fr;
+        min-height: 76px;
+        overflow: hidden;
+        border: 2px solid #071524;
+        border-radius: 4px;
+        background: #091a2c;
+        box-shadow:
+            inset 0 0 0 1px #3b6688,
+            inset 0 0 18px rgba(0, 0, 0, .76),
+            0 1px 0 rgba(255, 226, 111, .15);
+    }
+
+    .arkanoid-hud-cell {
+        position: relative;
+        display: flex;
+        min-width: 0;
+        padding: 8px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border-right: 1px solid #31526d;
+        background:
+            linear-gradient(
+                to bottom,
+                rgba(35, 71, 101, .90),
+                rgba(11, 31, 51, .96)
+            );
+        text-align: center;
+
+        &:last-child {
+            border-right: 0;
+        }
+    }
+
+    .arkanoid-hud-label {
+        color: #a9becd;
+        font-family: monospace;
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: 1.15px;
+        line-height: 11px;
+        text-shadow: 1px 1px 0 #000;
+    }
+
+    .arkanoid-score-value,
+    .arkanoid-level-value,
+    .arkanoid-blocks-value,
+    .arkanoid-lives-value {
+        display: block;
+        margin-top: 3px;
+        font-family: monospace;
+        font-weight: 900;
+        line-height: 1;
+        text-shadow:
+            1px 1px 0 #000,
+            0 0 7px currentColor;
+    }
+
+    .arkanoid-score-value {
+        color: #ffe16a;
+        font-size: 26px;
+        letter-spacing: 2px;
+    }
+
+    .arkanoid-level-value {
+        color: #78d9ff;
+        font-size: 25px;
+    }
+
+    .arkanoid-blocks-value {
+        color: #8ce69b;
+        font-size: 22px;
+    }
+
+    .arkanoid-lives-value {
+        color: #ffe16a;
+        font-size: 22px;
+    }
+
+    .arkanoid-hud-cell.is-status {
+        gap: 5px;
+        color: #8eddf0;
+        font-family: monospace;
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: .7px;
+        text-shadow: 1px 1px 0 #000;
+
+        &.is-ready {
+            background:
+                linear-gradient(
+                    to bottom,
+                    rgba(35, 71, 101, .90),
+                    rgba(11, 31, 51, .96)
+                );
+        }
+
+        &.is-playing {
+            color: #91e58d;
+            background:
+                linear-gradient(
+                    to bottom,
+                    rgba(43, 91, 55, .80),
+                    rgba(15, 43, 25, .95)
+                );
+        }
+
+        &.is-paused {
+            color: #f2d66c;
+            background:
+                linear-gradient(
+                    to bottom,
+                    rgba(104, 82, 33, .84),
+                    rgba(42, 31, 11, .95)
+                );
+        }
+
+        &.is-gameover {
+            color: #f47d71;
+            background:
+                linear-gradient(
+                    to bottom,
+                    rgba(104, 48, 42, .84),
+                    rgba(43, 18, 15, .96)
+                );
+        }
+    }
+
+    .arkanoid-status-icon {
+        position: relative;
+        display: block;
+        width: 30px;
+        height: 22px;
+        filter: drop-shadow(1px 1px 0 #000);
+        image-rendering: pixelated;
+
+        i {
+            position: absolute;
+            display: block;
+        }
+
+        .ball {
+            top: 2px;
+            left: 18px;
+            width: 7px;
+            height: 7px;
+            background: #f8fbff;
+            box-shadow:
+                -1px 0 0 #71d5ff,
+                0 1px 0 #397ea4;
+        }
+
+        .trail {
+            top: 9px;
+            left: 13px;
+            width: 8px;
+            height: 2px;
+            background: #71d5ff;
+            transform: rotate(-35deg);
+        }
+
+        .paddle {
+            right: 3px;
+            bottom: 2px;
+            left: 3px;
+            height: 5px;
+            background: #ffe169;
+            box-shadow:
+                inset 0 1px 0 #fff2a1,
+                inset 0 -1px 0 #8f5e1b;
+        }
+    }
+
+    .arkanoid-stage {
+        position: relative;
+        margin-top: 8px;
+        overflow: hidden;
+        border: 2px solid #07131f;
+        border-radius: 4px;
+        background: #06182e;
+        box-shadow:
+            0 0 0 1px #4a7190,
+            inset 0 0 22px rgba(0, 0, 0, .28),
+            0 0 10px rgba(45, 130, 190, .10);
+
+        &::after {
+            position: absolute;
+            z-index: 3;
+            inset: 0;
+            pointer-events: none;
+            background:
+                repeating-linear-gradient(
+                    to bottom,
+                    rgba(255, 255, 255, .010) 0,
+                    rgba(255, 255, 255, .010) 1px,
+                    rgba(0, 0, 0, .026) 2px,
+                    rgba(0, 0, 0, .026) 3px
+                );
+            content: '';
+        }
+    }
+
+    .arkanoid-canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        outline: none;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+        touch-action: none;
+    }
+
+    .arkanoid-game-overlay {
+        position: absolute;
+        z-index: 5;
+        display: flex;
+        inset: 0;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background:
+            radial-gradient(
+                circle at center,
+                rgba(25, 65, 99, .45),
+                rgba(4, 14, 27, .84)
+            );
+
+        &.is-pause {
+            background: rgba(5, 17, 30, .78);
+        }
+
+        &.is-gameover {
+            background:
+                radial-gradient(
+                    circle at center,
+                    rgba(85, 44, 35, .32),
+                    rgba(4, 13, 25, .90)
+                );
+        }
+    }
+
+    .arkanoid-overlay-panel {
+        display: flex;
+        width: 375px;
+        max-width: 92%;
+        padding: 18px 22px 17px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid #163d5c;
+        border-radius: 4px;
+        background:
+            linear-gradient(
+                to bottom,
+                #245a81,
+                #153c5e 58%,
+                #0d2944
+            );
+        box-shadow:
+            inset 0 0 0 1px #5d86a3,
+            inset 0 0 18px rgba(0, 0, 0, .52),
+            0 5px 18px rgba(0, 0, 0, .46);
+        text-align: center;
+
+        &.is-compact {
+            width: 285px;
+        }
+    }
+
+    .arkanoid-overlay-kicker {
+        color: #ffe16a;
+        font-family: monospace;
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: 2px;
+        line-height: 11px;
+        text-shadow: 1px 1px 0 #000;
+    }
+
+    .arkanoid-overlay-title {
+        margin-top: 4px;
+        color: #f1f9ff;
+        font-family: monospace;
+        font-size: 25px;
+        font-weight: 900;
+        letter-spacing: 1px;
+        line-height: 30px;
+        text-shadow:
+            2px 2px 0 #071b2e,
+            0 0 7px rgba(115, 209, 255, .15);
+    }
+
+    .arkanoid-overlay-copy {
+        max-width: 315px;
+        margin-top: 7px;
+        color: #d0dfeb;
+        font-size: 11px;
+        line-height: 15px;
+    }
+
+    .arkanoid-overlay-hint {
+        margin-top: 8px;
+        color: #90a9bb;
+        font-size: 9px;
+        line-height: 11px;
+    }
+
+    .arkanoid-primary-button {
+        min-width: 164px;
+        height: 39px;
+        margin-top: 14px;
+        padding: 0 18px;
+        border: 2px solid #78581d;
+        border-radius: 3px;
+        background:
+            linear-gradient(
+                to bottom,
+                #ffe477 0%,
+                #d9a83a 52%,
+                #986522 100%
+            );
+        color: #182a3c;
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: .6px;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, .48);
+        box-shadow:
+            inset 1px 1px 0 rgba(255, 255, 255, .62),
+            inset -1px -1px 0 rgba(0, 0, 0, .32),
+            0 2px 0 #0d1720;
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            background:
+                linear-gradient(
+                    to bottom,
+                    #ffec91,
+                    #e9bb50 52%,
+                    #ad792d
+                );
+        }
+
+        &:active:not(:disabled) {
+            padding-top: 2px;
+            box-shadow:
+                inset 1px 1px 0 rgba(0, 0, 0, .33),
+                inset -1px -1px 0 rgba(255, 255, 255, .23);
+        }
+
+        &:disabled {
+            opacity: .62;
+            cursor: default;
+        }
+    }
+
+    .arkanoid-gameover-results {
+        display: grid;
+        width: 100%;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        margin-top: 12px;
+
+        span {
+            display: flex;
+            min-height: 48px;
+            padding: 5px;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #355b77;
+            background: #0b2237;
+            color: #a9bfce;
+            font-family: monospace;
+            font-size: 8px;
+            font-weight: 900;
+            letter-spacing: .8px;
+            box-shadow:
+                inset 1px 1px 0 rgba(255, 255, 255, .06),
+                inset -1px -1px 0 rgba(0, 0, 0, .45);
+        }
+
+        b {
+            margin-top: 2px;
+            color: #ffe06a;
+            font-size: 16px;
+            line-height: 18px;
+        }
+    }
+
+    .arkanoid-new-record {
+        margin-top: 9px;
+        padding: 5px 8px;
+        border: 1px solid #a6812d;
+        background: rgba(89, 65, 15, .72);
+        color: #ffe77f;
+        font-family: monospace;
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: .5px;
+        text-shadow: 1px 1px 0 #392705;
+    }
+
+    .arkanoid-result-message {
+        display: block;
+        width: 100%;
+        margin-top: 8px;
+        padding: 5px 7px;
+        border: 1px solid #3b6683;
+        background: rgba(9, 30, 47, .78);
+        color: #c9dae5;
+        font-size: 9px;
+        line-height: 12px;
+
+        &.is-success {
+            border-color: #477651;
+            color: #a6e3ac;
+        }
+
+        &.is-error {
+            border-color: #7d4241;
+            color: #ef9991;
+        }
+    }
+
+    .arkanoid-console {
+        display: flex;
+        min-height: 68px;
+        margin-top: 8px;
+        overflow: hidden;
+        border: 2px solid #0b1d2c;
+        border-radius: 4px;
+        background:
+            linear-gradient(
+                to bottom,
+                #2b6388,
+                #184261 55%,
+                #12354e
+            );
+        box-shadow:
+            inset 1px 1px 0 rgba(255, 255, 255, .16),
+            inset -1px -1px 0 rgba(0, 0, 0, .42);
+    }
+
+    .arkanoid-controls-panel {
+        display: flex;
+        min-width: 0;
+        flex: 1;
+        align-items: center;
+        padding: 9px 12px;
+        gap: 12px;
+    }
+
+    .arkanoid-control-group {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .arkanoid-keycap {
+        display: inline-flex;
+        min-width: 30px;
+        height: 28px;
+        padding: 0 7px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #1b4d70;
+        border-radius: 3px;
+        background:
+            linear-gradient(
+                to bottom,
+                #6ab5dc,
+                #3d82ac 58%,
+                #2a638c
+            );
+        color: #f3fbff;
+        font-family: monospace;
+        font-size: 12px;
+        font-weight: 900;
+        text-shadow: 1px 1px 0 #16405e;
+        box-shadow:
+            inset 1px 1px 0 rgba(255, 255, 255, .42),
+            inset -1px -1px 0 rgba(0, 0, 0, .24),
+            0 2px 0 #0b2438;
+    }
+
+    .arkanoid-control-action {
+        color: #d0e1eb;
+        font-family: monospace;
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: .6px;
+        text-shadow: 1px 1px 0 #0a1c28;
+    }
+
+    .arkanoid-console-divider {
+        width: 1px;
+        height: 34px;
+        background: #4b7390;
+        box-shadow: 1px 0 0 rgba(255, 255, 255, .08);
+    }
+
+    .arkanoid-console-actions {
+        display: flex;
+        min-width: 230px;
+        align-items: center;
+        justify-content: flex-end;
+        padding: 8px 10px;
+        gap: 8px;
+        border-left: 1px solid #244d69;
+        background: rgba(8, 30, 47, .22);
+    }
+
+    .arkanoid-sound-button,
+    .arkanoid-restart-button {
+        position: relative;
+        display: inline-flex;
+        min-height: 36px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 3px;
+        font-family: monospace;
+        font-size: 9px;
+        font-weight: 900;
+        cursor: pointer;
+    }
+
+    .arkanoid-sound-button {
+        gap: 7px;
+        min-width: 96px;
+        padding: 4px 9px;
+        border: 1px solid #725923;
+        background:
+            linear-gradient(
+                to bottom,
+                #e4c35b,
+                #ae8233
+            );
+        color: #1b2b38;
+        box-shadow:
+            inset 1px 1px 0 rgba(255, 255, 255, .46),
+            inset -1px -1px 0 rgba(0, 0, 0, .28),
+            0 2px 0 #13202a;
+
+        b {
+            display: block;
+            font-size: 8px;
+        }
+
+        &:hover {
+            background:
+                linear-gradient(
+                    to bottom,
+                    #edd06f,
+                    #bd9342
+                );
+        }
+    }
+
+    .arkanoid-sound-icon {
+        color: #1c4460;
+        font-size: 17px;
+        line-height: 17px;
+    }
+
+    .arkanoid-restart-button {
+        min-width: 94px;
+        padding: 0 11px;
+        overflow: hidden;
+        border: 1px solid #245a7c;
+        background:
+            linear-gradient(
+                to bottom,
+                #5ba7cf,
+                #337aa5
+            );
+        color: #f2fbff;
+        text-shadow: 1px 1px 0 #16415f;
+        box-shadow:
+            inset 1px 1px 0 rgba(255, 255, 255, .42),
+            inset -1px -1px 0 rgba(0, 0, 0, .26),
+            0 2px 0 #102639;
+
+        &:hover:not(:disabled) {
+            background:
+                linear-gradient(
+                    to bottom,
+                    #70b7dc,
+                    #4189b2
+                );
+        }
+
+        &:active:not(:disabled) {
+            padding-top: 2px;
+        }
+
+        &:disabled {
+            opacity: .58;
+            cursor: default;
+        }
+    }
+
+    .arkanoid-restart-shine {
+        position: absolute;
+        top: 3px;
+        right: 7px;
+        left: 7px;
+        height: 2px;
+        background: rgba(255, 255, 255, .27);
+        pointer-events: none;
+    }
+
+    .arkanoid-summary-bar {
+        display: grid;
+        grid-template-columns: 1.05fr 1.55fr auto;
+        min-height: 61px;
+        margin-top: 8px;
+        overflow: hidden;
+        border: 2px solid #101e29;
+        border-radius: 4px;
+        background: #162d3e;
+        box-shadow:
+            inset 0 0 0 1px #4e6e84,
+            inset 0 0 14px rgba(0, 0, 0, .42);
+    }
+
+    .arkanoid-summary-brand {
+        display: flex;
+        padding: 8px 12px;
+        flex-direction: column;
+        justify-content: center;
+        border-right: 1px solid #39566a;
+        background:
+            linear-gradient(
+                to bottom,
+                #244d68,
+                #15374e
+            );
+
+        span {
+            color: #a9c0cf;
+            font-family: monospace;
+            font-size: 8px;
+            font-weight: 900;
+            letter-spacing: 1px;
+        }
+
+        strong {
+            margin-top: 2px;
+            color: #ffe16a;
+            font-family: monospace;
+            font-size: 15px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 0 #18210c;
+        }
+    }
+
+    .arkanoid-summary-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+
+        span {
+            display: flex;
+            min-width: 0;
+            padding: 7px 8px;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-right: 1px solid #365265;
+            color: #9eb5c4;
+            font-family: monospace;
+            font-size: 8px;
+            font-weight: 900;
+            letter-spacing: .5px;
+
+            &:last-child {
+                border-right: 0;
+            }
+        }
+
+        b {
+            margin-top: 2px;
+            color: #dceaf2;
+            font-size: 12px;
+            line-height: 13px;
+        }
+    }
+
+    .arkanoid-records-button {
+        display: flex;
+        min-width: 106px;
+        padding: 0 13px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        border: 0;
+        border-left: 1px solid #6b5420;
+        background:
+            linear-gradient(
+                to bottom,
+                #d9b64b,
+                #a77b2d
+            );
+        color: #222b31;
+        font-family: monospace;
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: .6px;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, .42);
+        cursor: pointer;
+
+        &:hover {
+            background:
+                linear-gradient(
+                    to bottom,
+                    #e6c760,
+                    #b88c3b
+                );
+        }
+    }
+
+    .arkanoid-records-star {
+        color: #234c67;
+        font-size: 15px;
+        line-height: 15px;
+        text-shadow: none;
+    }
+
+    @media (max-width: 810px) {
+        .arkanoid-hud {
+            grid-template-columns: 1.25fr .7fr 1fr .72fr;
+        }
+
+        .arkanoid-hud-cell.is-status {
+            display: none;
+        }
+
+        .arkanoid-console {
+            flex-direction: column;
+        }
+
+        .arkanoid-console-actions {
+            min-width: 0;
+            border-top: 1px solid #244d69;
+            border-left: 0;
+        }
+
+        .arkanoid-summary-bar {
+            grid-template-columns: 1fr auto;
+        }
+
+        .arkanoid-summary-stats {
+            display: none;
+        }
+    }
+}
+
+/* BIRIBIRI_ARKANOID_CANONICAL_CONTROLS_V1 */
+.nitro-arkanoid {
+    .arkanoid-life-row {
+        display: flex;
+        min-height: 30px;
+        margin-top: 4px;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+    }
+
+    .arkanoid-life-heart {
+        width: 23px;
+        height: 20px;
+        fill: #3b4350;
+        filter: drop-shadow(1px 1px 0 #000);
+        image-rendering: pixelated;
+
+        &.is-active {
+            fill: #f25368;
+            filter:
+                drop-shadow(1px 1px 0 #721f32)
+                drop-shadow(0 0 4px rgba(255, 88, 113, .42));
+
+            .heart-shine {
+                fill: #ffb0b9;
+            }
+        }
+
+        .heart-shine {
+            fill: #59616e;
+        }
+    }
+
+    .arkanoid-console-actions {
+        display: flex;
+        flex: 0 0 auto;
+        gap: 6px;
+        align-items: stretch;
+        min-width: 0;
+        padding: 0;
+        border-left: 0;
+        background: transparent;
+    }
+
+    .arkanoid-sound-button {
+        display: flex;
+        width: 84px;
+        min-width: 84px;
+        min-height: 0;
+        padding: 5px 7px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1px;
+        border: 2px solid #303b49;
+        border-radius: 3px;
+        background:
+            linear-gradient(
+                to bottom,
+                #4a5665,
+                #293440
+            );
+        color: #b8c3ce;
+        font-family: inherit;
+        font-size: 8px;
+        font-weight: 800;
+        line-height: 9px;
+        box-shadow:
+            inset 1px 1px 0 rgba(255, 255, 255, .22),
+            inset -1px -1px 0 rgba(0, 0, 0, .4);
+        cursor: pointer;
+
+        b {
+            display: block;
+            margin-top: 1px;
+            color: #8693a0;
+            font-size: 8px;
+        }
+
+        &.is-on {
+            border-color: #1a5c4a;
+            background:
+                linear-gradient(
+                    to bottom,
+                    #397e65,
+                    #1e493b
+                );
+            color: #d6fff0;
+
+            b {
+                color: #7ff0bd;
+            }
+        }
+
+        &:hover {
+            background:
+                linear-gradient(
+                    to bottom,
+                    #566373,
+                    #33404d
+                );
+        }
+
+        &.is-on:hover {
+            background:
+                linear-gradient(
+                    to bottom,
+                    #468d71,
+                    #285844
+                );
+        }
+
+        &:active {
+            padding-top: 7px;
+            padding-bottom: 3px;
+            box-shadow:
+                inset 1px 1px 0 rgba(0, 0, 0, .38),
+                inset -1px -1px 0 rgba(255, 255, 255, .14);
+        }
+    }
+
+    .arkanoid-sound-icon {
+        color: #f1d56a;
+        font-family: monospace;
+        font-size: 14px;
+        line-height: 14px;
+        text-shadow: 1px 1px 0 #000;
+    }
+
+    .arkanoid-restart-button {
+        position: relative;
+        display: flex;
+        width: 130px;
+        min-width: 130px;
+        min-height: 0;
+        padding: 0 14px;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        border: 2px solid #775818;
+        border-radius: 4px;
+        background:
+            linear-gradient(
+                to bottom,
+                #ffe37a 0%,
+                #eab445 54%,
+                #bb7723 100%
+            );
+        color: #342207;
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: .4px;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, .56);
+        box-shadow:
+            inset 1px 1px 0 rgba(255, 255, 255, .68),
+            inset -1px -1px 0 rgba(93, 48, 5, .5),
+            0 2px 0 #151006;
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            background:
+                linear-gradient(
+                    to bottom,
+                    #ffed98,
+                    #f3c85b 54%,
+                    #c98527
+                );
+        }
+
+        &:active:not(:disabled) {
+            padding-top: 2px;
+            box-shadow:
+                inset 1px 1px 0 rgba(96, 50, 4, .45),
+                inset -1px -1px 0 rgba(255, 255, 255, .28);
+        }
+
+        &:disabled {
+            opacity: .62;
+            cursor: default;
+            filter: grayscale(.15);
+        }
+    }
+
+    .arkanoid-restart-shine {
+        position: absolute;
+        top: 3px;
+        right: 7px;
+        left: 7px;
+        height: 2px;
+        background: rgba(255, 255, 255, .32);
+        pointer-events: none;
+    }
+
+    .arkanoid-summary-bar {
+        display: flex;
+        min-height: 54px;
+        margin-top: 8px;
+        padding: 6px;
+        align-items: stretch;
+        gap: 6px;
+        overflow: hidden;
+        border: 2px solid #070d16;
+        border-radius: 4px;
+        background:
+            linear-gradient(
+                to bottom,
+                #17263a,
+                #091321
+            );
+        box-shadow:
+            inset 0 0 0 1px #334f70,
+            inset 0 0 12px rgba(0, 0, 0, .68);
+    }
+
+    .arkanoid-summary-brand {
+        display: flex;
+        min-width: 150px;
+        padding: 4px 9px;
+        flex-direction: column;
+        justify-content: center;
+        border: 1px solid #253e59;
+        background:
+            linear-gradient(
+                to bottom,
+                #203650,
+                #102037
+            );
+
+        span {
+            color: #6edff5;
+            font-family: monospace;
+            font-size: 7px;
+            font-weight: 900;
+            letter-spacing: 1.3px;
+            line-height: 8px;
+        }
+
+        strong {
+            margin-top: 2px;
+            color: #e6eef5;
+            font-family: monospace;
+            font-size: 10px;
+            font-weight: 900;
+            letter-spacing: .5px;
+            line-height: 12px;
+            text-shadow: 1px 1px 0 #000;
+        }
+    }
+
+    .arkanoid-summary-stats {
+        display: grid;
+        min-width: 0;
+        flex: 1 1 auto;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 3px;
+
+        span {
+            display: flex;
+            min-width: 0;
+            padding: 3px 5px;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #223a54;
+            background: #08111f;
+            color: #7189a1;
+            font-family: monospace;
+            font-size: 7px;
+            font-weight: 900;
+            letter-spacing: .6px;
+            line-height: 8px;
+            white-space: nowrap;
+        }
+
+        b {
+            margin-top: 2px;
+            color: #f0d766;
+            font-size: 11px;
+            line-height: 12px;
+            letter-spacing: .5px;
+            text-shadow: 1px 1px 0 #000;
+        }
+    }
+
+    .arkanoid-records-button {
+        display: flex;
+        width: 112px;
+        min-width: 112px;
+        flex: 0 0 112px;
+        padding: 0 11px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        border: 2px solid #765919;
+        border-radius: 4px;
+        background:
+            linear-gradient(
+                to bottom,
+                #ffe47d 0%,
+                #eab446 55%,
+                #b97824 100%
+            );
+        color: #342207;
+        font-family: inherit;
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: .5px;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, .55);
+        box-shadow:
+            inset 1px 1px 0 rgba(255, 255, 255, .66),
+            inset -1px -1px 0 rgba(93, 48, 5, .48),
+            0 2px 0 #151006;
+        cursor: pointer;
+
+        &:hover {
+            background:
+                linear-gradient(
+                    to bottom,
+                    #fff09a,
+                    #f3c95e 55%,
+                    #c9892c
+                );
+        }
+
+        &:active {
+            padding-top: 2px;
+            box-shadow:
+                inset 1px 1px 0 rgba(96, 50, 4, .44),
+                inset -1px -1px 0 rgba(255, 255, 255, .27);
+        }
+    }
+
+    .arkanoid-records-star {
+        color: #fff2a8;
+        font-size: 15px;
+        line-height: 15px;
+        text-shadow:
+            1px 1px 0 #7b5109,
+            0 0 4px rgba(255, 236, 121, .5);
+    }
+
+    @media (max-width: 810px) {
+        .arkanoid-console-actions {
+            min-height: 48px;
+        }
+
+        .arkanoid-restart-button {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        .arkanoid-sound-button {
+            width: 100px;
+            min-width: 100px;
+        }
+
+        .arkanoid-summary-stats {
+            display: none;
+        }
+
+        .arkanoid-summary-brand {
+            flex: 1 1 auto;
+        }
+    }
+}
+
+/* BIRIBIRI_ARKANOID_TOP_CONSOLE_CANONICAL_V1 */
+.nitro-arkanoid {
+    .arkanoid-console {
+        display: flex;
+        min-height: 59px;
+        margin-top: 8px;
+        gap: 8px;
+        align-items: stretch;
+        justify-content: space-between;
+
+        padding: 0 !important;
+        overflow: visible !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+
+    .arkanoid-controls-panel {
+        display: flex;
+        min-width: 0;
+        flex: 1 1 auto;
+        padding: 7px 9px;
+        align-items: center;
+        gap: 9px;
+        overflow: hidden;
+
+        border: 2px solid #10263b;
+        border-radius: 3px;
+        background:
+            linear-gradient(
+                to bottom,
+                #2b6388,
+                #184261
+            );
+        box-shadow:
+            inset 0 0 0 1px #4f7898,
+            inset 0 0 10px rgba(0, 0, 0, .42);
+    }
+
+    .arkanoid-console-actions {
+        display: flex;
+        flex: 0 0 auto;
+        gap: 6px;
+        align-items: stretch;
+
+        min-width: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+    }
+
+    .arkanoid-console-actions::before,
+    .arkanoid-console-actions::after {
+        content: none !important;
+        display: none !important;
+    }
+
+    .arkanoid-sound-button {
+        display: flex;
+        width: 84px;
+        min-width: 84px;
+        padding: 5px 7px;
+        flex: 0 0 84px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1px;
+
+        border: 2px solid #303b49 !important;
+        border-radius: 3px !important;
+        background:
+            linear-gradient(
+                to bottom,
+                #4a5665,
+                #293440
+            ) !important;
+        color: #b8c3ce;
+        box-shadow:
+            inset 1px 1px 0 rgba(255, 255, 255, .22),
+            inset -1px -1px 0 rgba(0, 0, 0, .4) !important;
+
+        &::before,
+        &::after {
+            content: none !important;
+            display: none !important;
+        }
+
+        b {
+            color: #8693a0;
+        }
+
+        &.is-on {
+            border-color: #1a5c4a !important;
+            background:
+                linear-gradient(
+                    to bottom,
+                    #397e65,
+                    #1e493b
+                ) !important;
+            color: #d6fff0;
+
+            b {
+                color: #7ff0bd;
+            }
+        }
+
+        &:active {
+            padding-top: 7px;
+            padding-bottom: 3px;
+        }
+    }
+
+    .arkanoid-restart-button {
+        position: relative;
+        display: flex;
+        width: 130px;
+        min-width: 130px;
+        padding: 0 14px;
+        flex: 0 0 130px;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+
+        border: 2px solid #775818 !important;
+        border-radius: 4px !important;
+        background:
+            linear-gradient(
+                to bottom,
+                #ffe37a 0%,
+                #eab445 54%,
+                #bb7723 100%
+            ) !important;
+        color: #342207 !important;
+        box-shadow:
+            inset 1px 1px 0 rgba(255, 255, 255, .68),
+            inset -1px -1px 0 rgba(93, 48, 5, .5),
+            0 2px 0 #151006 !important;
+
+        &::before,
+        &::after {
+            content: none !important;
+            display: none !important;
+        }
+
+        &:hover:not(:disabled) {
+            background:
+                linear-gradient(
+                    to bottom,
+                    #ffed98,
+                    #f3c85b 54%,
+                    #c98527
+                ) !important;
+        }
+
+        &:active:not(:disabled) {
+            padding-top: 2px;
+        }
+    }
+
+    .arkanoid-restart-shine {
+        position: absolute;
+        top: 3px;
+        right: 7px;
+        left: 7px;
+        height: 2px;
+        display: block !important;
+        background: rgba(255, 255, 255, .32);
+        pointer-events: none;
+    }
+
+    @media (max-width: 810px) {
+        .arkanoid-console {
+            flex-direction: column;
+        }
+
+        .arkanoid-console-actions {
+            min-height: 48px;
+        }
+
+        .arkanoid-restart-button {
+            flex: 1 1 auto;
+            width: auto;
+            min-width: 0;
+        }
+
+        .arkanoid-sound-button {
+            width: 100px;
+            min-width: 100px;
+            flex-basis: 100px;
+        }
+    }
+}
+
+/* BIRIBIRI_ARKANOID_CANONICAL_SCREWS_V1 */
+.nitro-arkanoid {
+    .arkanoid-cabinet-screw {
+        border: 1px solid #617088;
+        background: #a9b4bf;
+        box-shadow:
+            inset 1px 1px 0 rgba(255, 255, 255, .7),
+            inset -1px -1px 0 rgba(23, 34, 48, .45);
+    }
+}

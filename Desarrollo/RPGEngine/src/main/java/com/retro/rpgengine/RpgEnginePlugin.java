@@ -2,7 +2,9 @@ package com.retro.rpgengine;
 
 import com.eu.habbo.Emulator;
 import com.eu.habbo.habbohotel.rooms.Room;
+import com.eu.habbo.habbohotel.rooms.ForcedRoomEntryRegistry;
 import com.eu.habbo.habbohotel.users.Habbo;
+import com.eu.habbo.messages.outgoing.rooms.ForwardToRoomComposer;
 import com.eu.habbo.plugin.EventHandler;
 import com.eu.habbo.plugin.EventListener;
 import com.eu.habbo.plugin.EventPriority;
@@ -26,6 +28,9 @@ public class RpgEnginePlugin extends HabboPlugin implements EventListener
     public static final int PACKET_RPG_ENGINE_COMMAND = 5050;
 
     private final Set<Integer> disconnecting =
+            java.util.Collections.newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
+
+    private final Set<Integer> automaticRejoinPending =
             java.util.Collections.newSetFromMap(new ConcurrentHashMap<Integer, Boolean>());
 
     @Override
@@ -57,6 +62,7 @@ public class RpgEnginePlugin extends HabboPlugin implements EventListener
         {
             Encounter updated = ServicioRpgEngine.systemReconnectParticipant(userId);
             scheduleParticipantDeadlineCheck(updated, userId);
+            scheduleAutomaticReconnectRejoin(event.habbo, updated);
         }
         catch(Exception error)
         {
@@ -241,6 +247,115 @@ public class RpgEnginePlugin extends HabboPlugin implements EventListener
         }
     }
 
+    private void scheduleAutomaticReconnectRejoin(
+            final Habbo habbo,
+            final Encounter encounter)
+    {
+        if(habbo == null || encounter == null ||
+           !"active".equals(encounter.status))
+            return;
+
+        final int userId = habbo.getHabboInfo().getId();
+        EncounterParticipant self = null;
+
+        for(EncounterParticipant participant : encounter.participants)
+        {
+            if(participant.userId == userId)
+            {
+                self = participant;
+                break;
+            }
+        }
+
+        if(self == null ||
+           !"returning".equals(self.status) ||
+           !self.hasSavedPosition)
+            return;
+
+        if(!automaticRejoinPending.add(userId))
+            return;
+
+        final int encounterId = encounter.id;
+        final int combatRoomId = encounter.roomId;
+
+        // UserLoginEvent happens very early in the login lifecycle.
+        // Give Arcturus a short moment to finish attaching the client/Habbo
+        // before starting a server-authoritative room entry.
+        Emulator.getThreading().run(() ->
+        {
+            try
+            {
+                if(habbo.getClient() == null)
+                    return;
+
+                Encounter refreshed = ServicioRpgEngine.getEncounter(encounterId);
+
+                if(refreshed == null || !"active".equals(refreshed.status))
+                    return;
+
+                EncounterParticipant participant = null;
+
+                for(EncounterParticipant value : refreshed.participants)
+                {
+                    if(value.userId == userId)
+                    {
+                        participant = value;
+                        break;
+                    }
+                }
+
+                if(participant == null ||
+                   !"returning".equals(participant.status) ||
+                   !participant.hasSavedPosition)
+                    return;
+
+                // Do not resurrect an Encounter into a room that is no longer
+                // registered in this RPG.
+                if(ServicioRpgEngine.getContext(combatRoomId, userId) == null)
+                    return;
+
+                Room currentRoom = habbo.getHabboInfo().getCurrentRoom();
+
+                if(currentRoom != null && currentRoom.getId() == combatRoomId)
+                {
+                    ServicioRpgEngine.systemRejoinCombatRoom(habbo, currentRoom);
+                    return;
+                }
+
+                // Match Arcturus' own server-side forwarding flow:
+                // 1) tell Nitro to visually transition to the room;
+                // 2) perform the authoritative room entry with access checks bypassed.
+                if(currentRoom != null)
+                {
+                    Emulator.getGameEnvironment()
+                            .getRoomManager()
+                            .leaveRoom(habbo, currentRoom);
+                }
+
+                // Important: Arcturus' own summon/forward flow performs the
+                // authoritative entry FIRST and only then tells Nitro to switch
+                // visually to that room. Sending ForwardToRoom first makes Nitro
+                // attempt a normal locked-room entry and can briefly trigger the
+                // doorbell/password flow while the server already inserts the Habbo.
+                ForcedRoomEntryRegistry.arm(habbo, combatRoomId);
+
+                if(habbo.getClient() != null)
+                {
+                    habbo.getClient().sendResponse(
+                            new ForwardToRoomComposer(combatRoomId)
+                    );
+                }
+            }
+            catch(Exception error)
+            {
+                logEncounterEvent("automatic-rejoin", userId, error);
+            }
+            finally
+            {
+                automaticRejoinPending.remove(userId);
+            }
+        }, 2500L);
+    }
     private static void scheduleParticipantDeadlineCheck(
             Encounter encounter,
             int userId)

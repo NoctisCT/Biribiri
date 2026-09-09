@@ -18,22 +18,22 @@ class ListBadgeTextEditors extends ListRecords
     {
         return [
             Actions\CreateAction::make()
-                ->label('Add Badge')
+                ->label('Añadir placa')
 				        ->color('info')
-                ->modalHeading('Add a New Badge')
-                ->modalButton('Create Badge')
+                ->modalHeading('Añadir una nueva placa')
+                ->modalButton('Crear placa')
                 ->after(function () {
                     Notification::make()
-                        ->title('Badge Created')
-                        ->body('The badge was successfully created.')
+                        ->title('Placa creada')
+                        ->body('La placa se ha creado correctamente.')
                         ->success()
                         ->send();
                 }),
             Actions\Action::make('export')
-                ->label('Export to JSON')
+                ->label('Exportar a JSON')
                 ->action('exportToJson'),
             Actions\Action::make('backup')
-                ->label('Create Backup')
+                ->label('Crear copia de seguridad')
                 ->color('success')
                 ->action('createBackup'),
         ];
@@ -45,8 +45,8 @@ class ListBadgeTextEditors extends ListRecords
 
         if (empty($jsonPath)) {
             Notification::make()
-                ->title('Export Failed')
-                ->body('The JSON file path is not configured in the website settings.')
+                ->title('Error al exportar')
+                ->body('La ruta del archivo JSON no está configurada en los ajustes del sitio web.')
                 ->danger()
                 ->send();
             return;
@@ -54,8 +54,8 @@ class ListBadgeTextEditors extends ListRecords
 
         if (!file_exists($jsonPath)) {
             Notification::make()
-                ->title('Export Failed')
-                ->body('The JSON file does not exist at the specified path.')
+                ->title('Error al exportar')
+                ->body('El archivo JSON no existe en la ruta especificada.')
                 ->danger()
                 ->send();
             return;
@@ -79,8 +79,8 @@ class ListBadgeTextEditors extends ListRecords
         file_put_contents($jsonPath, json_encode($jsonData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
         Notification::make()
-            ->title('Export Successful')
-            ->body('Badge data exported successfully.')
+            ->title('Exportación completada')
+            ->body('Los datos de las placas se han exportado correctamente.')
             ->success()
             ->send();
     }
@@ -91,8 +91,8 @@ class ListBadgeTextEditors extends ListRecords
 
         if (empty($jsonPath)) {
             Notification::make()
-                ->title('Backup Failed')
-                ->body('The JSON file path is not configured in the website settings.')
+                ->title('Error en la copia de seguridad')
+                ->body('La ruta del archivo JSON no está configurada en los ajustes del sitio web.')
                 ->danger()
                 ->send();
             return;
@@ -100,8 +100,8 @@ class ListBadgeTextEditors extends ListRecords
 
         if (!file_exists($jsonPath)) {
             Notification::make()
-                ->title('Backup Failed')
-                ->body('The JSON file does not exist at the specified path.')
+                ->title('Error en la copia de seguridad')
+                ->body('El archivo JSON no existe en la ruta especificada.')
                 ->danger()
                 ->send();
             return;
@@ -111,14 +111,14 @@ class ListBadgeTextEditors extends ListRecords
 
         if (copy($jsonPath, $backupPath)) {
             Notification::make()
-                ->title('Backup Successful')
-                ->body('A backup of the JSON file has been created: ' . basename($backupPath))
+                ->title('Copia de seguridad completada')
+                ->body('Se ha creado una copia de seguridad del archivo JSON: ' . basename($backupPath))
                 ->success()
                 ->send();
         } else {
             Notification::make()
-                ->title('Backup Failed')
-                ->body('Failed to create a backup of the JSON file.')
+                ->title('Error en la copia de seguridad')
+                ->body('No se pudo crear una copia de seguridad del archivo JSON.')
                 ->danger()
                 ->send();
         }

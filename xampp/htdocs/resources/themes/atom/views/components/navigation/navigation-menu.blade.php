@@ -11,6 +11,10 @@
                 <x-navigation.dropdown-child :route="route('profile.show', auth()->user()->username)">
                     {{ __('My Profile') }}
                 </x-navigation.dropdown-child>
+
+                <x-navigation.dropdown-child :route="route('character-select')" :turbolink="false">
+                    Personajes
+                </x-navigation.dropdown-child>
             </x-slot:children>
         </x-navigation.dropdown>
     @else

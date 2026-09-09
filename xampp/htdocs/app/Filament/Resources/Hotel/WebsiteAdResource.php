@@ -20,7 +20,9 @@ class WebsiteAdResource extends Resource
     protected static ?string $model = WebsiteAd::class;
 
     protected static ?string $navigationGroup = 'Hotel';
-    protected static ?string $navigationLabel = 'ADS Images';
+    protected static ?string $navigationLabel = 'Imágenes de anuncios';
+    protected static ?string $modelLabel = 'imagen de anuncio';
+    protected static ?string $pluralModelLabel = 'imágenes de anuncios';
     protected static ?string $navigationIcon = 'heroicon-o-sparkles';
 
     public static function form(Form $form): Form
@@ -28,13 +30,13 @@ class WebsiteAdResource extends Resource
         return $form
             ->schema([
                 Forms\Components\FileUpload::make('image')
-                    ->label('Image')
+                    ->label('Imagen')
                     ->disk('ads')
                     ->preserveFilenames()
                     ->image()
                     ->rules(['required', 'image', 'mimes:jpeg,png,jpg,gif'])
                     ->validationMessages([
-                        'required' => 'Please upload an image.', 'image' => 'The file must be a valid image.', 'mimes' => 'Only JPEG, PNG, JPG, and GIF images are allowed.'])
+                        'required' => 'Sube una imagen.', 'image' => 'El archivo debe ser una imagen válida.', 'mimes' => 'Solo se permiten imágenes JPEG, PNG, JPG y GIF.'])
                     ->required()
                     ->getUploadedFileNameForStorageUsing(
                         function (TemporaryUploadedFile $file): string {
@@ -59,6 +61,7 @@ class WebsiteAdResource extends Resource
                         ->searchable(),
                 ]),
                 TextColumn::make('created_at')
+                    ->label(__('filament::resources.columns.created_at'))
                     ->dateTime(),
             ])
             ->filters([

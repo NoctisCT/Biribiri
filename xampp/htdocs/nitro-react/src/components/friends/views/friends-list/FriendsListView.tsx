@@ -136,7 +136,7 @@ export const FriendsListView: FC<{}> = props =>
                             <FriendsListGroupView list={ offlineFriends } selectedFriendsIds={ selectedFriendsIds } selectFriend={ selectFriend } />
                         </NitroCardAccordionSetView>
                         <FriendsListRequestView headerText={ LocalizeText('friendlist.tab.friendrequests') + ` (${ requests.length })` } isExpanded={ true } />
-                        <FriendsSearchView headerText={ LocalizeText('people.search.title') } />
+                        <FriendsSearchView headerText="Buscar" />
                     </NitroCardAccordionView>
                     { selectedFriendsIds && selectedFriendsIds.length > 0 &&
                         <Flex gap={ 1 } className="p-1">

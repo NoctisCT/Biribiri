@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Air Hockey Standalone</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <h1>Air Hockey Standalone</h1>
+        <p>Motor local independiente · 240 Hz · sin Habbo / Nitro / Arcturus</p>
+      </div>
+      <div class="actions">
+        <button id="resetBtn" type="button">Reiniciar</button>
+        <button id="debugBtn" type="button">Debug: OFF</button>
+      </div>
+    </header>
+
+    <section class="scoreboard" aria-label="Marcador">
+      <div class="player blue">
+        <span>TÚ</span>
+        <strong id="leftScore">0</strong>
+      </div>
+      <div class="center">
+        <span id="status">Mueve el ratón sobre la mesa</span>
+      </div>
+      <div class="player red">
+        <strong id="rightScore">0</strong>
+        <span>CPU</span>
+      </div>
+    </section>
+
+    <div class="canvas-wrap">
+      <canvas id="game" width="1000" height="600"></canvas>
+    </div>
+
+    <section class="dev-panel">
+      <div>
+        <label for="transfer">Golpe</label>
+        <input id="transfer" type="range" min="0.35" max="1.00" step="0.01" value="0.68">
+        <output id="transferOut">0.68</output>
+      </div>
+      <div>
+        <label for="restitution">Rebote</label>
+        <input id="restitution" type="range" min="0.20" max="0.95" step="0.01" value="0.72">
+        <output id="restitutionOut">0.72</output>
+      </div>
+      <div>
+        <label for="drag">Fricción</label>
+        <input id="drag" type="range" min="0.05" max="1.00" step="0.01" value="0.34">
+        <output id="dragOut">0.34</output>
+      </div>
+      <div>
+        <label for="ai">CPU</label>
+        <input id="ai" type="range" min="0.20" max="1.00" step="0.01" value="0.58">
+        <output id="aiOut">0.58</output>
+      </div>
+    </section>
+
+    <footer>
+      El círculo azul responde al ratón 1:1. La física y el dibujo comparten exactamente las mismas posiciones.
+    </footer>
+  </main>
+
+  <script src="./game.js"></script>
+</body>
+</html>

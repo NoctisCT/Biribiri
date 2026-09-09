@@ -1,0 +1,19 @@
+/*
+ * RPGEngine UI V2
+ *
+ * The important layout is intentionally inline in RpgEngineView.tsx.
+ * This avoids depending on the old local SCSS loading path while the
+ * Biribiri UI structure is still being reorganized.
+ */
+.rpg-engine-window {
+    width: 540px;
+    min-width: 540px;
+    max-width: calc(100vw - 24px);
+}
+
+@media (max-width: 580px) {
+    .rpg-engine-window {
+        width: calc(100vw - 24px);
+        min-width: 0;
+    }
+}

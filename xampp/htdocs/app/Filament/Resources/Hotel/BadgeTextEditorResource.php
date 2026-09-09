@@ -18,8 +18,9 @@ class BadgeTextEditorResource extends Resource
 
     protected static ?string $navigationGroup = 'Hotel';
     protected static ?string $navigationIcon = 'heroicon-o-pencil-square';
-    protected static ?string $navigationLabel = 'Badge Editor';
-    protected static ?string $modelLabel = 'Badge Text';
+    protected static ?string $navigationLabel = 'Editor de placas';
+    protected static ?string $modelLabel = 'Texto de placa';
+    protected static ?string $pluralModelLabel = 'Textos de placas';
     protected static ?string $slug = 'hotel/badge-text-editor';
 
     public static function form(Forms\Form $form): Forms\Form
@@ -28,17 +29,17 @@ class BadgeTextEditorResource extends Resource
             ->schema([
                 Forms\Components\TextInput::make('badge_key')
                     ->required()
-                    ->label('Badge Key - You must add badge_desc_')
+                    ->label('Clave de placa - debes añadir badge_desc_')
                     ->default('badge_desc_')
-                    ->placeholder('e.g., badge_desc_XXXX'),
+                    ->placeholder('Ej.: badge_desc_XXXX'),
                 Forms\Components\TextInput::make('badge_name')
                     ->required()
-                    ->label('Badge Name')
-                    ->placeholder('e.g., XXXX'),
+                    ->label('Nombre de la placa')
+                    ->placeholder('Ej.: XXXX'),
                 Forms\Components\Textarea::make('badge_description')
                     ->required()
-                    ->label('Badge Description')
-                    ->placeholder('Please add a description for the badge.'),
+                    ->label('Descripción de la placa')
+                    ->placeholder('Añade una descripción para la placa.'),
             ]);
     }
 
@@ -50,7 +51,7 @@ class BadgeTextEditorResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('badge_key')
-                    ->label('Badge Image')
+                    ->label('Imagen de la placa')
                     ->getStateUsing(function ($record) use ($badgesPath) {
                         $badgeName = str_replace('badge_desc_', '', $record->badge_key);
                         $imageUrl = asset(rtrim($badgesPath, '/\\') . '/' . $badgeName . '.gif');
@@ -59,11 +60,11 @@ class BadgeTextEditorResource extends Resource
                     ->width(40)
                     ->height(40),
                 TextColumn::make('badge_name')
-                    ->label('Badge Name')
+                    ->label('Nombre de la placa')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('badge_description')
-                    ->label('Badge Description')
+                    ->label('Descripción de la placa')
                     ->getStateUsing(fn ($record) => Str::limit($record->badge_description, 65))
                     ->searchable(),
             ])

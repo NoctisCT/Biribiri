@@ -82,7 +82,7 @@ class BadgePage extends Page
                             )
                     ]),
 
-                Section::make('Nitro Texts')
+                Section::make('Textos de Nitro')
                     ->collapsible()
                     ->visible(fn () => isset($this->data['nitro']) && !empty($this->data['nitro']))
                     ->schema([
@@ -97,7 +97,7 @@ class BadgePage extends Page
                             ->visible(fn () => isset($this->data['nitro']['description']) ?? false),
                     ]),
 
-                Section::make('Flash Texts')
+                Section::make('Textos de Flash')
                     ->collapsible()
                     ->visible(fn () => isset($this->data['flash']) && !empty($this->data['flash']))
                     ->schema([

@@ -1,0 +1,631 @@
+'use strict';
+
+/*
+ * AIR HOCKEY CORE V2
+ *
+ * ESTE MISMO ARCHIVO lo carga:
+ * - Node.js en server.js (física autoritativa)
+ * - el navegador en client.js (constantes/helpers/render)
+ *
+ * La física no vive dentro de Habbo ni dentro de networking.
+ */
+(function(root, factory) {
+  const api = factory();
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = api;
+  }
+
+  root.AirHockeyCore = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function() {
+  const C = Object.freeze({
+    W: 1000,
+    H: 600,
+    CENTER_X: 500,
+
+    MALLET_R: 38,
+    PUCK_R: 18,
+    SOLID_R: 56,
+
+    GOAL_HALF: 104,
+    FIXED_DT: 1 / 240,
+
+    MAX_MICRO_STEP: 4.0,
+    MAX_MICRO_STEPS: 160,
+
+    WALL_RESTITUTION: 0.90,
+    MAX_PUCK_SPEED: 2350,
+    MAX_MALLET_IMPACT_SPEED: 1850,
+
+    // Congelados desde el standalone V1 que se siente bien.
+    TRANSFER: 0.68,
+    RESTITUTION: 0.72,
+    DRAG: 0.34,
+
+    WIN_SCORE: 7
+  });
+
+  C.GOAL_TOP = (C.H / 2) - C.GOAL_HALF;
+  C.GOAL_BOTTOM = (C.H / 2) + C.GOAL_HALF;
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function clampVector(x, y, maxLen) {
+    const len = Math.hypot(x, y);
+
+    if (len <= maxLen || len < 1e-9) {
+      return { x, y };
+    }
+
+    const scale = maxLen / len;
+
+    return {
+      x: x * scale,
+      y: y * scale
+    };
+  }
+
+  function clampTarget(side, point) {
+    const y = clamp(
+      Number(point.y) || 0,
+      C.MALLET_R,
+      C.H - C.MALLET_R
+    );
+
+    if (side === 'left') {
+      return {
+        x: clamp(
+          Number(point.x) || 0,
+          C.MALLET_R,
+          C.CENTER_X - C.MALLET_R - 5
+        ),
+        y
+      };
+    }
+
+    return {
+      x: clamp(
+        Number(point.x) || 0,
+        C.CENTER_X + C.MALLET_R + 5,
+        C.W - C.MALLET_R
+      ),
+      y
+    };
+  }
+
+  function copyMallet(mallet) {
+    return {
+      x: mallet.x,
+      y: mallet.y,
+      targetX: mallet.targetX,
+      targetY: mallet.targetY,
+      vx: mallet.vx,
+      vy: mallet.vy
+    };
+  }
+
+  class AirHockeyPhysics {
+    constructor() {
+      this.state = {
+        playing: false,
+        winner: null,
+        roundPause: 0,
+
+        leftScore: 0,
+        rightScore: 0,
+
+        left: {
+          x: 175,
+          y: C.H / 2,
+          targetX: 175,
+          targetY: C.H / 2,
+          vx: 0,
+          vy: 0
+        },
+
+        right: {
+          x: C.W - 175,
+          y: C.H / 2,
+          targetX: C.W - 175,
+          targetY: C.H / 2,
+          vx: 0,
+          vy: 0
+        },
+
+        puck: {
+          x: C.W / 2,
+          y: C.H / 2,
+          vx: 0,
+          vy: 0
+        },
+
+        contacts: 0,
+        tick: 0
+      };
+    }
+
+    setPlaying(value) {
+      this.state.playing = Boolean(value) && !this.state.winner;
+    }
+
+    setInput(side, x, y) {
+      if (side !== 'left' && side !== 'right') return;
+
+      const target = clampTarget(side, { x, y });
+      const mallet = this.state[side];
+
+      mallet.targetX = target.x;
+      mallet.targetY = target.y;
+    }
+
+    resetMatch() {
+      const s = this.state;
+
+      s.leftScore = 0;
+      s.rightScore = 0;
+      s.winner = null;
+      s.contacts = 0;
+
+      this.resetRound(0);
+    }
+
+    resetRound(direction = 0) {
+      const s = this.state;
+
+      s.puck.x = C.W / 2;
+      s.puck.y = C.H / 2;
+      s.puck.vx = direction === 0 ? 0 : direction * 260;
+      s.puck.vy = 0;
+
+      s.left.x = 175;
+      s.left.y = C.H / 2;
+      s.left.targetX = s.left.x;
+      s.left.targetY = s.left.y;
+      s.left.vx = 0;
+      s.left.vy = 0;
+
+      s.right.x = C.W - 175;
+      s.right.y = C.H / 2;
+      s.right.targetX = s.right.x;
+      s.right.targetY = s.right.y;
+      s.right.vx = 0;
+      s.right.vy = 0;
+
+      s.roundPause = 0.55;
+    }
+
+    _goalForPuck(x, y) {
+      const inGoalMouth =
+        y > C.GOAL_TOP + C.PUCK_R &&
+        y < C.GOAL_BOTTOM - C.PUCK_R;
+
+      if (x < -C.PUCK_R && inGoalMouth) return -1;
+      if (x > C.W + C.PUCK_R && inGoalMouth) return 1;
+
+      return 0;
+    }
+
+    _resolveWalls(puck) {
+      const inGoalMouth =
+        puck.y > C.GOAL_TOP + C.PUCK_R &&
+        puck.y < C.GOAL_BOTTOM - C.PUCK_R;
+
+      if (puck.y < C.PUCK_R) {
+        puck.y = C.PUCK_R;
+
+        if (puck.vy < 0) {
+          puck.vy = -puck.vy * C.WALL_RESTITUTION;
+        }
+      }
+
+      if (puck.y > C.H - C.PUCK_R) {
+        puck.y = C.H - C.PUCK_R;
+
+        if (puck.vy > 0) {
+          puck.vy = -puck.vy * C.WALL_RESTITUTION;
+        }
+      }
+
+      if (!inGoalMouth) {
+        if (puck.x < C.PUCK_R) {
+          puck.x = C.PUCK_R;
+
+          if (puck.vx < 0) {
+            puck.vx = -puck.vx * C.WALL_RESTITUTION;
+          }
+        }
+
+        if (puck.x > C.W - C.PUCK_R) {
+          puck.x = C.W - C.PUCK_R;
+
+          if (puck.vx > 0) {
+            puck.vx = -puck.vx * C.WALL_RESTITUTION;
+          }
+        }
+      }
+
+      const posts = [
+        { x: 0, y: C.GOAL_TOP },
+        { x: 0, y: C.GOAL_BOTTOM },
+        { x: C.W, y: C.GOAL_TOP },
+        { x: C.W, y: C.GOAL_BOTTOM }
+      ];
+
+      for (const post of posts) {
+        const dx = puck.x - post.x;
+        const dy = puck.y - post.y;
+        const rr = C.PUCK_R + 10;
+        const d2 = (dx * dx) + (dy * dy);
+
+        if (d2 >= rr * rr) continue;
+
+        const d = Math.sqrt(Math.max(d2, 1e-9));
+        const nx = dx / d;
+        const ny = dy / d;
+
+        puck.x = post.x + (nx * rr);
+        puck.y = post.y + (ny * rr);
+
+        const vn = (puck.vx * nx) + (puck.vy * ny);
+
+        if (vn < 0) {
+          puck.vx -=
+            (1 + C.WALL_RESTITUTION) *
+            vn *
+            nx;
+
+          puck.vy -=
+            (1 + C.WALL_RESTITUTION) *
+            vn *
+            ny;
+        }
+      }
+    }
+
+    _resolveSolidMallet(
+      puck,
+      malletX,
+      malletY,
+      malletVX,
+      malletVY
+    ) {
+      const dx = puck.x - malletX;
+      const dy = puck.y - malletY;
+      const d2 = (dx * dx) + (dy * dy);
+
+      if (d2 >= C.SOLID_R * C.SOLID_R) {
+        return false;
+      }
+
+      let nx;
+      let ny;
+
+      const d =
+        Math.sqrt(Math.max(d2, 1e-12));
+
+      if (d < 1e-5) {
+        const rvx = puck.vx - malletVX;
+        const rvy = puck.vy - malletVY;
+        const rl = Math.hypot(rvx, rvy);
+
+        if (rl > 1e-5) {
+          nx = rvx / rl;
+          ny = rvy / rl;
+        } else {
+          nx = malletX < C.CENTER_X ? 1 : -1;
+          ny = 0;
+        }
+      } else {
+        nx = dx / d;
+        ny = dy / d;
+      }
+
+      /*
+       * HARD CONSTRAINT:
+       * el puck jamás permanece dentro de MALLET_R + PUCK_R.
+       */
+      puck.x =
+        malletX +
+        (nx * (C.SOLID_R + 0.15));
+
+      puck.y =
+        malletY +
+        (ny * (C.SOLID_R + 0.15));
+
+      const clampedMallet =
+        clampVector(
+          malletVX,
+          malletVY,
+          C.MAX_MALLET_IMPACT_SPEED
+        );
+
+      const effectiveMX =
+        clampedMallet.x * C.TRANSFER;
+
+      const effectiveMY =
+        clampedMallet.y * C.TRANSFER;
+
+      const puckNormal =
+        (puck.vx * nx) +
+        (puck.vy * ny);
+
+      const malletNormal =
+        (effectiveMX * nx) +
+        (effectiveMY * ny);
+
+      const relativeNormal =
+        puckNormal - malletNormal;
+
+      if (relativeNormal < 0) {
+        const targetNormal =
+          malletNormal +
+          (
+            C.RESTITUTION *
+            (malletNormal - puckNormal)
+          );
+
+        const delta =
+          targetNormal - puckNormal;
+
+        puck.vx += delta * nx;
+        puck.vy += delta * ny;
+      }
+
+      this.state.contacts += 1;
+      return true;
+    }
+
+    _score(goal) {
+      const s = this.state;
+
+      if (goal < 0) {
+        s.rightScore += 1;
+
+        if (s.rightScore >= C.WIN_SCORE) {
+          s.winner = 'right';
+          s.playing = false;
+          return;
+        }
+
+        this.resetRound(1);
+        return;
+      }
+
+      s.leftScore += 1;
+
+      if (s.leftScore >= C.WIN_SCORE) {
+        s.winner = 'left';
+        s.playing = false;
+        return;
+      }
+
+      this.resetRound(-1);
+    }
+
+    step(dt = C.FIXED_DT) {
+      const s = this.state;
+
+      if (!s.playing || s.winner) {
+        return;
+      }
+
+      if (s.roundPause > 0) {
+        s.roundPause =
+          Math.max(0, s.roundPause - dt);
+
+        return;
+      }
+
+      const leftStartX = s.left.x;
+      const leftStartY = s.left.y;
+      const rightStartX = s.right.x;
+      const rightStartY = s.right.y;
+
+      const leftTarget =
+        clampTarget('left', {
+          x: s.left.targetX,
+          y: s.left.targetY
+        });
+
+      const rightTarget =
+        clampTarget('right', {
+          x: s.right.targetX,
+          y: s.right.targetY
+        });
+
+      const leftDX =
+        leftTarget.x - leftStartX;
+
+      const leftDY =
+        leftTarget.y - leftStartY;
+
+      const rightDX =
+        rightTarget.x - rightStartX;
+
+      const rightDY =
+        rightTarget.y - rightStartY;
+
+      const rawLeftVX = leftDX / dt;
+      const rawLeftVY = leftDY / dt;
+      const rawRightVX = rightDX / dt;
+      const rawRightVY = rightDY / dt;
+
+      const leftImpact =
+        clampVector(
+          rawLeftVX,
+          rawLeftVY,
+          C.MAX_MALLET_IMPACT_SPEED
+        );
+
+      const rightImpact =
+        clampVector(
+          rawRightVX,
+          rawRightVY,
+          C.MAX_MALLET_IMPACT_SPEED
+        );
+
+      s.left.vx = leftImpact.x;
+      s.left.vy = leftImpact.y;
+      s.right.vx = rightImpact.x;
+      s.right.vy = rightImpact.y;
+
+      const puckTravel =
+        Math.hypot(
+          s.puck.vx,
+          s.puck.vy
+        ) * dt;
+
+      const leftTravel =
+        Math.hypot(leftDX, leftDY);
+
+      const rightTravel =
+        Math.hypot(rightDX, rightDY);
+
+      const maxTravel =
+        Math.max(
+          puckTravel,
+          leftTravel,
+          rightTravel
+        );
+
+      let microSteps =
+        Math.ceil(
+          maxTravel /
+          C.MAX_MICRO_STEP
+        );
+
+      microSteps =
+        clamp(
+          microSteps,
+          1,
+          C.MAX_MICRO_STEPS
+        );
+
+      const microDt = dt / microSteps;
+
+      for (
+        let i = 1;
+        i <= microSteps;
+        i++
+      ) {
+        const t = i / microSteps;
+
+        const leftX =
+          leftStartX +
+          (leftDX * t);
+
+        const leftY =
+          leftStartY +
+          (leftDY * t);
+
+        const rightX =
+          rightStartX +
+          (rightDX * t);
+
+        const rightY =
+          rightStartY +
+          (rightDY * t);
+
+        s.puck.x +=
+          s.puck.vx * microDt;
+
+        s.puck.y +=
+          s.puck.vy * microDt;
+
+        this._resolveSolidMallet(
+          s.puck,
+          leftX,
+          leftY,
+          s.left.vx,
+          s.left.vy
+        );
+
+        this._resolveSolidMallet(
+          s.puck,
+          rightX,
+          rightY,
+          s.right.vx,
+          s.right.vy
+        );
+
+        this._resolveWalls(s.puck);
+
+        const goal =
+          this._goalForPuck(
+            s.puck.x,
+            s.puck.y
+          );
+
+        if (goal !== 0) {
+          this._score(goal);
+          return;
+        }
+
+        const damping =
+          Math.exp(
+            -C.DRAG * microDt
+          );
+
+        s.puck.vx *= damping;
+        s.puck.vy *= damping;
+
+        const speed =
+          Math.hypot(
+            s.puck.vx,
+            s.puck.vy
+          );
+
+        if (speed > C.MAX_PUCK_SPEED) {
+          const scale =
+            C.MAX_PUCK_SPEED / speed;
+
+          s.puck.vx *= scale;
+          s.puck.vy *= scale;
+        }
+      }
+
+      s.left.x = leftTarget.x;
+      s.left.y = leftTarget.y;
+      s.right.x = rightTarget.x;
+      s.right.y = rightTarget.y;
+
+      s.tick += 1;
+    }
+
+    snapshot() {
+      const s = this.state;
+
+      return {
+        playing: s.playing,
+        winner: s.winner,
+        roundPause: s.roundPause,
+
+        leftScore: s.leftScore,
+        rightScore: s.rightScore,
+
+        left: copyMallet(s.left),
+        right: copyMallet(s.right),
+
+        puck: {
+          x: s.puck.x,
+          y: s.puck.y,
+          vx: s.puck.vx,
+          vy: s.puck.vy
+        },
+
+        contacts: s.contacts,
+        tick: s.tick
+      };
+    }
+  }
+
+  return {
+    C,
+    clamp,
+    clampVector,
+    clampTarget,
+    AirHockeyPhysics
+  };
+});

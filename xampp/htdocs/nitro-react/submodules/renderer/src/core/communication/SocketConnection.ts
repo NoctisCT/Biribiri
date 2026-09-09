@@ -239,6 +239,7 @@ export class SocketConnection extends EventDispatcher implements IConnection
         {
             if(!wrapper) continue;
 
+
             const messages = this.getMessagesForWrapper(wrapper);
 
             if(!messages || !messages.length) continue;
@@ -271,6 +272,7 @@ export class SocketConnection extends EventDispatcher implements IConnection
         if(!wrapper) return null;
 
         const events = this._messages.getEvents(wrapper.header);
+
 
         if(!events || !events.length)
         {

@@ -17,7 +17,7 @@ export const FriendsContainerView: FC<FriendsContainerViewProps> = props =>
     return (
         <Column gap={ 1 }>
             <Text small>
-                <b>{ LocalizeText('extendedprofile.friends.count') }</b> { friendsCount }
+                <b>Amigos:</b> { friendsCount }
             </Text>
             <Text bold small>{ LocalizeText('extendedprofile.relstatus') }</Text>
             <Column>

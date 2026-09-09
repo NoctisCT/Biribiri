@@ -41,15 +41,15 @@ export const NavigatorRoomSettingsAccessTabView: FC<NavigatorRoomSettingsTabView
                     <Text bold>{ LocalizeText('navigator.roomsettings.doormode') }</Text>
                     <Flex alignItems="center" gap={ 1 }>
                         <input className="form-check-input" type="radio" name="lockState" checked={ (roomData.lockState === RoomDataParser.OPEN_STATE) && !isTryingPassword } onChange={ event => handleChange('lock_state', RoomDataParser.OPEN_STATE) } />
-                        <Text>{ LocalizeText('navigator.roomsettings.doormode.open') }</Text>
+                        <Text>Cualquiera</Text>
                     </Flex>
                     <Flex alignItems="center" gap={ 1 }>
                         <input className="form-check-input" type="radio" name="lockState" checked={ (roomData.lockState === RoomDataParser.DOORBELL_STATE) && !isTryingPassword } onChange={ event => handleChange('lock_state', RoomDataParser.DOORBELL_STATE) } />
-                        <Text>{ LocalizeText('navigator.roomsettings.doormode.doorbell') }</Text>
+                        <Text>Timbre</Text>
                     </Flex>
                     <Flex alignItems="center" gap={ 1 }>
                         <input className="form-check-input" type="radio" name="lockState" checked={ (roomData.lockState === RoomDataParser.INVISIBLE_STATE) && !isTryingPassword } onChange={ event => handleChange('lock_state', RoomDataParser.INVISIBLE_STATE) } />
-                        <Text>{ LocalizeText('navigator.roomsettings.doormode.invisible') }</Text>
+                        <Text>Invisible en el Navegador</Text>
                     </Flex>
                     <Flex fullWidth gap={ 1 }>
                         <input className="form-check-input" type="radio" name="lockState" checked={ (roomData.lockState === RoomDataParser.PASSWORD_STATE) || isTryingPassword } onChange={ event => setIsTryingPassword(event.target.checked) } />

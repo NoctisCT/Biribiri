@@ -60,9 +60,9 @@ class AdminFilamentPanelProvider extends PanelProvider
 			->plugins([
 				ActivitylogPlugin::make()
 				->resource(UserAuditResource::class)
-					->label('Log')
-					->pluralLabel('Audit Log')
-					->navigationGroup('Audit')
+					->label('Registro')
+					->pluralLabel('Registro de auditoría')
+					->navigationGroup('Auditoría')
 					->navigationCountBadge(true)
                     ->authorize(function ($user) {
                         return $user->can('viewAny', ActivitylogResource::getModel());

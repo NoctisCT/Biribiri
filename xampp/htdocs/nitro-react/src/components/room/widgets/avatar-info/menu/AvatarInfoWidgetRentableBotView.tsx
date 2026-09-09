@@ -151,7 +151,7 @@ export const AvatarInfoWidgetRentableBotView: FC<AvatarInfoWidgetRentableBotView
                         </ContextMenuListItemView> }
                     { (avatarInfo.botSkills.indexOf(BotSkillsEnum.CHANGE_BOT_MOTTO) >= 0) &&
                         <ContextMenuListItemView onClick={ event => processAction('change_bot_motto') }>
-                            { LocalizeText('avatar.widget.change_bot_motto') }
+                            Cambiar misión
                         </ContextMenuListItemView> }
                     { (avatarInfo.botSkills.indexOf(BotSkillsEnum.DRESS_UP) >= 0) &&
                         <ContextMenuListItemView onClick={ event => processAction('dress_up') }>

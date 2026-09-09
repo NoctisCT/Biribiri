@@ -39,13 +39,13 @@ export const UserContainerView: FC<UserContainerViewProps> = props =>
                 </Column>
                 <Column gap={ 1 }>
                     <Text small>
-                        <b>{ LocalizeText('extendedprofile.created') }</b> { userProfile.registration }
+                        <b>Creado:</b> { userProfile.registration }
                     </Text>
                     <Text small>
-                        <b>{ LocalizeText('extendedprofile.last.login') }</b> { FriendlyTime.format(userProfile.secondsSinceLastVisit, '.ago', 2) }
+                        <b>Última conexión:</b> { FriendlyTime.format(userProfile.secondsSinceLastVisit, '.ago', 2) }
                     </Text>
                     <Text small>
-                        <b>{ LocalizeText('extendedprofile.achievementscore') }</b> { userProfile.achievementPoints }
+                        <b>Puntuación de logros:</b> { userProfile.achievementPoints }
                     </Text>
                 </Column>
                 <Flex gap={ 1 }>

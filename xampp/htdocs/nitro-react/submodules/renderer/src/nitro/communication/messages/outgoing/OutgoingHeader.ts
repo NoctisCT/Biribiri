@@ -1,5 +1,9 @@
 export class OutgoingHeader
 {
+    public static BIRIBIRI_WARDROBE_PURCHASE_REQUEST = 6205;
+    public static BIRIBIRI_WARDROBE_NAME_SAVE = 6204;
+    public static BIRIBIRI_WARDROBE_NAMES_REQUEST = 6202;
+    public static BIRIBIRI_WARDROBE_STATE_REQUEST = 6200;
     public static ACHIEVEMENT_LIST = 219;
     public static ABRIR_SUBASTAS = 5000;
     public static AUTHENTICATION = -1;
@@ -504,4 +508,11 @@ export class OutgoingHeader
     public static GET_HOLO_GRID_WALKABILITY = 5040;
     public static RPG_ENGINE_COMMAND = 5050;
     public static HOLO_SLOT_SPIN = 5042;
+    public static AIR_HOCKEY_MOVE = 6000;
+    public static AIR_HOCKEY_READY = 6001;
+    public static AIR_HOCKEY_LEAVE = 6002;
+
+    public static BIRIBIRI_ARCADE_START = 6101;
+
+    public static BIRIBIRI_ARCADE_SUBMIT = 6103;
 }

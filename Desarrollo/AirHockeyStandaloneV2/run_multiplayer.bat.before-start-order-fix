@@ -1,0 +1,26 @@
+@echo off
+setlocal
+cd /d "%~dp0"
+
+where node >nul 2>nul
+if errorlevel 1 (
+    echo [ERROR] No encuentro Node.js en PATH.
+    pause
+    exit /b 1
+)
+
+echo ========================================
+echo  AIR HOCKEY STANDALONE V2 MULTIPLAYER
+echo ========================================
+echo.
+echo Servidor: http://127.0.0.1:8766/
+echo.
+echo Se abriran dos ventanas/pestanas.
+echo Cierra ESTA consola para detener el servidor.
+echo.
+
+start "" "http://127.0.0.1:8766/"
+timeout /t 1 /nobreak >nul
+start "" "http://127.0.0.1:8766/"
+
+node server.js

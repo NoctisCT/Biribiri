@@ -15,10 +15,10 @@ export const ModToolsPickedIssuesTabView: FC<ModToolsPickedIssuesTabViewProps> =
         <Column gap={ 0 } overflow="hidden">
             <Column gap={ 2 }>
                 <Grid gap={ 1 } className="text-black fw-bold border-bottom pb-1">
-                    <Base className="g-col-2">Type</Base>
-                    <Base className="g-col-3">Room/Player</Base>
-                    <Base className="g-col-4">Opened</Base>
-                    <Base className="g-col-3">Picker</Base>
+                    <Base className="g-col-2">Tipo</Base>
+                    <Base className="g-col-3">Sala/Usuario</Base>
+                    <Base className="g-col-4">Abierto</Base>
+                    <Base className="g-col-3">Asignado a</Base>
                 </Grid>
             </Column>
             <Column overflow="auto" className="striped-children" gap={ 0 }>

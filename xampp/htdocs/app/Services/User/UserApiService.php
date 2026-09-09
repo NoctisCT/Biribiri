@@ -3,18 +3,38 @@
 namespace App\Services\User;
 
 use App\Models\User;
+use App\Services\EmulatorPresenceService;
 use Illuminate\Database\Eloquent\Builder;
 
 class UserApiService
 {
-    public function fetchUser(string $username, array $columns): User
-    {
-        return User::select($columns)->where('username', '=', $username)->first();
+    public function __construct(
+        private readonly EmulatorPresenceService $presence
+    ) {
     }
 
-    public function onlineUsers($columns = ['username', 'motto', 'look'], bool $randomOrder = true): Builder
-    {
-        $query = User::select($columns)->where('online', '=', '1');
+    public function fetchUser(
+        string $username,
+        array $columns
+    ): User {
+        return User::select($columns)
+            ->where('username', '=', $username)
+            ->first();
+    }
+
+    public function onlineUsers(
+        $columns = [
+            'username',
+            'motto',
+            'look',
+        ],
+        bool $randomOrder = true
+    ): Builder {
+        $this->presence
+            ->normalizeGlobalPresence();
+
+        $query = User::select($columns)
+            ->where('online', '=', '1');
 
         if ($randomOrder) {
             $query = $query->inRandomOrder();
@@ -25,6 +45,7 @@ class UserApiService
 
     public function onlineUserCount(): int
     {
-        return User::where('online', '=', '1')->count();
+        return $this->presence
+            ->onlineUserCount();
     }
 }

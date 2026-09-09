@@ -22,11 +22,13 @@ class HousekeepingPermissionResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-shield-check';
 
-    protected static ?string $navigationGroup = 'Website';
+    protected static ?string $navigationGroup = 'Sitio web';
+    protected static ?string $pluralModelLabel = 'permisos de administración';
+    protected static ?string $modelLabel = 'permiso de administración';
 
     protected static ?string $slug = 'website/housekeeping-permissions';
     
-    protected static ?string $navigationLabel = 'Housekeeping permissions';
+    protected static ?string $navigationLabel = 'Permisos de administración';
 
     public static string $translateIdentifier = 'housekeeping-permissions';
 

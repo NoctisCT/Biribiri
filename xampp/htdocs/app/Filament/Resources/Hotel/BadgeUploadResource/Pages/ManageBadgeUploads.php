@@ -25,7 +25,7 @@ class ManageBadgeUploads extends Page implements Forms\Contracts\HasForms
     {
         return [
             Forms\Components\FileUpload::make('badge_file')
-                ->label('Upload Badge')
+                ->label('Subir placa')
                 ->disk('badges')
                 ->preserveFilenames()
                 ->acceptedFileTypes(['image/gif'])
@@ -39,7 +39,7 @@ class ManageBadgeUploads extends Page implements Forms\Contracts\HasForms
         $data = $this->form->getState();
 
         Notification::make()
-            ->title('Badge uploaded successfully!')
+            ->title('¡Placa subida correctamente!')
             ->success()
             ->send();
     }

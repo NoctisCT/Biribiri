@@ -15,7 +15,7 @@
                     <div class="absolute -left-1 h-6 w-6 rotate-45 bg-white dark:bg-gray-900"></div>
 
                     <span class="relative">
-                        {{ __(':online :hotel online', ['online' => DB::table('users')->where('online', '1')->count(),'hotel' => setting('hotel_name')]) }}
+                        {{ __(':online :hotel online', ['online' => app(\App\Services\EmulatorPresenceService::class)->onlineUserCount(),'hotel' => setting('hotel_name')]) }}
                     </span>
                 </div>
             </div>

@@ -1,6 +1,5 @@
 import { ClubGiftInfoEvent, FriendlyTime, GetClubGiftInfo, ILinkEventTracker, ScrGetKickbackInfoMessageComposer, ScrKickbackData, ScrSendKickbackInfoMessageEvent } from '@nitrots/nitro-renderer';
 import { FC, useEffect, useState } from 'react';
-import { OverlayTrigger, Popover } from 'react-bootstrap';
 import { AddEventLinkTracker, ClubStatus, CreateLinkEvent, GetClubBadge, GetConfiguration, LocalizeText, RemoveLinkEventTracker, SendMessageComposer } from '../../api';
 import { Base, Button, Column, Flex, LayoutAvatarImageView, LayoutBadgeImageView, NitroCardContentView, NitroCardHeaderView, NitroCardView, Text } from '../../common';
 import { useInventoryBadges, useMessageEvent, usePurse, useSessionInfo } from '../../hooks';
@@ -42,7 +41,7 @@ export const HcCenterView: FC<{}> = props =>
     }
 
     const getHcPaydayTime = () => (!kickbackData || kickbackData.timeUntilPayday < 60) ? LocalizeText('hccenter.special.time.soon') : FriendlyTime.shortFormat(kickbackData.timeUntilPayday * 60);
-    const getHcPaydayAmount = () => LocalizeText('hccenter.special.sum', [ 'credits' ], [ (kickbackData?.creditRewardForStreakBonus + kickbackData?.creditRewardForMonthlySpent).toString() ]);
+    const getHcPaydayAmount = () => LocalizeText('hccenter.special.sum', [ 'credits' ], [ kickbackData?.creditRewardForStreakBonus.toString() ]);
 
     useMessageEvent<ClubGiftInfoEvent>(ClubGiftInfoEvent, event =>
     {
@@ -112,22 +111,6 @@ export const HcCenterView: FC<{}> = props =>
 
     if(!isVisible) return null;
 
-    const popover = (
-        <Popover id="popover-basic">
-            <Popover.Body className="text-black py-2 px-3">
-                <h5>{ LocalizeText('hccenter.breakdown.title') }</h5>
-                <div>{ LocalizeText('hccenter.breakdown.creditsspent', [ 'credits' ], [ kickbackData?.totalCreditsSpent.toString() ]) }</div>
-                <div>{ LocalizeText('hccenter.breakdown.paydayfactor.percent', [ 'percent' ], [ (kickbackData?.kickbackPercentage * 100).toString() ]) }</div>
-                <div>{ LocalizeText('hccenter.breakdown.streakbonus', [ 'credits' ], [ kickbackData?.creditRewardForStreakBonus.toString() ]) }</div>
-                <hr className="w-100 text-black my-1" />
-                <div>{ LocalizeText('hccenter.breakdown.total', [ 'credits', 'actual' ], [ getHcPaydayAmount(), ((((kickbackData?.kickbackPercentage * kickbackData?.totalCreditsSpent) + kickbackData?.creditRewardForStreakBonus) * 100) / 100).toString() ]) }</div>
-                <div className="btn btn-link text-primary p-0" onClick={ () => CreateLinkEvent('habbopages/' + GetConfiguration('hc.center')['payday.habbopage']) }>
-                    { LocalizeText('hccenter.special.infolink') }
-                </div>
-            </Popover.Body>
-        </Popover>
-    );
-
     return (
         <NitroCardView theme="primary-slim" className="nitro-hc-center">
             <NitroCardHeaderView headerText={ LocalizeText('generic.hccenter') } onCloseClick={ () => setIsVisible(false) } />
@@ -158,7 +141,6 @@ export const HcCenterView: FC<{}> = props =>
                         <Column className="rounded-start bg-primary p-2 payday-special mb-1">
                             <h4 className="mb-1">{ LocalizeText('hccenter.special.title') }</h4>
                             <div>{ LocalizeText('hccenter.special.info') }</div>
-                            <div className="btn btn-link text-white p-0 mt-auto align-self-baseline" onClick={ () => CreateLinkEvent('habbopages/' + GetConfiguration('hc.center')['payday.habbopage']) }>{ LocalizeText('hccenter.special.infolink') }</div>
                         </Column>
                         <div className="payday flex-shrink-0 p-2">
                             <h5 className="mb-2 ms-2">{ LocalizeText('hccenter.special.time.title') }</h5>
@@ -171,11 +153,6 @@ export const HcCenterView: FC<{}> = props =>
                                     <h5 className="ms-2 mb-1 bolder">{ LocalizeText('hccenter.special.amount.title') }</h5>
                                     <div className="d-flex flex-column">
                                         <div className="w-100 text-center ms-4n">{ getHcPaydayAmount() }</div>
-                                        <OverlayTrigger trigger={ [ 'hover', 'focus' ] } placement="left" overlay={ popover }>
-                                            <div className="btn btn-link align-self-end text-primary">
-                                                { LocalizeText('hccenter.breakdown.infolink') }
-                                            </div>
-                                        </OverlayTrigger>
                                     </div>
                                 </div> }
                         </div>

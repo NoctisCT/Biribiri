@@ -22,7 +22,7 @@ export const ModToolsUserSendMessageView: FC<ModToolsUserSendMessageViewProps> =
     {
         if(message.trim().length === 0)
         {
-            simpleAlert('Please write a message to user.', null, null, null, 'Error', null);
+            simpleAlert('Escribe un mensaje para el usuario.', null, null, null, 'Error', null);
             
             return;
         }
@@ -34,11 +34,11 @@ export const ModToolsUserSendMessageView: FC<ModToolsUserSendMessageViewProps> =
 
     return (
         <NitroCardView className="nitro-mod-tools-user-message" theme="primary-slim" windowPosition={ DraggableWindowPosition.TOP_LEFT }>
-            <NitroCardHeaderView headerText={ 'Send Message' } onCloseClick={ () => onCloseClick() } />
+            <NitroCardHeaderView headerText={ 'Enviar mensaje' } onCloseClick={ () => onCloseClick() } />
             <NitroCardContentView className="text-black">
-                <Text>Message To: { user.username }</Text>
+                <Text>Mensaje para: { user.username }</Text>
                 <textarea className="form-control" value={ message } onChange={ event => setMessage(event.target.value) }></textarea>
-                <Button fullWidth onClick={ sendMessage }>Send message</Button>
+                <Button fullWidth onClick={ sendMessage }>Enviar mensaje</Button>
             </NitroCardContentView>
         </NitroCardView>
     );

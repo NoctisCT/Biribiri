@@ -20,12 +20,13 @@ class CameraWebResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-photo';
 
-	protected static ?string $navigationGroup = 'Website';
+	protected static ?string $navigationGroup = 'Sitio web';
+	protected static ?string $modelLabel = 'foto';
 
     protected static ?string $slug = 'camera-web';
 
-    protected static ?string $pluralModelLabel = 'photos';
-	protected static ?string $navigationLabel = 'Web Camera';
+    protected static ?string $pluralModelLabel = 'fotos';
+	protected static ?string $navigationLabel = 'Cámara web';
 
 	public static function form(Form $form): Form
 {

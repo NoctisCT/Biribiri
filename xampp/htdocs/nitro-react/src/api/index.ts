@@ -29,3 +29,4 @@ export * from './user';
 export * from './utils';
 export * from './wired';
 export * from './tragaperras';
+export * from './air-hockey';

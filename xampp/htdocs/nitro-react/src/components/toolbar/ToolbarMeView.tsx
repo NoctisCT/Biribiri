@@ -60,6 +60,10 @@ export const ToolbarMeView: FC<PropsWithChildren<ToolbarMeViewProps>> = props =>
                 <Base className="navigation-item icon icon-me-clothing" />
             </Flex>
 
+            <Flex center pointer className="holo-me-slot" onClick={ event => CreateLinkEvent('rpg-engine/toggle') }>
+                <Base className="navigation-item icon icon-me-rooms" title="RPGEngine" />
+            </Flex>
+
             <Flex center pointer className="holo-me-slot" onClick={ event => CreateLinkEvent('user-settings/toggle') }>
                 <Base className="navigation-item icon icon-me-settings" />
             </Flex>

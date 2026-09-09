@@ -70,46 +70,46 @@ export const ModToolsRoomView: FC<ModToolsRoomViewProps> = props =>
 
     return (
         <NitroCardView className="nitro-mod-tools-room" theme="primary-slim" windowPosition={ DraggableWindowPosition.TOP_LEFT }>
-            <NitroCardHeaderView headerText={ 'Room Info' + (name ? ': ' + name : '') } onCloseClick={ event => onCloseClick() } />
+            <NitroCardHeaderView headerText={ 'Información de la sala' + (name ? ': ' + name : '') } onCloseClick={ event => onCloseClick() } />
             <NitroCardContentView className="text-black">
                 <Flex gap={ 2 }>
                     <Column justifyContent="center" grow gap={ 1 }>
                         <Flex alignItems="center" gap={ 2 }>
-                            <Text bold align="end" className="col-7">Room Owner:</Text>
+                            <Text bold align="end" className="col-7">Dueño de la sala:</Text>
                             <Text underline pointer truncate>{ ownerName }</Text>
                         </Flex>
                         <Flex alignItems="center" gap={ 2 }>
-                            <Text bold align="end" className="col-7">Users in room:</Text>
+                            <Text bold align="end" className="col-7">Usuarios en la sala:</Text>
                             <Text>{ usersInRoom }</Text>
                         </Flex>
                         <Flex alignItems="center" gap={ 2 }>
-                            <Text bold align="end" className="col-7">Owner in room:</Text>
-                            <Text>{ ownerInRoom ? 'Yes' : 'No' }</Text>
+                            <Text bold align="end" className="col-7">Dueño en la sala:</Text>
+                            <Text>{ ownerInRoom ? 'Sí' : 'No' }</Text>
                         </Flex>
                     </Column>
                     <Column gap={ 1 }>
-                        <Button onClick={ event => TryVisitRoom(roomId) }>Visit Room</Button>
-                        <Button onClick={ event => CreateLinkEvent(`mod-tools/open-room-chatlog/${ roomId }`) }>Chatlog</Button>
+                        <Button onClick={ event => TryVisitRoom(roomId) }>Visitar sala</Button>
+                        <Button onClick={ event => CreateLinkEvent(`mod-tools/open-room-chatlog/${ roomId }`) }>Historial</Button>
                     </Column>
                 </Flex>
                 <Column className="bg-muted rounded p-2" gap={ 1 }>
                     <Flex alignItems="center" gap={ 1 }>
                         <input className="form-check-input" type="checkbox" checked={ kickUsers } onChange={ event => setKickUsers(event.target.checked) } />
-                        <Text small>Kick everyone out</Text>
+                        <Text small>Expulsar a todos</Text>
                     </Flex>
                     <Flex alignItems="center" gap={ 1 }>
                         <input className="form-check-input" type="checkbox" checked={ lockRoom } onChange={ event => setLockRoom(event.target.checked) } />
-                        <Text small>Enable the doorbell</Text>
+                        <Text small>Activar el timbre</Text>
                     </Flex>
                     <Flex alignItems="center" gap={ 1 }>
                         <input className="form-check-input" type="checkbox" checked={ changeRoomName } onChange={ event => setChangeRoomName(event.target.checked) }/>
-                        <Text small>Change room name</Text>
+                        <Text small>Cambiar nombre de la sala</Text>
                     </Flex>
                 </Column>
-                <textarea className="form-control" placeholder="Type a mandatory message to the users in this text box..." value={ message } onChange={ event => setMessage(event.target.value) }></textarea>
+                <textarea className="form-control" placeholder="Escribe aquí el mensaje obligatorio para los usuarios..." value={ message } onChange={ event => setMessage(event.target.value) }></textarea>
                 <Flex justifyContent="between">
-                    <Button variant="danger" onClick={ event => handleClick('send_message') }>Send Caution</Button>
-                    <Button onClick={ event => handleClick('alert_only') }>Send Alert only</Button>
+                    <Button variant="danger" onClick={ event => handleClick('send_message') }>Enviar advertencia</Button>
+                    <Button onClick={ event => handleClick('alert_only') }>Solo enviar alerta</Button>
                 </Flex>
             </NitroCardContentView>
         </NitroCardView>

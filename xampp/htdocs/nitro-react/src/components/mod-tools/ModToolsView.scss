@@ -1,5 +1,12 @@
 .nitro-mod-tools {
-    width: $nitro-mod-tools-width;
+    width: 240px;
+
+    .btn {
+        justify-content: flex-start;
+        padding-left: 8px;
+        padding-right: 8px;
+        white-space: nowrap;
+    }
 }
 
 .nitro-mod-tools-room {

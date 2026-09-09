@@ -8,7 +8,8 @@ import {
     RpgEngineStatDefinition,
     RpgEngineStatValue,
     RpgEngineEncounter,
-    RpgEngineEncounterConfig
+    RpgEngineEncounterConfig,
+    RpgEngineSheetTemplate
 } from '@nitrots/nitro-renderer';
 import { GetCommunication } from '../../nitro/GetCommunication';
 import { SendMessageComposer } from '../../nitro/SendMessageComposer';
@@ -49,6 +50,30 @@ const ACTION_END_ENCOUNTER = 31;
 const ACTION_START_PVP_ENCOUNTER = 32;
 const ACTION_ENCOUNTER_PUSH = 33;
 
+const ACTION_REQUEST_PROJECT_CREATION = 34;
+const ACTION_GET_PROJECT_CREATION_REQUEST_STATUS = 35;
+const ACTION_APPROVE_PROJECT_CREATION_REQUEST = 36;
+const ACTION_REJECT_PROJECT_CREATION_REQUEST = 37;
+const ACTION_GET_SHEET_TEMPLATE = 38;
+const ACTION_UPSERT_SHEET_SECTION = 39;
+const ACTION_DELETE_SHEET_SECTION = 40;
+const ACTION_MOVE_SHEET_SECTION = 41;
+const ACTION_UPSERT_SHEET_FIELD = 42;
+const ACTION_DELETE_SHEET_FIELD = 43;
+const ACTION_MOVE_SHEET_FIELD = 44;
+const ACTION_GET_MY_CHARACTER = 45;
+const ACTION_SAVE_MY_CHARACTER = 46;
+
+const ACTION_LIST_MY_RPG_ACCESS = 47;
+const ACTION_LIST_MANAGEABLE_GROUPS = 48;
+const ACTION_LINK_PROJECT_GROUP = 49;
+const ACTION_UNLINK_PROJECT_GROUP = 50;
+
+const ACTION_LIST_RPG_CHARACTERS = 51;
+const ACTION_GET_RPG_CHARACTER = 52;
+const ACTION_ADMIN_SAVE_RPG_CHARACTER = 53;
+const ACTION_GET_CHARACTER_SHEET_DESIGN = 54;
+const ACTION_SAVE_CHARACTER_SHEET_DESIGN = 55;
 const OV_RESOURCE = 1;
 const OV_BASE = 2;
 const OV_DIRECTIONS = 4;
@@ -76,6 +101,7 @@ interface RpgEngineResponseSnapshot
     context: RpgEngineContext | null;
     encounterConfig: RpgEngineEncounterConfig | null;
     encounter: RpgEngineEncounter | null;
+    sheetTemplate: RpgEngineSheetTemplate | null;
 }
 
 interface RpgEngineStateSnapshot
@@ -89,6 +115,7 @@ interface RpgEngineStateSnapshot
     lastStatValue: RpgEngineStatValue | null;
     encounterConfig: RpgEngineEncounterConfig | null;
     encounter: RpgEngineEncounter | null;
+    sheetTemplate: RpgEngineSheetTemplate | null;
     lastResponse: RpgEngineResponseSnapshot | null;
     appliedKey: string | null;
 }
@@ -104,6 +131,7 @@ let contextCache: RpgEngineContext = null;
 let lastStatValue: RpgEngineStatValue = null;
 let encounterConfigCache: RpgEngineEncounterConfig = null;
 let encounterCache: RpgEngineEncounter = null;
+let sheetTemplateCache: RpgEngineSheetTemplate = null;
 let lastResponse: RpgEngineResponseSnapshot = null;
 let appliedKey: string = null;
 let appliedRoomId = -1;
@@ -143,6 +171,19 @@ function cloneEncounter(value: RpgEngineEncounter): RpgEngineEncounter
         participants: value.participants.map(participant => ({ ...participant })),
         reservations: (value.reservations ?? []).map(reservation => ({ ...reservation }))
     } : null;
+}
+
+function cloneSheetTemplate(value: RpgEngineSheetTemplate): RpgEngineSheetTemplate
+{
+    if(!value) return null;
+
+    return {
+        ...value,
+        sections: value.sections.map(section => ({
+            ...section,
+            fields: section.fields.map(field => ({ ...field }))
+        }))
+    };
 }
 
 function cloneContext(value: RpgEngineContext): RpgEngineContext
@@ -427,6 +468,7 @@ function onServerResult(event: RpgEngineResultEvent): void
     const context = parser.context;
     const encounterConfig = parser.encounterConfig;
     const encounter = parser.encounter;
+    const sheetTemplate = parser.sheetTemplate;
 
     for(const project of projects)
     {
@@ -501,6 +543,9 @@ function onServerResult(event: RpgEngineResultEvent): void
         clearAppliedContext();
     }
 
+    if(sheetTemplate)
+        sheetTemplateCache = cloneSheetTemplate(sheetTemplate);
+
     lastResponse = {
         action: parser.action,
         success: parser.success,
@@ -511,7 +556,8 @@ function onServerResult(event: RpgEngineResultEvent): void
         statValue: cloneStatValue(statValue),
         context: cloneContext(context),
         encounterConfig: cloneEncounterConfig(encounterConfig),
-        encounter: cloneEncounter(encounter)
+        encounter: cloneEncounter(encounter),
+        sheetTemplate: cloneSheetTemplate(sheetTemplate)
     };
 
     if(parser.success)
@@ -547,6 +593,7 @@ function snapshot(): RpgEngineStateSnapshot
         lastStatValue: cloneStatValue(lastStatValue),
         encounterConfig: cloneEncounterConfig(encounterConfigCache),
         encounter: cloneEncounter(encounterCache),
+        sheetTemplate: cloneSheetTemplate(sheetTemplateCache),
         lastResponse: lastResponse ? {
             ...lastResponse,
             projects: lastResponse.projects.map(cloneProject),
@@ -555,7 +602,8 @@ function snapshot(): RpgEngineStateSnapshot
             statValue: cloneStatValue(lastResponse.statValue),
             context: cloneContext(lastResponse.context),
             encounterConfig: cloneEncounterConfig(lastResponse.encounterConfig),
-            encounter: cloneEncounter(lastResponse.encounter)
+            encounter: cloneEncounter(lastResponse.encounter),
+            sheetTemplate: cloneSheetTemplate(lastResponse.sheetTemplate)
         } : null,
         appliedKey
     };
@@ -1011,6 +1059,317 @@ function createDebugApi()
             return { sent: true, action: 'encounter-end', encounterId: Math.trunc(encounterId) };
         },
 
+        requestProject: (name: string, reason: string = '') =>
+        {
+            send(
+                ACTION_REQUEST_PROJECT_CREATION,
+                String(name ?? ''),
+                String(reason ?? '')
+            );
+
+            return {
+                sent: true,
+                action: 'request-project',
+                name: String(name ?? ''),
+                reason: String(reason ?? '')
+            };
+        },
+
+        requestStatus: () =>
+        {
+            send(ACTION_GET_PROJECT_CREATION_REQUEST_STATUS);
+            return { sent: true, action: 'request-status' };
+        },
+
+        requestApprove: (userId: number) =>
+        {
+            send(ACTION_APPROVE_PROJECT_CREATION_REQUEST, Math.trunc(userId));
+
+            return {
+                sent: true,
+                action: 'request-approve',
+                userId: Math.trunc(userId)
+            };
+        },
+
+        requestReject: (userId: number) =>
+        {
+            send(ACTION_REJECT_PROJECT_CREATION_REQUEST, Math.trunc(userId));
+
+            return {
+                sent: true,
+                action: 'request-reject',
+                userId: Math.trunc(userId)
+            };
+        },
+
+        sheetTemplate: (rpgId: number) =>
+        {
+            send(ACTION_GET_SHEET_TEMPLATE, Math.trunc(rpgId));
+            return { sent: true, action: 'sheet-template' };
+        },
+
+        sheetSectionSave: (rpgId: number, sectionId: number, title: string) =>
+        {
+            send(ACTION_UPSERT_SHEET_SECTION, Math.trunc(rpgId), Math.trunc(sectionId || 0), String(title ?? ''));
+            return { sent: true, action: 'sheet-section-save' };
+        },
+
+        sheetSectionDelete: (rpgId: number, sectionId: number) =>
+        {
+            send(ACTION_DELETE_SHEET_SECTION, Math.trunc(rpgId), Math.trunc(sectionId));
+            return { sent: true, action: 'sheet-section-delete' };
+        },
+
+        sheetSectionMove: (rpgId: number, sectionId: number, direction: number) =>
+        {
+            send(ACTION_MOVE_SHEET_SECTION, Math.trunc(rpgId), Math.trunc(sectionId), direction < 0 ? -1 : 1);
+            return { sent: true, action: 'sheet-section-move' };
+        },
+
+        sheetFieldSave: (
+            rpgId: number,
+            fieldId: number,
+            sectionId: number,
+            label: string,
+            fieldType: string,
+            required: boolean,
+            visibility: string,
+            controlMode: string,
+            optionsText: string = ''
+        ) =>
+        {
+            send(
+                ACTION_UPSERT_SHEET_FIELD,
+                Math.trunc(rpgId),
+                Math.trunc(fieldId || 0),
+                Math.trunc(sectionId),
+                String(label ?? ''),
+                String(fieldType ?? ''),
+                required ? 1 : 0,
+                String(visibility ?? ''),
+                String(controlMode ?? ''),
+                String(optionsText ?? '')
+            );
+            return { sent: true, action: 'sheet-field-save' };
+        },
+
+        sheetFieldDelete: (rpgId: number, fieldId: number) =>
+        {
+            send(ACTION_DELETE_SHEET_FIELD, Math.trunc(rpgId), Math.trunc(fieldId));
+            return { sent: true, action: 'sheet-field-delete' };
+        },
+
+        sheetFieldMove: (rpgId: number, fieldId: number, direction: number) =>
+        {
+            send(ACTION_MOVE_SHEET_FIELD, Math.trunc(rpgId), Math.trunc(fieldId), direction < 0 ? -1 : 1);
+            return { sent: true, action: 'sheet-field-move' };
+        },
+
+        characterMine: (rpgId: number) =>
+        {
+            send(ACTION_GET_MY_CHARACTER, Math.trunc(rpgId));
+
+            return {
+                sent: true,
+                action: 'character-mine',
+                rpgId: Math.trunc(rpgId)
+            };
+        },
+
+        characterSave: (
+            rpgId: number,
+            values: Record<number, string> = {}
+        ) =>
+        {
+            const entries = Object.entries(values ?? {})
+                .map(([ fieldId, value ]) => [ Math.trunc(Number(fieldId)), String(value ?? '') ] as const)
+                .filter(([ fieldId ]) => fieldId > 0)
+                .sort((a, b) => a[0] - b[0]);
+
+            const args: Array<string | number | boolean> = [
+                Math.trunc(rpgId),
+                entries.length
+            ];
+
+            for(const [ fieldId, value ] of entries)
+            {
+                args.push(fieldId, value);
+            }
+
+            send(ACTION_SAVE_MY_CHARACTER, ...args);
+
+            return {
+                sent: true,
+                action: 'character-save',
+                rpgId: Math.trunc(rpgId),
+                fields: entries.length
+            };
+        },
+
+        rpgAccess: () =>
+        {
+            send(ACTION_LIST_MY_RPG_ACCESS);
+            return { sent: true, action: 'rpg-access' };
+        },
+
+        manageableGroups: () =>
+        {
+            send(ACTION_LIST_MANAGEABLE_GROUPS);
+            return { sent: true, action: 'manageable-groups' };
+        },
+
+        linkGroup: (rpgId: number, guildId: number) =>
+        {
+            send(
+                ACTION_LINK_PROJECT_GROUP,
+                Math.trunc(rpgId),
+                Math.trunc(guildId)
+            );
+
+            return {
+                sent: true,
+                action: 'link-group',
+                rpgId: Math.trunc(rpgId),
+                guildId: Math.trunc(guildId)
+            };
+        },
+
+        unlinkGroup: (rpgId: number) =>
+        {
+            send(ACTION_UNLINK_PROJECT_GROUP, Math.trunc(rpgId));
+
+            return {
+                sent: true,
+                action: 'unlink-group',
+                rpgId: Math.trunc(rpgId)
+            };
+        },
+
+        characterList: (rpgId: number) =>
+        {
+            send(ACTION_LIST_RPG_CHARACTERS, Math.trunc(rpgId));
+
+            return {
+                sent: true,
+                action: 'character-list',
+                rpgId: Math.trunc(rpgId)
+            };
+        },
+
+        characterGet: (rpgId: number, targetUserId: number) =>
+        {
+            send(
+                ACTION_GET_RPG_CHARACTER,
+                Math.trunc(rpgId),
+                Math.trunc(targetUserId)
+            );
+
+            return {
+                sent: true,
+                action: 'character-get',
+                rpgId: Math.trunc(rpgId),
+                targetUserId: Math.trunc(targetUserId)
+            };
+        },
+
+        characterAdminSave: (
+            rpgId: number,
+            targetUserId: number,
+            values: Record<number, string> = {}
+        ) =>
+        {
+            const entries = Object.entries(values ?? {})
+                .map(([ fieldId, value ]) => [
+                    Math.trunc(Number(fieldId)),
+                    String(value ?? '')
+                ] as const)
+                .filter(([ fieldId ]) => fieldId > 0)
+                .sort((a, b) => a[0] - b[0]);
+
+            const args: Array<string | number | boolean> = [
+                Math.trunc(rpgId),
+                Math.trunc(targetUserId),
+                entries.length
+            ];
+
+            for(const [ fieldId, value ] of entries)
+                args.push(fieldId, value);
+
+            send(ACTION_ADMIN_SAVE_RPG_CHARACTER, ...args);
+
+            return {
+                sent: true,
+                action: 'character-admin-save',
+                rpgId: Math.trunc(rpgId),
+                targetUserId: Math.trunc(targetUserId),
+                fields: entries.length
+            };
+        },
+
+        characterDesignGet: (rpgId: number, targetUserId: number) =>
+        {
+            send(
+                ACTION_GET_CHARACTER_SHEET_DESIGN,
+                Math.trunc(rpgId),
+                Math.trunc(targetUserId)
+            );
+
+            return {
+                sent: true,
+                action: 'character-design-get',
+                rpgId: Math.trunc(rpgId),
+                targetUserId: Math.trunc(targetUserId)
+            };
+        },
+
+        characterDesignSave: (rpgId: number, design: any) =>
+        {
+            const blocks = Array.isArray(design?.blocks)
+                ? design.blocks
+                : [];
+
+            const args: Array<string | number | boolean> = [
+                Math.trunc(rpgId),
+                String(design?.backgroundColor ?? '#1F1F26'),
+                String(design?.backgroundImageUrl ?? ''),
+                String(design?.primaryColor ?? '#6F5BD3'),
+                String(design?.secondaryColor ?? '#292633'),
+                String(design?.textColor ?? '#F5F5F5'),
+                String(design?.panelColor ?? '#17171D'),
+                Math.trunc(design?.panelOpacity ?? 90),
+                String(design?.bannerImageUrl ?? ''),
+                Math.trunc(design?.bannerHeight ?? 180),
+                Math.trunc(design?.contentWidth ?? 760),
+                Math.trunc(design?.borderRadius ?? 8),
+                String(design?.advancedJson ?? ''),
+                blocks.length
+            ];
+
+            for(const block of blocks)
+            {
+                args.push(
+                    String(block?.blockType ?? ''),
+                    Math.trunc(block?.sourceId ?? 0),
+                    Math.trunc(block?.sortOrder ?? 0),
+                    Math.trunc(block?.widthSpan ?? 12),
+                    String(block?.alignment ?? 'left'),
+                    Math.trunc(block?.imageWidthPct ?? 100),
+                    Math.trunc(block?.imageMaxHeight ?? 300),
+                    block?.labelVisible ? 1 : 0
+                );
+            }
+
+            send(ACTION_SAVE_CHARACTER_SHEET_DESIGN, ...args);
+
+            return {
+                sent: true,
+                action: 'character-design-save',
+                rpgId: Math.trunc(rpgId),
+                blocks: blocks.length
+            };
+        },
+
         auto: (enabled: boolean = true) =>
         {
             autoApply = !!enabled;
@@ -1023,7 +1382,11 @@ function createDebugApi()
         state: snapshot,
 
         help: () => ({
-            create: 'RPGEngine.create("Pokemon RPG")',
+            create: 'RPGEngine.create("Pokemon RPG") // requiere permiso aprobado salvo admin',
+            requestProject: 'RPGEngine.requestProject("Pokemon RPG", "Motivo / idea")',
+            requestStatus: 'RPGEngine.requestStatus()',
+            requestApprove: 'RPGEngine.requestApprove(userId) // admin',
+            requestReject: 'RPGEngine.requestReject(userId) // admin',
             projects: 'RPGEngine.projects()',
             addCurrentRoom: 'RPGEngine.addCurrentRoom(rpgId)',
             rooms: 'RPGEngine.rooms(rpgId)',

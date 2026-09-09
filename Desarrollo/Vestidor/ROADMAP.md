@@ -110,3 +110,14 @@ No es prioridad para la primera versión, pero `Conjuntos + compartir looks` dej
 - Priorizar funciones que el usuario realmente utilice repetidamente.
 - Evitar añadir complejidad visual gratuita.
 - Todo código exclusivo de esta función debe archivarse bajo `Desarrollo/Vestidor/` además de permanecer en sus rutas runtime necesarias.
+
+## Arquitectura de persistencia — decisión cerrada
+
+- **No usar localStorage** para features persistentes del vestidor.
+- Outfits del armario: MariaDB (`users_wardrobe`).
+- Derechos de slots: MariaDB (`biribiri_wardrobe_entitlements`).
+- 10 slots base.
+- +10 slots HC.
+- Slots adicionales comprables por créditos más adelante.
+- Validación de slot en servidor, no confiar únicamente en Nitro.
+

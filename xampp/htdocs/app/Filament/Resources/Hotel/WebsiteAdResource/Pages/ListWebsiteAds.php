@@ -17,30 +17,30 @@ class ListWebsiteAds extends ListRecords
     {
         return [
             Actions\CreateAction::make()
-                ->label('Create new ADS')
+                ->label('Crear nuevo anuncio')
 				->color('success'),
             Action::make('importAdsData')
-                ->label('Import ADS Images from folder')
+                ->label('Importar imágenes de anuncios desde la carpeta')
                 ->color('info')
                 ->action(function () {
                     Artisan::call('import:ads-data');
-                    session()->flash('success', 'ADS data imported successfully!');
+                    session()->flash('success', '¡Datos de anuncios importados correctamente!');
                 })
                 ->requiresConfirmation()
-                ->modalHeading('Import ADS Data')
-                ->modalDescription('Are you sure you want to import ADS data? This action cannot be undone.')
-                ->modalButton('Yes, import data'),
+                ->modalHeading('Importar datos de anuncios')
+                ->modalDescription('¿Seguro que quieres importar los datos de anuncios? Esta acción no se puede deshacer.')
+                ->modalButton('Sí, importar datos'),
             Action::make('emptyTable')
-                ->label('Empty Database Table')
+                ->label('Vaciar tabla de la base de datos')
                 ->color('danger')
                 ->action(function () {
                     WebsiteAd::truncate();
-                    session()->flash('success', 'The table has been emptied successfully!');
+                    session()->flash('success', '¡La tabla se ha vaciado correctamente!');
                 })
                 ->requiresConfirmation()
-                ->modalHeading('Empty Table')
-                ->modalDescription('Are you sure you want to empty the table? This action cannot be undone and will delete all records.')
-                ->modalButton('Yes, empty table'),
+                ->modalHeading('Vaciar tabla')
+                ->modalDescription('¿Seguro que quieres vaciar la tabla? Esta acción no se puede deshacer y eliminará todos los registros.')
+                ->modalButton('Sí, vaciar tabla'),
         ];
     }
 }

@@ -1,0 +1,583 @@
+@import '../space-invaders/SpaceInvadersView.scss';
+
+/*
+ * BIRIBIRI_ASTEROIDS_V2_VECTOR_IDENTITY
+ * Same arcade family / completely different cabinet identity.
+ */
+.nitro-space-invaders.nitro-asteroids {
+    --ast-bg: #020608;
+    --ast-panel: #0a1217;
+    --ast-panel-2: #111c22;
+    --ast-steel: #40515a;
+    --ast-steel-hi: #788991;
+    --ast-cyan: #56d6e5;
+    --ast-cyan-dim: #296f7b;
+    --ast-amber: #ffb54b;
+    --ast-amber-hi: #ffd66d;
+    --ast-green: #61dda0;
+    --ast-red: #ef6670;
+    --ast-text: #c6d8dc;
+    --ast-muted: #71868c;
+
+    .space-invaders-content {
+        padding: 6px;
+        background:
+            linear-gradient(
+                to bottom,
+                #b8b9b6 0%,
+                #91979a 45%,
+                #747d81 100%
+            );
+    }
+
+    .space-invaders-shell {
+        padding: 10px;
+        border: 2px solid #20282c;
+        border-radius: 3px;
+        background:
+            linear-gradient(
+                135deg,
+                #3a484f 0%,
+                #202b30 16%,
+                #111b20 58%,
+                #1b282e 100%
+            );
+        box-shadow:
+            inset 1px 1px 0 rgba(255, 255, 255, .28),
+            inset -1px -1px 0 rgba(0, 0, 0, .72),
+            inset 0 0 24px rgba(0, 0, 0, .48),
+            0 1px 0 rgba(255, 255, 255, .16);
+    }
+
+    .space-cabinet-screw {
+        border-color: #4c5b61;
+        background: #9ba5a8;
+    }
+
+    /* -------------------------------------------------------------
+       HUD · segmented vector instrument panel
+       ------------------------------------------------------------- */
+    .space-invaders-hud {
+        grid-template-columns: 1.36fr .72fr 1fr 1fr;
+        min-height: 80px;
+        border: 2px solid #05090b;
+        border-radius: 2px;
+        background: #03080b;
+        box-shadow:
+            inset 0 0 0 1px #4a5f68,
+            inset 0 0 18px rgba(0, 0, 0, .92),
+            0 1px 0 rgba(151, 178, 185, .15);
+    }
+
+    .space-hud-cell {
+        overflow: hidden;
+        border-right: 1px solid #314148;
+        background:
+            linear-gradient(
+                to bottom,
+                rgba(19, 32, 38, .96),
+                rgba(4, 11, 14, .98)
+            );
+
+
+
+
+
+        &:last-child {
+            border-right: 0;
+        }
+    }
+
+    .space-hud-label {
+        color: #78949b;
+        font-size: 9px;
+        letter-spacing: 1.8px;
+        text-shadow: none;
+    }
+
+    .space-score-value {
+        color: var(--ast-amber-hi);
+        font-size: 28px;
+        letter-spacing: 2px;
+        text-shadow:
+            0 0 8px rgba(255, 181, 75, .30),
+            1px 1px 0 #000;
+    }
+
+    .space-level-value {
+        color: var(--ast-cyan);
+        font-size: 27px;
+        text-shadow:
+            0 0 8px rgba(86, 214, 229, .25),
+            1px 1px 0 #000;
+    }
+
+    .asteroids-life-row {
+        display: flex;
+        min-height: 28px;
+        margin-top: 4px;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .asteroids-life-ship {
+        width: 22px;
+        height: 22px;
+        fill: transparent;
+        stroke: #354950;
+        stroke-width: 1.6px;
+        filter: none;
+
+        &.is-active {
+            stroke: #a9eef4;
+            filter:
+                drop-shadow(0 0 3px rgba(86, 214, 229, .33));
+        }
+    }
+
+    .space-hud-cell.is-status {
+        gap: 5px;
+        color: var(--ast-green);
+        font-size: 12px;
+        letter-spacing: 1px;
+        background:
+            linear-gradient(
+                to bottom,
+                rgba(12, 45, 38, .96),
+                rgba(4, 18, 17, .98)
+            );
+
+
+
+        &.is-ready {
+            color: #a9eef4;
+            background:
+                linear-gradient(
+                    to bottom,
+                    rgba(19, 32, 38, .96),
+                    rgba(4, 11, 14, .98)
+                );
+        }
+
+        &.is-paused {
+            color: var(--ast-amber-hi);
+            background:
+                linear-gradient(
+                    to bottom,
+                    rgba(55, 40, 13, .94),
+                    rgba(22, 14, 4, .98)
+                );
+        }
+
+        &.is-gameover {
+            color: #ff8a91;
+            background:
+                linear-gradient(
+                    to bottom,
+                    rgba(61, 24, 28, .96),
+                    rgba(22, 7, 9, .98)
+                );
+        }
+    }
+
+    .asteroids-status-rock {
+        width: 22px;
+        height: 22px;
+        fill: rgba(36, 90, 98, .16);
+        stroke: currentColor;
+        stroke-width: 1.6px;
+        filter:
+            drop-shadow(0 0 3px rgba(86, 214, 229, .24));
+
+        .rock-cut {
+            fill: transparent;
+            stroke: currentColor;
+            stroke-width: 1px;
+        }
+    }
+
+    /* -------------------------------------------------------------
+       PLAYFIELD · vector monitor, not Space Invaders CRT
+       ------------------------------------------------------------- */
+    .space-invaders-stage {
+        margin-top: 9px;
+        border: 2px solid #05090b;
+        border-radius: 2px;
+        background: #010406;
+        box-shadow:
+            0 0 0 1px #53666e,
+            inset 0 0 0 1px #173642,
+            inset 0 0 32px rgba(0, 0, 0, .92),
+            0 0 12px rgba(37, 125, 139, .10);
+
+        &::before {
+            position: absolute;
+            z-index: 3;
+            inset: 6px;
+            pointer-events: none;
+            border: 1px solid rgba(76, 184, 200, .13);
+            content: '';
+        }
+
+
+    }
+
+    .space-invaders-canvas {
+        image-rendering: auto;
+        filter:
+            contrast(1.03)
+            saturate(.92);
+    }
+
+    /* -------------------------------------------------------------
+       OVERLAYS · own identity + game over one single row
+       ------------------------------------------------------------- */
+    .space-game-overlay {
+        background:
+            radial-gradient(
+                circle at center,
+                rgba(13, 39, 44, .54),
+                rgba(1, 4, 6, .91)
+            );
+
+        &.is-pause {
+            background: rgba(1, 5, 7, .78);
+        }
+
+        &.is-gameover {
+            background:
+                radial-gradient(
+                    circle at center,
+                    rgba(47, 25, 11, .34),
+                    rgba(2, 5, 7, .92)
+                );
+        }
+    }
+
+    .space-overlay-panel {
+        width: 414px;
+        max-width: 92%;
+        padding: 20px 22px 18px;
+        border: 2px solid #071014;
+        border-radius: 2px;
+        background:
+            linear-gradient(
+                to bottom,
+                #15252b,
+                #091216 60%,
+                #050b0e
+            );
+        box-shadow:
+            inset 0 0 0 1px #4b6570,
+            inset 0 0 20px rgba(0, 0, 0, .82),
+            0 7px 22px rgba(0, 0, 0, .58);
+
+        &.is-compact {
+            width: 300px;
+        }
+    }
+
+    .space-overlay-kicker {
+        color: var(--ast-cyan);
+        font-size: 9px;
+        letter-spacing: 2.6px;
+    }
+
+    .space-overlay-title {
+        color: #edf9fa;
+        font-size: 24px;
+        letter-spacing: 1.6px;
+        text-shadow:
+            0 0 8px rgba(86, 214, 229, .16),
+            2px 2px 0 #000;
+    }
+
+    .space-overlay-copy {
+        color: #a8bdc1;
+    }
+
+    .space-overlay-hint {
+        color: #697f85;
+    }
+
+    .space-primary-button {
+        min-width: 164px;
+        height: 39px;
+        border: 2px solid #7b5217;
+        border-radius: 2px;
+        background:
+            linear-gradient(
+                to bottom,
+                #ffd369 0%,
+                #f3a838 52%,
+                #b96d1e 100%
+            );
+        color: #241708;
+        font-size: 13px;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, .48);
+        box-shadow:
+            inset 1px 1px 0 rgba(255, 255, 255, .58),
+            inset -1px -1px 0 rgba(73, 37, 4, .48),
+            0 2px 0 #050708;
+
+        &:hover {
+            background:
+                linear-gradient(
+                    to bottom,
+                    #ffe18a,
+                    #ffb84a 52%,
+                    #ca7921
+                );
+        }
+    }
+
+    .space-gameover-results {
+        display: grid;
+        width: 100%;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 13px;
+
+        span {
+            min-width: 0;
+            min-height: 52px;
+            padding: 6px 4px;
+            border: 1px solid #2d4951;
+            background:
+                linear-gradient(
+                    to bottom,
+                    #0c181d,
+                    #050b0e
+                );
+            color: #758e94;
+            font-size: 8px;
+            letter-spacing: 1.1px;
+            box-shadow:
+                inset 1px 1px 0 rgba(255, 255, 255, .05),
+                inset -1px -1px 0 rgba(0, 0, 0, .58);
+        }
+
+        b {
+            margin-top: 3px;
+            color: var(--ast-amber-hi);
+            font-size: 16px;
+            line-height: 18px;
+            letter-spacing: .8px;
+            text-shadow:
+                0 0 5px rgba(255, 181, 75, .20);
+        }
+    }
+
+    .space-score-submit-status {
+        color: #7f969b;
+
+        &.is-accepted {
+            color: #75dda6;
+        }
+
+        &.is-rejected {
+            color: #f08288;
+        }
+    }
+
+    /* -------------------------------------------------------------
+       CONSOLE · dark avionics panel, no purple Space key
+       ------------------------------------------------------------- */
+    .space-invaders-console {
+        min-height: 62px;
+        margin-top: 9px;
+        gap: 9px;
+        background: transparent;
+        border: 0;
+        box-shadow: none;
+    }
+
+    .space-controls-panel {
+        padding: 7px 9px;
+        gap: 8px;
+        border: 2px solid #070b0d;
+        border-radius: 2px;
+        background:
+            linear-gradient(
+                to bottom,
+                #222f34,
+                #0d1518
+            );
+        box-shadow:
+            inset 0 0 0 1px #52636a,
+            inset 0 0 12px rgba(0, 0, 0, .70),
+            0 1px 0 rgba(255, 255, 255, .10);
+    }
+
+    .space-console-divider {
+        width: 1px;
+        height: 30px;
+        background:
+            linear-gradient(
+                to bottom,
+                transparent,
+                #50636b,
+                transparent
+            );
+        opacity: .82;
+    }
+
+    .space-control-group {
+        gap: 4px;
+    }
+
+    .space-keycap {
+        min-width: 25px;
+        height: 27px;
+        border: 1px solid #376974;
+        border-radius: 2px;
+        background:
+            linear-gradient(
+                to bottom,
+                #243b43,
+                #0d1d22
+            );
+        color: #c5f3f7;
+        font-size: 12px;
+        text-shadow: 1px 1px 0 #000;
+        box-shadow:
+            inset 1px 1px 0 rgba(255, 255, 255, .12),
+            inset -1px -1px 0 rgba(0, 0, 0, .50),
+            0 1px 0 #020405;
+
+        &.is-letter {
+            min-width: 24px;
+        }
+
+        &.is-space {
+            min-width: 68px;
+            border-color: #9a6722;
+            background:
+                linear-gradient(
+                    to bottom,
+                    #4d3a1f,
+                    #22170b
+                );
+            color: #ffd574;
+            box-shadow:
+                inset 1px 1px 0 rgba(255, 222, 147, .20),
+                inset -1px -1px 0 rgba(0, 0, 0, .55),
+                0 1px 0 #020405;
+        }
+    }
+
+    .space-control-separator {
+        color: #53656b;
+    }
+
+    .space-control-action {
+        color: #9cb1b6;
+        font-size: 9px;
+        letter-spacing: .5px;
+    }
+
+    .space-console-actions {
+        gap: 8px;
+        background: transparent;
+        border: 0;
+        box-shadow: none;
+    }
+
+    .space-sound-button {
+        min-width: 86px;
+        border-color: #204f40;
+        border-radius: 2px;
+        background:
+            linear-gradient(
+                to bottom,
+                #27463d,
+                #132720
+            );
+        color: #8ca69d;
+
+        &.is-on {
+            border-color: #287b59;
+            background:
+                linear-gradient(
+                    to bottom,
+                    #2e8a61,
+                    #135036
+                );
+            color: #e6fff0;
+            box-shadow:
+                inset 1px 1px 0 rgba(255, 255, 255, .18),
+                inset -1px -1px 0 rgba(0, 0, 0, .42),
+                0 1px 0 #030604;
+        }
+    }
+
+    .space-restart-button,
+    .space-records-button {
+        border-color: #8b5e18;
+        border-radius: 2px;
+        background:
+            linear-gradient(
+                to bottom,
+                #ffd66e,
+                #f2ac3d 53%,
+                #b96e1f
+            );
+        color: #2d1d08;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, .42);
+    }
+
+    /* -------------------------------------------------------------
+       RECORDS STRIP · same family structure, Asteroids styling
+       ------------------------------------------------------------- */
+    .space-arcade-summary-bar {
+        min-height: 50px;
+        margin-top: 8px;
+        border: 2px solid #060a0c;
+        border-radius: 2px;
+        background:
+            linear-gradient(
+                to bottom,
+                #18262b,
+                #091114
+            );
+        box-shadow:
+            inset 0 0 0 1px #4b5f67,
+            inset 0 0 12px rgba(0, 0, 0, .68);
+    }
+
+    .space-arcade-summary-brand {
+        border-right-color: #33474e;
+
+        span {
+            color: var(--ast-cyan);
+        }
+
+        strong {
+            color: var(--ast-amber-hi);
+            text-shadow:
+                0 0 5px rgba(255, 181, 75, .18);
+        }
+    }
+
+    .space-arcade-summary-stats {
+        span {
+            border-right-color: #33474e;
+            color: #71878d;
+        }
+
+        b {
+            color: #f0c969;
+            text-shadow:
+                0 0 4px rgba(255, 181, 75, .14);
+        }
+    }
+
+    .space-records-button {
+        min-width: 110px;
+    }
+
+    .space-records-star {
+        color: #fff3b6;
+    }
+}

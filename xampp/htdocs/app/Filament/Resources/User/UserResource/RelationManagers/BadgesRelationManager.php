@@ -76,15 +76,15 @@ class BadgesRelationManager extends RelationManager
                         if (!$hasRconEnabled) {
                             Notification::make()
                                 ->danger()
-                                ->title('RCON is not enabled!')
-                                ->body("You can't send badges to online users if RCON is not enabled.")
+                                ->title('¡RCON no está activado!')
+                                ->body("No puedes enviar placas a usuarios conectados si RCON no está activado.")
                                 ->persistent()
                                 ->send();
                         } else {
                             $rcon = app(RconService::class);
                             $data = $action->getFormData();
 
-                            $rcon->sendSafelyFromDashboard('sendBadge', [$user, $data['badge_code']], 'RCON: Failed to send the badge');
+                            $rcon->sendSafelyFromDashboard('sendBadge', [$user, $data['badge_code']], 'RCON: No se pudo enviar la placa');
                         }
 
                         $action->cancel();
@@ -110,8 +110,8 @@ class BadgesRelationManager extends RelationManager
         if (!$hasRconEnabled) {
             Notification::make()
                 ->danger()
-                ->title('RCON is not enabled!')
-                ->body("You can't remove badges to online users if RCON is not enabled.")
+                ->title('¡RCON no está activado!')
+                ->body("No puedes retirar placas a usuarios conectados si RCON no está activado.")
                 ->persistent()
                 ->send();
         } else {
@@ -120,7 +120,7 @@ class BadgesRelationManager extends RelationManager
                 ? $action->getRecord()?->badge_code
                 : $action->getRecords()->map(fn ($record) => $record->badge_code)->join(';');
 
-            $rcon->sendSafelyFromDashboard('removeBadge', [$user, $badge], 'RCON: Failed to remove the badge');
+            $rcon->sendSafelyFromDashboard('removeBadge', [$user, $badge], 'RCON: No se pudo retirar la placa');
         }
 
         $action->cancel();

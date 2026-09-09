@@ -169,9 +169,9 @@ class SettingsRelationManager extends RelationManager
             ])
             ->headerActions([
                 Action::make('helper')
-                    ->label('Settings Tip')
+                    ->label('Consejo sobre ajustes')
                     ->icon('heroicon-o-exclamation-triangle')
-                    ->tooltip('You can only change the offline user settings.')
+                    ->tooltip('Solo puedes cambiar los ajustes de usuarios desconectados.')
                     ->extraAttributes(['style' => 'cursor: default !important'])
             ])
             ->actions([

@@ -12,8 +12,8 @@ class DateRangeFilter extends Filter
     {
         return parent::make($name)
             ->form([
-                DatePicker::make("{$name}_from"),
-                DatePicker::make("{$name}_until"),
+                DatePicker::make("{$name}_from")->label('Desde'),
+                DatePicker::make("{$name}_until")->label('Hasta'),
             ])
             ->query(function (Builder $query, array $data) use (&$name): Builder {
                 return $query

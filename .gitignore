@@ -52,3 +52,47 @@ avatar-sync-mvp/src/main/java/com/neah/avatarsync/*.STABLE-*
 *.bak-*
 *.backup-*
 *.roto-*
+
+# ----- Local secrets -----
+**/.env
+**/.env.*
+!**/.env.example
+
+# ----- Runtime logs & compressed logs -----
+Emulator/logging/
+*.gz
+
+# ----- Local backups / snapshots -----
+backup-pre-*.sql
+backups/
+**/_backups/
+**/_holo_backup*/
+*.bak
+*.bak.*
+*.broken-*
+
+# ----- Laravel runtime/storage -----
+xampp/htdocs/storage/
+
+# ----- Local test artifacts -----
+xampp/htdocs/prueba-apache.txt
+xampp/htdocs/public/prueba-apache.txt
+xampp/htdocs/nitro-react/cls
+xampp/htdocs/nitro-react/powershell
+# ----- Additional local backups / inspection output -----
+BACKUP-CONFIG-*.txt
+**/_holo*_backup*/
+avatar-sync-mvp.zip
+Emulator/plugin-inspect/
+Emulator/plugin-manifest-inspect/
+# ----- Reproducible local environments -----
+tools/rembg-venv/
+
+# ----- Historical local snapshots -----
+Archivo/
+xampp/htdocs/public/dist - copia/
+
+# ----- Database dumps -----
+PackAIO-V4.sql
+# ----- Generated audits -----
+Auditoria/

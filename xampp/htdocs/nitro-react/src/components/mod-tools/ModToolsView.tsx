@@ -121,19 +121,19 @@ export const ModToolsView: FC<{}> = props =>
         <>
             { isVisible &&
                 <NitroCardView uniqueKey="mod-tools" className="nitro-mod-tools" windowPosition={ DraggableWindowPosition.TOP_LEFT } theme="primary-slim" >
-                    <NitroCardHeaderView headerText={ 'Mod Tools' } onCloseClick={ event => setIsVisible(false) } />
+                    <NitroCardHeaderView headerText={ 'Herramientas de moderación' } onCloseClick={ event => setIsVisible(false) } />
                     <NitroCardContentView className="text-black" gap={ 1 }>
                         <Button gap={ 1 } onClick={ event => CreateLinkEvent(`mod-tools/toggle-room-info/${ currentRoomId }`) } disabled={ (currentRoomId <= 0) } className="position-relative">
-                            <Base className="icon icon-small-room position-absolute start-1"/> Room Tool
+                            <Base className="icon icon-small-room"/> Herramientas de sala
                         </Button>
                         <Button innerRef={ elementRef } gap={ 1 } onClick={ event => CreateLinkEvent(`mod-tools/toggle-room-chatlog/${ currentRoomId }`) } disabled={ (currentRoomId <= 0) } className="position-relative">
-                            <Base className="icon icon-chat-history position-absolute start-1"/> Chatlog Tool
+                            <Base className="icon icon-chat-history"/> Historial de chat
                         </Button>
                         <Button gap={ 1 } onClick={ () => CreateLinkEvent(`mod-tools/toggle-user-info/${ selectedUser.userId }`) } disabled={ !selectedUser } className="position-relative">
-                            <Base className="icon icon-user position-absolute start-1"/> User: { selectedUser ? selectedUser.username : '' }
+                            <Base className="icon icon-user"/> Usuario: { selectedUser ? selectedUser.username : '' }
                         </Button>
                         <Button gap={ 1 } onClick={ () => setIsTicketsVisible(prevValue => !prevValue) } className="position-relative">
-                            <Base className="icon icon-tickets position-absolute start-1"/> Report Tool
+                            <Base className="icon icon-tickets"/> Reportes
                         </Button>
                     </NitroCardContentView>
                 </NitroCardView> }

@@ -1,0 +1,172 @@
+package com.biribiri.wardrobe;
+
+import com.eu.habbo.Emulator;
+import com.eu.habbo.habbohotel.users.Habbo;
+import com.eu.habbo.messages.ICallable;
+import com.eu.habbo.messages.incoming.MessageHandler;
+import com.eu.habbo.plugin.HabboPlugin;
+
+public final class BiribiriWardrobePlugin extends HabboPlugin
+{
+    public static final int PACKET_STATE_REQUEST = 6200;
+    public static final int PACKET_STATE_RESPONSE = 6201;
+    public static final int PACKET_NAMES_REQUEST = 6202;
+    public static final int PACKET_NAMES_RESPONSE = 6203;
+    public static final int PACKET_NAME_SAVE = 6204;
+    public static final int PACKET_PURCHASE_REQUEST = 6205;
+    public static final int PACKET_PURCHASE_RESULT = 6206;
+
+    public static final String BUILD = "BIRIBIRI_WARDROBE_V4_2_EXTRA_SLOT_PURCHASE";
+
+    private static BiribiriWardrobePlugin instance;
+    private final WardrobeManager manager = new WardrobeManager();
+
+    private boolean statePacketRegistered = false;
+    private boolean namesPacketRegistered = false;
+    private boolean nameSavePacketRegistered = false;
+    private boolean purchasePacketRegistered = false;
+    private boolean saveGuardRegistered = false;
+
+    private final ICallable saveGuard = new ICallable()
+    {
+        @Override
+        public void call(MessageHandler handler)
+        {
+            try
+            {
+                if(
+                    handler == null ||
+                    handler.client == null ||
+                    handler.client.getHabbo() == null ||
+                    handler.packet == null
+                ) return;
+
+                int slotId = handler.packet.clone().readInt();
+                Habbo habbo = handler.client.getHabbo();
+
+                if(!manager.isSlotUnlocked(habbo, slotId))
+                {
+                    handler.isCancelled = true;
+                    manager.sendState(handler.client);
+                }
+            }
+            catch(Throwable throwable)
+            {
+                handler.isCancelled = true;
+
+                System.out.println(
+                    "[BiribiriWardrobe] save guard error: " +
+                    throwable.getClass().getSimpleName() +
+                    " - " + throwable.getMessage()
+                );
+            }
+        }
+    };
+
+    public static BiribiriWardrobePlugin getInstance()
+    {
+        return instance;
+    }
+
+    public WardrobeManager getManager()
+    {
+        return this.manager;
+    }
+
+    @Override
+    public void onEnable()
+    {
+        instance = this;
+
+        try
+        {
+            this.manager.initializeDatabase();
+
+            if(!this.statePacketRegistered)
+            {
+                Emulator.getGameServer().getPacketManager().registerHandler(
+                    PACKET_STATE_REQUEST,
+                    WardrobeStateRequest.class
+                );
+                this.statePacketRegistered = true;
+            }
+
+            if(!this.namesPacketRegistered)
+            {
+                Emulator.getGameServer().getPacketManager().registerHandler(
+                    PACKET_NAMES_REQUEST,
+                    WardrobeNamesRequest.class
+                );
+                this.namesPacketRegistered = true;
+            }
+
+            if(!this.nameSavePacketRegistered)
+            {
+                Emulator.getGameServer().getPacketManager().registerHandler(
+                    PACKET_NAME_SAVE,
+                    WardrobeNameSave.class
+                );
+                this.nameSavePacketRegistered = true;
+            }
+
+            if(!this.purchasePacketRegistered)
+            {
+                Emulator.getGameServer().getPacketManager().registerHandler(
+                    PACKET_PURCHASE_REQUEST,
+                    WardrobePurchaseRequest.class
+                );
+                this.purchasePacketRegistered = true;
+            }
+
+            if(!this.saveGuardRegistered)
+            {
+                Emulator.getGameServer().getPacketManager().registerCallable(
+                    800,
+                    this.saveGuard
+                );
+                this.saveGuardRegistered = true;
+            }
+
+            System.out.println(
+                "[BiribiriWardrobe] habilitado build=" + BUILD +
+                " state=" + PACKET_STATE_REQUEST + "/" + PACKET_STATE_RESPONSE +
+                " names=" + PACKET_NAMES_REQUEST + "/" + PACKET_NAMES_RESPONSE +
+                " saveName=" + PACKET_NAME_SAVE +
+                " purchase=" + PACKET_PURCHASE_REQUEST + "/" + PACKET_PURCHASE_RESULT
+            );
+        }
+        catch(Throwable throwable)
+        {
+            throw new RuntimeException(throwable);
+        }
+    }
+
+    @Override
+    public void onDisable()
+    {
+        try
+        {
+            if(this.saveGuardRegistered)
+            {
+                Emulator.getGameServer().getPacketManager().unregisterCallables(
+                    800,
+                    this.saveGuard
+                );
+            }
+        }
+        catch(Throwable ignored)
+        {
+        }
+
+        this.saveGuardRegistered = false;
+        instance = null;
+
+        System.out.println("[BiribiriWardrobe] deshabilitado.");
+    }
+
+    @Override
+    public boolean hasPermission(Habbo habbo, String permission)
+    {
+        return false;
+    }
+}

@@ -1275,8 +1275,8 @@ public final class ServicioRpgEngine
 
         participant.status = result.getString("status");
         participant.exitReason = result.getString("exit_reason");
-        participant.reconnectDeadlineEpoch = epochSeconds(result.getTimestamp("reconnect_deadline"));
-        participant.returnDeadlineEpoch = epochSeconds(result.getTimestamp("return_deadline"));
+        participant.reconnectDeadlineEpoch = result.getLong("reconnect_deadline_epoch");
+        participant.returnDeadlineEpoch = result.getLong("return_deadline_epoch");
 
         int savedX = result.getInt("saved_x");
         boolean xNull = result.wasNull();
@@ -1301,7 +1301,10 @@ public final class ServicioRpgEngine
 
         try(PreparedStatement statement = connection.prepareStatement(
                 "SELECT encounter_id, user_id, join_sequence, entry_type, entry_by_user_id, " +
-                "status, exit_reason, reconnect_deadline, return_deadline, saved_x, saved_y, saved_z " +
+                "status, exit_reason, " +
+                "UNIX_TIMESTAMP(reconnect_deadline) AS reconnect_deadline_epoch, " +
+                "UNIX_TIMESTAMP(return_deadline) AS return_deadline_epoch, " +
+                "saved_x, saved_y, saved_z " +
                 "FROM rpg_engine_encounter_participants WHERE encounter_id=? " +
                 "ORDER BY join_sequence ASC, joined_at ASC, user_id ASC"))
         {
@@ -1394,9 +1397,9 @@ public final class ServicioRpgEngine
 
         encounter.status = result.getString("status");
         encounter.version = result.getInt("version");
-        encounter.createdAtEpoch = epochSeconds(result.getTimestamp("created_at"));
-        encounter.startedAtEpoch = epochSeconds(result.getTimestamp("started_at"));
-        encounter.endedAtEpoch = epochSeconds(result.getTimestamp("ended_at"));
+        encounter.createdAtEpoch = result.getLong("created_at_epoch");
+        encounter.startedAtEpoch = result.getLong("started_at_epoch");
+        encounter.endedAtEpoch = result.getLong("ended_at_epoch");
         encounter.participants = listEncounterParticipantsInternal(connection, encounter.id);
         encounter.reservations = listRoomReservationsInternal(connection, encounter.roomId);
         return encounter;
@@ -1410,7 +1413,10 @@ public final class ServicioRpgEngine
 
             try(PreparedStatement statement = connection.prepareStatement(
                     "SELECT id, rpg_id, room_id, created_by_user_id, initiator_user_id, creation_mode, " +
-                    "status, version, created_at, started_at, ended_at " +
+                    "status, version, " +
+                    "UNIX_TIMESTAMP(created_at) AS created_at_epoch, " +
+                    "UNIX_TIMESTAMP(started_at) AS started_at_epoch, " +
+                    "UNIX_TIMESTAMP(ended_at) AS ended_at_epoch " +
                     "FROM rpg_engine_encounters WHERE id=? LIMIT 1"))
             {
                 statement.setInt(1, encounterId);

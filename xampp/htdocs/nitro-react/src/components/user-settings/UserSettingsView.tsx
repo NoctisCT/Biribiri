@@ -4,6 +4,9 @@ import { FaVolumeDown, FaVolumeMute, FaVolumeUp } from 'react-icons/fa';
 import { AddEventLinkTracker, DispatchMainEvent, DispatchUiEvent, LocalizeText, RemoveLinkEventTracker, SendMessageComposer } from '../../api';
 import { classNames, Column, Flex, NitroCardContentView, NitroCardHeaderView, NitroCardView, Text } from '../../common';
 import { useCatalogPlaceMultipleItems, useCatalogSkipPurchaseConfirmation, useMessageEvent } from '../../hooks';
+import { REACTION_DISPLAY_BOXED, REACTION_DISPLAY_FLOATING, REACTION_DISPLAY_HIDDEN, RequestReactionProfile, SaveReactionDisplayMode, useReactionProfile } from '../room/widgets/reactions/ReactionState';
+
+import './UserSettingsView.scss';
 
 export const UserSettingsView: FC<{}> = props =>
 {
@@ -11,6 +14,7 @@ export const UserSettingsView: FC<{}> = props =>
     const [ userSettings, setUserSettings ] = useState<NitroSettingsEvent>(null);
     const [ catalogPlaceMultipleObjects, setCatalogPlaceMultipleObjects ] = useCatalogPlaceMultipleItems();
     const [ catalogSkipPurchaseConfirmation, setCatalogSkipPurchaseConfirmation ] = useCatalogSkipPurchaseConfirmation();
+    const reactionProfile = useReactionProfile();
 
     const processAction = (type: string, value?: boolean | number | string) =>
     {
@@ -123,11 +127,18 @@ export const UserSettingsView: FC<{}> = props =>
         DispatchUiEvent(userSettings);
     }, [ userSettings ]);
 
+    useEffect(() =>
+    {
+        if(!isVisible) return;
+
+        RequestReactionProfile();
+    }, [ isVisible ]);
+
     if(!isVisible || !userSettings) return null;
 
     return (
         <NitroCardView uniqueKey="user-settings" className="user-settings-window" theme="primary-slim">
-            <NitroCardHeaderView headerText={ LocalizeText('widget.memenu.settings.title') } onCloseClick={ event => processAction('close_view') } />
+            <NitroCardHeaderView headerText="Ajustes"  onCloseClick={ event => processAction('close_view') } />
             <NitroCardContentView className="text-black">
                 <Column gap={ 1 }>
                     <Flex alignItems="center" gap={ 1 }>
@@ -144,12 +155,41 @@ export const UserSettingsView: FC<{}> = props =>
                     </Flex>
                     <Flex alignItems="center" gap={ 1 }>
                         <input className="form-check-input" type="checkbox" checked={ catalogPlaceMultipleObjects } onChange={ event => setCatalogPlaceMultipleObjects(event.target.checked) } />
-                        <Text>{ LocalizeText('memenu.settings.other.place.multiple.objects') }</Text>
+                        <Text>Colocar varios objetos de la tienda</Text>
                     </Flex>
                     <Flex alignItems="center" gap={ 1 }>
                         <input className="form-check-input" type="checkbox" checked={ catalogSkipPurchaseConfirmation } onChange={ event => setCatalogSkipPurchaseConfirmation(event.target.checked) } />
-                        <Text>{ LocalizeText('memenu.settings.other.skip.purchase.confirmation') }</Text>
+                        <Text>Omitir confirmación de compra</Text>
                     </Flex>
+                </Column>
+                <Column gap={ 1 }>
+                    <Text bold>Reacciones de avatar</Text>
+
+                    <div className="reaction-display-options">
+                        <button
+                            type="button"
+                            className={ `reaction-display-option ${ reactionProfile.displayMode === REACTION_DISPLAY_BOXED ? 'is-active' : '' }` }
+                            onClick={ () => SaveReactionDisplayMode(REACTION_DISPLAY_BOXED) }>
+                            <span className="reaction-display-indicator" />
+                            <span>Con caja</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            className={ `reaction-display-option ${ reactionProfile.displayMode === REACTION_DISPLAY_FLOATING ? 'is-active' : '' }` }
+                            onClick={ () => SaveReactionDisplayMode(REACTION_DISPLAY_FLOATING) }>
+                            <span className="reaction-display-indicator" />
+                            <span>Flotantes</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            className={ `reaction-display-option ${ reactionProfile.displayMode === REACTION_DISPLAY_HIDDEN ? 'is-active' : '' }` }
+                            onClick={ () => SaveReactionDisplayMode(REACTION_DISPLAY_HIDDEN) }>
+                            <span className="reaction-display-indicator" />
+                            <span>Ocultar</span>
+                        </button>
+                    </div>
                 </Column>
                 <Column>
                     <Text bold>{ LocalizeText('widget.memenu.settings.volume') }</Text>

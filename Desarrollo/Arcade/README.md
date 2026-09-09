@@ -18,6 +18,8 @@ pero el trabajo exclusivo de Biribiri debe quedar además archivado y localizabl
 - `Frontend/DuckHunt/` — golden master, FINAL.
 - `Frontend/BlockDrop/` — snapshot actual antes de adaptación estética.
 - `Frontend/PacMan/` — snapshot actual antes de adaptación estética.
+- `Frontend/LiftShift/` — Lift Shift V1, máquina `rare_frankarcade`.
+- `Frontend/Snake/` — Snake V1, máquina `arcade_slither`.
 - `Frontend/Shared/` — leaderboard y componentes comunes.
 - `Backend/ArcadeCore/` — espejo del proyecto backend compartido si existe localmente.
 - `RendererProtocol/` — archivos custom de protocolo arcade detectados en el renderer source.

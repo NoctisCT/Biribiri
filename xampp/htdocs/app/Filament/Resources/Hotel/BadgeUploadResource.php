@@ -13,14 +13,17 @@ class BadgeUploadResource extends Resource
 {
     protected static ?string $navigationGroup = 'Hotel';
 	  protected static ?string $navigationIcon = 'heroicon-o-gif';
-    protected static ?string $label = 'Badge Upload';
+    protected static ?string $label = 'Subida de placas';
+    protected static ?string $navigationLabel = 'Subir placas';
+    protected static ?string $modelLabel = 'placa';
+    protected static ?string $pluralModelLabel = 'placas';
 
     public static function form(Forms\Form $form): Forms\Form
     {
         return $form
             ->schema([
                 Forms\Components\FileUpload::make('badge_file')
-                    ->label('Upload Badge')
+                    ->label('Subir placa')
                     ->disk('local')
                     ->directory(setting('badge_path_filesystem'))
                     ->required()
@@ -37,10 +40,10 @@ class BadgeUploadResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('filename')
-                    ->label('File Name')
+                    ->label('Nombre del archivo')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('path')
-                    ->label('File Path'),
+                    ->label('Ruta del archivo'),
             ])
             ->filters([]);
     }

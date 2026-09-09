@@ -1,7 +1,7 @@
 <x-slot name="title">
     <h2 class="text-2xl font-semibold">{{ __('Hello!') }}</h2>
     <p class="dark:text-gray-400">
-        {{ __('There is currently :online users online', ['online' => DB::table('users')->where('online', '1')->count()]) }}
+        {{ __('There is currently :online users online', ['online' => app(\App\Services\EmulatorPresenceService::class)->onlineUserCount()]) }}
     </p>
 </x-slot>
 

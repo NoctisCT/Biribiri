@@ -138,6 +138,41 @@ export interface RpgEngineContext
     movementStat: RpgEngineStatValue | null;
 }
 
+
+export type RpgEngineSheetFieldType =
+    'text' | 'long_text' | 'number' | 'image' | 'date' | 'select' | 'yes_no';
+
+export type RpgEngineSheetVisibility = 'public' | 'members' | 'owner' | 'staff';
+export type RpgEngineSheetControlMode = 'player' | 'staff' | 'engine';
+
+export interface RpgEngineSheetField
+{
+    id: number;
+    rpgId: number;
+    sectionId: number;
+    label: string;
+    fieldType: RpgEngineSheetFieldType;
+    required: boolean;
+    visibility: RpgEngineSheetVisibility;
+    controlMode: RpgEngineSheetControlMode;
+    sortOrder: number;
+    optionsText: string;
+}
+
+export interface RpgEngineSheetSection
+{
+    id: number;
+    rpgId: number;
+    title: string;
+    sortOrder: number;
+    fields: RpgEngineSheetField[];
+}
+
+export interface RpgEngineSheetTemplate
+{
+    rpgId: number;
+    sections: RpgEngineSheetSection[];
+}
 export class RpgEngineResultParser implements IMessageParser
 {
     private _action = 0;
@@ -150,6 +185,7 @@ export class RpgEngineResultParser implements IMessageParser
     private _context: RpgEngineContext = null;
     private _encounterConfig: RpgEngineEncounterConfig = null;
     private _encounter: RpgEngineEncounter = null;
+    private _sheetTemplate: RpgEngineSheetTemplate = null;
 
     public flush(): boolean
     {
@@ -163,6 +199,7 @@ export class RpgEngineResultParser implements IMessageParser
         this._context = null;
         this._encounterConfig = null;
         this._encounter = null;
+        this._sheetTemplate = null;
 
         return true;
     }
@@ -409,6 +446,52 @@ export class RpgEngineResultParser implements IMessageParser
             };
         }
 
+        let sheetTemplate: RpgEngineSheetTemplate = null;
+
+        if(wrapper.readBoolean())
+        {
+            const sheetRpgId = wrapper.readInt();
+            const sectionCount = Math.max(0, wrapper.readInt());
+            const sections: RpgEngineSheetSection[] = [];
+
+            for(let i = 0; i < sectionCount; i++)
+            {
+                const sectionId = wrapper.readInt();
+                const sectionRpgId = wrapper.readInt();
+                const title = wrapper.readString();
+                const sortOrder = wrapper.readInt();
+                const fieldCount = Math.max(0, wrapper.readInt());
+                const fields: RpgEngineSheetField[] = [];
+
+                for(let j = 0; j < fieldCount; j++)
+                {
+                    fields.push({
+                        id: wrapper.readInt(),
+                        rpgId: wrapper.readInt(),
+                        sectionId: wrapper.readInt(),
+                        label: wrapper.readString(),
+                        fieldType: wrapper.readString() as RpgEngineSheetFieldType,
+                        required: wrapper.readBoolean(),
+                        visibility: wrapper.readString() as RpgEngineSheetVisibility,
+                        controlMode: wrapper.readString() as RpgEngineSheetControlMode,
+                        sortOrder: wrapper.readInt(),
+                        optionsText: wrapper.readString()
+                    });
+                }
+
+                sections.push({
+                    id: sectionId,
+                    rpgId: sectionRpgId,
+                    title,
+                    sortOrder,
+                    fields
+                });
+            }
+
+            sheetTemplate = { rpgId: sheetRpgId, sections };
+        }
+
+        this._sheetTemplate = sheetTemplate;
         this._projects = projects;
         this._rooms = rooms;
         this._stats = stats;
@@ -463,6 +546,19 @@ export class RpgEngineResultParser implements IMessageParser
     public get encounterConfig(): RpgEngineEncounterConfig
     {
         return this._encounterConfig ? { ...this._encounterConfig } : null;
+    }
+
+    public get sheetTemplate(): RpgEngineSheetTemplate
+    {
+        if(!this._sheetTemplate) return null;
+
+        return {
+            ...this._sheetTemplate,
+            sections: this._sheetTemplate.sections.map(section => ({
+                ...section,
+                fields: section.fields.map(field => ({ ...field }))
+            }))
+        };
     }
 
     public get encounter(): RpgEngineEncounter

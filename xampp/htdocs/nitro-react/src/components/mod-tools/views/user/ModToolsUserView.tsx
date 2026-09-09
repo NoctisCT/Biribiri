@@ -27,60 +27,60 @@ export const ModToolsUserView: FC<ModToolsUserViewProps> = props =>
 
         return [
             {
-                localeKey: 'modtools.userinfo.userName',
+                label: 'Nombre de usuario',
                 value: userInfo.userName,
                 showOnline: true
             },
             {
-                localeKey: 'modtools.userinfo.cfhCount',
+                label: 'Solicitudes de ayuda',
                 value: userInfo.cfhCount.toString()
             },
             {
-                localeKey: 'modtools.userinfo.abusiveCfhCount',
+                label: 'Solicitudes abusivas',
                 value: userInfo.abusiveCfhCount.toString()
             },
             {
-                localeKey: 'modtools.userinfo.cautionCount',
+                label: 'Advertencias',
                 value: userInfo.cautionCount.toString()
             },
             {
-                localeKey: 'modtools.userinfo.banCount',
+                label: 'Suspensiones',
                 value: userInfo.banCount.toString()
             },
             {
-                localeKey: 'modtools.userinfo.lastSanctionTime',
+                label: 'Última sanción',
                 value: userInfo.lastSanctionTime
             },
             {
-                localeKey: 'modtools.userinfo.tradingLockCount',
+                label: 'Bloqueos de intercambio',
                 value: userInfo.tradingLockCount.toString()
             },
             {
-                localeKey: 'modtools.userinfo.tradingExpiryDate',
+                label: 'Fin del bloqueo de intercambio',
                 value: userInfo.tradingExpiryDate
             },
             {
-                localeKey: 'modtools.userinfo.minutesSinceLastLogin',
+                label: 'Última conexión',
                 value: FriendlyTime.format(userInfo.minutesSinceLastLogin * 60, '.ago', 2)
             },
             {
-                localeKey: 'modtools.userinfo.lastPurchaseDate',
+                label: 'Última compra',
                 value: userInfo.lastPurchaseDate
             },
             {
-                localeKey: 'modtools.userinfo.primaryEmailAddress',
+                label: 'Correo principal',
                 value: userInfo.primaryEmailAddress
             },
             {
-                localeKey: 'modtools.userinfo.identityRelatedBanCount',
+                label: 'Suspensiones relacionadas con identidad',
                 value: userInfo.identityRelatedBanCount.toString()
             },
             {
-                localeKey: 'modtools.userinfo.registrationAgeInMinutes',
+                label: 'Antigüedad de la cuenta',
                 value: FriendlyTime.format(userInfo.registrationAgeInMinutes * 60, '.ago', 2)
             },
             {
-                localeKey: 'modtools.userinfo.userClassification',
+                label: 'Clasificación del usuario',
                 value: userInfo.userClassification
             }
         ];
@@ -116,7 +116,7 @@ export const ModToolsUserView: FC<ModToolsUserViewProps> = props =>
 
                                         return (
                                             <tr key={ index }>
-                                                <th scope="row">{ LocalizeText(property.localeKey) }</th>
+                                                <th scope="row">{ property.label }</th>
                                                 <td>
                                                     { property.value }
                                                     { property.showOnline &&
@@ -130,16 +130,16 @@ export const ModToolsUserView: FC<ModToolsUserViewProps> = props =>
                         </Column>
                         <Column size={ 4 } gap={ 1 }>
                             <Button onClick={ event => CreateLinkEvent(`mod-tools/open-user-chatlog/${ userId }`) }>
-                                Room Chat
+                                Historial de sala
                             </Button>
                             <Button onClick={ event => setSendMessageVisible(!sendMessageVisible) }>
-                                Send Message
+                                Enviar mensaje
                             </Button>
                             <Button onClick={ event => setRoomVisitsVisible(!roomVisitsVisible) }>
-                                Room Visits
+                                Visitas a salas
                             </Button>
                             <Button onClick={ event => setModActionVisible(!modActionVisible) }>
-                                Mod Action
+                                Acción de moderación
                             </Button>
                         </Column>
                     </Grid>

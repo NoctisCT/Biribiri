@@ -89,7 +89,7 @@ export const CatalogView: FC<{}> = props =>
                                     >
                                         <Flex gap={GetConfiguration('catalog.tab.icons') ? 1 : 0} alignItems="center">
                                             {GetConfiguration('catalog.tab.icons') && <CatalogIconView icon={child.iconId} />}
-                                            {child.localization}
+                                            {child.localization.replace(/\s*\(\d+\)\s*$/, '')}
                                         </Flex>
                                     </NitroCardTabsItemView>
                                 );

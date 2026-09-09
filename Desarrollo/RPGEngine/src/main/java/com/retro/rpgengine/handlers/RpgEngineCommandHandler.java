@@ -4,7 +4,13 @@ import com.eu.habbo.habbohotel.rooms.Room;
 import com.eu.habbo.habbohotel.users.Habbo;
 import com.eu.habbo.messages.incoming.MessageHandler;
 import com.retro.rpgengine.ServicioRpgEngine;
+import com.retro.rpgengine.RpgProjectRequestService;
 import com.retro.rpgengine.RpgEnginePackets;
+import com.retro.rpgengine.RpgSheetTemplateService;
+import com.retro.rpgengine.RpgCharacterService;
+import com.retro.rpgengine.RpgCharacterDesignService;
+import com.retro.rpgengine.RpgMembershipService;
+import com.retro.rpgengine.RpgSheetTemplateService.SheetTemplate;
 import com.retro.rpgengine.ServicioRpgEngine.Contexto;
 import com.retro.rpgengine.ServicioRpgEngine.Movimiento;
 import com.retro.rpgengine.ServicioRpgEngine.Proyecto;
@@ -54,6 +60,32 @@ public class RpgEngineCommandHandler extends MessageHandler
     private static final int END_ENCOUNTER = 31;
     private static final int START_PVP_ENCOUNTER = 32;
 
+    private static final int GET_SHEET_TEMPLATE = 38;
+    private static final int UPSERT_SHEET_SECTION = 39;
+    private static final int DELETE_SHEET_SECTION = 40;
+    private static final int MOVE_SHEET_SECTION = 41;
+    private static final int UPSERT_SHEET_FIELD = 42;
+    private static final int DELETE_SHEET_FIELD = 43;
+    private static final int MOVE_SHEET_FIELD = 44;
+
+    private static final int GET_MY_CHARACTER = 45;
+    private static final int SAVE_MY_CHARACTER = 46;
+
+    private static final int LIST_MY_RPG_ACCESS = 47;
+    private static final int LIST_MANAGEABLE_GROUPS = 48;
+    private static final int LINK_PROJECT_GROUP = 49;
+    private static final int UNLINK_PROJECT_GROUP = 50;
+
+    private static final int REQUEST_PROJECT_CREATION = 34;
+    private static final int GET_PROJECT_CREATION_REQUEST_STATUS = 35;
+    private static final int APPROVE_PROJECT_CREATION_REQUEST = 36;
+    private static final int REJECT_PROJECT_CREATION_REQUEST = 37;
+
+    private static final int LIST_RPG_CHARACTERS = 51;
+    private static final int GET_RPG_CHARACTER = 52;
+    private static final int ADMIN_SAVE_RPG_CHARACTER = 53;
+    private static final int GET_CHARACTER_SHEET_DESIGN = 54;
+    private static final int SAVE_CHARACTER_SHEET_DESIGN = 55;
     @Override
     public void handle()
     {
@@ -73,6 +105,7 @@ public class RpgEngineCommandHandler extends MessageHandler
         Contexto context = null;
         EncounterConfig encounterConfig = null;
         Encounter encounter = null;
+        SheetTemplate sheetTemplate = null;
 
         try
         {
@@ -80,9 +113,22 @@ public class RpgEngineCommandHandler extends MessageHandler
             {
                 case CREATE_PROJECT:
                 {
-                    Proyecto project = ServicioRpgEngine.createProject(userId, this.packet.readString());
-                    projects = Collections.singletonList(project);
-                    success = true;
+                    String projectName = this.packet.readString();
+                    long authorizationId = RpgProjectRequestService.claimCreateAuthorization(habbo);
+
+                    try
+                    {
+                        Proyecto project = ServicioRpgEngine.createProject(userId, projectName);
+                        projects = Collections.singletonList(project);
+                        message = "project-created";
+                        success = true;
+                    }
+                    catch(Exception error)
+                    {
+                        RpgProjectRequestService.restoreCreateAuthorization(authorizationId);
+                        throw error;
+                    }
+
                     break;
                 }
 
@@ -425,6 +471,356 @@ public class RpgEngineCommandHandler extends MessageHandler
                     break;
                 }
 
+                case REQUEST_PROJECT_CREATION:
+                {
+                    String requestedName = this.packet.readString();
+                    String reason = this.packet.readString();
+
+                    RpgProjectRequestService.submit(habbo, requestedName, reason);
+                    message = "request-submitted";
+                    success = true;
+                    break;
+                }
+
+                case GET_PROJECT_CREATION_REQUEST_STATUS:
+                {
+                    message = RpgProjectRequestService.status(habbo);
+                    success = true;
+                    break;
+                }
+
+                case APPROVE_PROJECT_CREATION_REQUEST:
+                {
+                    int targetUserId = this.packet.readInt().intValue();
+                    RpgProjectRequestService.approve(habbo, targetUserId);
+                    message = "request-approved-by-admin";
+                    success = true;
+                    break;
+                }
+
+                case REJECT_PROJECT_CREATION_REQUEST:
+                {
+                    int targetUserId = this.packet.readInt().intValue();
+                    RpgProjectRequestService.reject(habbo, targetUserId);
+                    message = "request-rejected-by-admin";
+                    success = true;
+                    break;
+                }
+
+                case GET_SHEET_TEMPLATE:
+                {
+                    int rpgId = this.packet.readInt().intValue();
+                    sheetTemplate = RpgSheetTemplateService.getTemplate(userId, rpgId);
+                    success = true;
+                    break;
+                }
+
+                case UPSERT_SHEET_SECTION:
+                {
+                    int rpgId = this.packet.readInt().intValue();
+                    int sectionId = this.packet.readInt().intValue();
+                    sheetTemplate = RpgSheetTemplateService.saveSection(
+                            userId, rpgId, sectionId, this.packet.readString());
+                    message = sectionId <= 0 ? "sheet-section-created" : "sheet-section-updated";
+                    success = true;
+                    break;
+                }
+
+                case DELETE_SHEET_SECTION:
+                {
+                    int rpgId = this.packet.readInt().intValue();
+                    int sectionId = this.packet.readInt().intValue();
+                    sheetTemplate = RpgSheetTemplateService.deleteSection(userId, rpgId, sectionId);
+                    message = "sheet-section-deleted";
+                    success = true;
+                    break;
+                }
+
+                case MOVE_SHEET_SECTION:
+                {
+                    int rpgId = this.packet.readInt().intValue();
+                    int sectionId = this.packet.readInt().intValue();
+                    int direction = this.packet.readInt().intValue();
+                    sheetTemplate = RpgSheetTemplateService.moveSection(userId, rpgId, sectionId, direction);
+                    success = true;
+                    break;
+                }
+
+                case UPSERT_SHEET_FIELD:
+                {
+                    int rpgId = this.packet.readInt().intValue();
+                    int fieldId = this.packet.readInt().intValue();
+                    int sectionId = this.packet.readInt().intValue();
+                    String label = this.packet.readString();
+                    String fieldType = this.packet.readString();
+                    boolean required = this.packet.readInt().intValue() == 1;
+                    String visibility = this.packet.readString();
+                    String controlMode = this.packet.readString();
+                    String optionsText = this.packet.readString();
+
+                    sheetTemplate = RpgSheetTemplateService.saveField(
+                            userId, rpgId, fieldId, sectionId, label, fieldType,
+                            required, visibility, controlMode, optionsText);
+                    message = fieldId <= 0 ? "sheet-field-created" : "sheet-field-updated";
+                    success = true;
+                    break;
+                }
+
+                case DELETE_SHEET_FIELD:
+                {
+                    int rpgId = this.packet.readInt().intValue();
+                    int fieldId = this.packet.readInt().intValue();
+                    sheetTemplate = RpgSheetTemplateService.deleteField(userId, rpgId, fieldId);
+                    message = "sheet-field-deleted";
+                    success = true;
+                    break;
+                }
+
+                case MOVE_SHEET_FIELD:
+                {
+                    int rpgId = this.packet.readInt().intValue();
+                    int fieldId = this.packet.readInt().intValue();
+                    int direction = this.packet.readInt().intValue();
+                    sheetTemplate = RpgSheetTemplateService.moveField(userId, rpgId, fieldId, direction);
+                    success = true;
+                    break;
+                }
+
+                case GET_MY_CHARACTER:
+                {
+                    int rpgId = this.packet.readInt().intValue();
+
+                    sheetTemplate = RpgCharacterService.getTemplate(rpgId);
+                    message = RpgCharacterService.toJson(
+                            RpgCharacterService.getMyCharacter(userId, rpgId)
+                    );
+                    success = true;
+                    break;
+                }
+
+                case SAVE_MY_CHARACTER:
+                {
+                    int rpgId = this.packet.readInt().intValue();
+                    int count = this.packet.readInt().intValue();
+
+                    if(count < 0 || count > 200)
+                        throw new ServicioRpgEngine.RpgEngineException(
+                                "invalid-character-field-count"
+                        );
+
+                    java.util.LinkedHashMap<Integer, String> values =
+                            new java.util.LinkedHashMap<Integer, String>();
+
+                    for(int i = 0; i < count; i++)
+                    {
+                        int fieldId = this.packet.readInt().intValue();
+                        String value = this.packet.readString();
+                        values.put(fieldId, value);
+                    }
+
+                    int currentRoomId = currentRoom == null ? 0 : currentRoom.getId();
+
+                    RpgCharacterService.CharacterData character =
+                            RpgCharacterService.saveMyCharacter(
+                                    userId,
+                                    rpgId,
+                                    currentRoomId,
+                                    values
+                            );
+
+                    sheetTemplate = RpgCharacterService.getTemplate(rpgId);
+                    message = RpgCharacterService.toJson(character);
+                    success = true;
+                    break;
+                }
+
+                case LIST_MY_RPG_ACCESS:
+                {
+                    message = RpgMembershipService.listAccessibleRpgsJson(userId);
+                    success = true;
+                    break;
+                }
+
+                case LIST_MANAGEABLE_GROUPS:
+                {
+                    message = RpgMembershipService.listManageableGuildsJson(userId);
+                    success = true;
+                    break;
+                }
+
+                case LINK_PROJECT_GROUP:
+                {
+                    int rpgId = this.packet.readInt().intValue();
+                    int guildId = this.packet.readInt().intValue();
+
+                    message = RpgMembershipService.linkProjectGuildJson(
+                            userId,
+                            rpgId,
+                            guildId
+                    );
+                    success = true;
+                    break;
+                }
+
+                case UNLINK_PROJECT_GROUP:
+                {
+                    int rpgId = this.packet.readInt().intValue();
+
+                    message = RpgMembershipService.unlinkProjectGuildJson(
+                            userId,
+                            rpgId
+                    );
+                    success = true;
+                    break;
+                }
+
+                case LIST_RPG_CHARACTERS:
+                {
+                    int rpgId = this.packet.readInt().intValue();
+
+                    message = RpgCharacterService.summariesToJson(
+                            RpgCharacterService.listCharactersForRpg(
+                                    userId,
+                                    rpgId
+                            )
+                    );
+                    success = true;
+                    break;
+                }
+
+                case GET_RPG_CHARACTER:
+                {
+                    int rpgId = this.packet.readInt().intValue();
+                    int targetUserId = this.packet.readInt().intValue();
+
+                    sheetTemplate = RpgCharacterService.getTemplateForViewer(
+                            userId,
+                            rpgId,
+                            targetUserId
+                    );
+
+                    message = RpgCharacterService.toJson(
+                            RpgCharacterService.getCharacterForViewer(
+                                    userId,
+                                    rpgId,
+                                    targetUserId
+                            )
+                    );
+                    success = true;
+                    break;
+                }
+
+                case ADMIN_SAVE_RPG_CHARACTER:
+                {
+                    int rpgId = this.packet.readInt().intValue();
+                    int targetUserId = this.packet.readInt().intValue();
+                    int count = this.packet.readInt().intValue();
+
+                    if(count < 0 || count > 200)
+                        throw new ServicioRpgEngine.RpgEngineException(
+                                "invalid-character-field-count"
+                        );
+
+                    java.util.LinkedHashMap<Integer, String> values =
+                            new java.util.LinkedHashMap<Integer, String>();
+
+                    for(int i = 0; i < count; i++)
+                    {
+                        int fieldId = this.packet.readInt().intValue();
+                        String value = this.packet.readString();
+                        values.put(fieldId, value);
+                    }
+
+                    RpgCharacterService.CharacterData character =
+                            RpgCharacterService.saveCharacterAsAdmin(
+                                    userId,
+                                    rpgId,
+                                    targetUserId,
+                                    values
+                            );
+
+                    sheetTemplate = RpgCharacterService.getTemplateForViewer(
+                            userId,
+                            rpgId,
+                            targetUserId
+                    );
+                    message = RpgCharacterService.toJson(character);
+                    success = true;
+                    break;
+                }
+
+                case GET_CHARACTER_SHEET_DESIGN:
+                {
+                    int rpgId = this.packet.readInt().intValue();
+                    int targetUserId = this.packet.readInt().intValue();
+
+                    message = RpgCharacterDesignService.toJson(
+                            RpgCharacterDesignService.getDesign(
+                                    userId,
+                                    rpgId,
+                                    targetUserId
+                            )
+                    );
+                    success = true;
+                    break;
+                }
+
+                case SAVE_CHARACTER_SHEET_DESIGN:
+                {
+                    int rpgId = this.packet.readInt().intValue();
+
+                    RpgCharacterDesignService.DesignData design =
+                            new RpgCharacterDesignService.DesignData();
+
+                    design.backgroundColor = this.packet.readString();
+                    design.backgroundImageUrl = this.packet.readString();
+                    design.primaryColor = this.packet.readString();
+                    design.secondaryColor = this.packet.readString();
+                    design.textColor = this.packet.readString();
+                    design.panelColor = this.packet.readString();
+                    design.panelOpacity = this.packet.readInt().intValue();
+                    design.bannerImageUrl = this.packet.readString();
+                    design.bannerHeight = this.packet.readInt().intValue();
+                    design.contentWidth = this.packet.readInt().intValue();
+                    design.borderRadius = this.packet.readInt().intValue();
+                    design.advancedJson = this.packet.readString();
+
+                    int blockCount = this.packet.readInt().intValue();
+
+                    if(blockCount < 0 || blockCount > 300)
+                        throw new ServicioRpgEngine.RpgEngineException(
+                                "invalid-sheet-design-block-count"
+                        );
+
+                    for(int i = 0; i < blockCount; i++)
+                    {
+                        RpgCharacterDesignService.BlockData block =
+                                new RpgCharacterDesignService.BlockData();
+
+                        block.blockType = this.packet.readString();
+                        block.sourceId = this.packet.readInt().intValue();
+                        block.sortOrder = this.packet.readInt().intValue();
+                        block.widthSpan = this.packet.readInt().intValue();
+                        block.alignment = this.packet.readString();
+                        block.imageWidthPct = this.packet.readInt().intValue();
+                        block.imageMaxHeight = this.packet.readInt().intValue();
+                        block.labelVisible =
+                                this.packet.readInt().intValue() == 1;
+
+                        design.blocks.add(block);
+                    }
+
+                    message = RpgCharacterDesignService.toJson(
+                            RpgCharacterDesignService.saveOwnDesign(
+                                    userId,
+                                    rpgId,
+                                    design
+                            )
+                    );
+                    success = true;
+                    break;
+                }
+
                 default:
                     message = "unknown-action";
                     break;
@@ -455,7 +851,8 @@ public class RpgEngineCommandHandler extends MessageHandler
                 statValue,
                 context,
                 encounterConfig,
-                encounter
+                encounter,
+                sheetTemplate
         ));
     }
 

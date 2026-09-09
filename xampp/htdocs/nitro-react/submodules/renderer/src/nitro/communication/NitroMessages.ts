@@ -1,3 +1,23 @@
+import { BiribiriWardrobePurchaseRequestComposer } from './messages/outgoing';
+import { BiribiriWardrobePurchaseResultEvent } from './messages/incoming';
+import { BiribiriWardrobeNamesEvent } from './messages/incoming';
+import { BiribiriWardrobeNameSaveComposer, BiribiriWardrobeNamesRequestComposer } from './messages/outgoing';
+import { BiribiriWardrobeStateRequestComposer } from './messages/outgoing';
+import { BiribiriWardrobeStateEvent } from './messages/incoming';
+import { ArcadeGameStartComposer, ArcadeScoreSubmitComposer } from './messages/outgoing/arcade';
+import { ArcadeCloseEvent, ArcadeGameStartedEvent, ArcadeLeaderboardEvent } from './messages/incoming/arcade';
+import { SpaceInvadersOpenEvent } from './messages/incoming/spaceinvaders';
+import { DuckHuntOpenEvent } from './messages/incoming/duckhunt';
+import { BlockDropOpenEvent } from './messages/incoming/blockdrop';
+import { PacManOpenEvent } from './messages/incoming/pacman';
+import { LiftShiftOpenEvent } from './messages/incoming/liftshift';
+import { SnakeOpenEvent } from './messages/incoming/snake';
+import { RooftopRescueOpenEvent } from './messages/incoming/rooftoprescue';
+import { ArkanoidOpenEvent } from './messages/incoming/arkanoid';
+import { PinballOpenEvent } from './messages/incoming/pinball';
+import { AsteroidsOpenEvent } from './messages/incoming/asteroids';
+import { AirHockeyCloseEvent, AirHockeyErrorEvent, AirHockeyOpenEvent, AirHockeyRoundEvent, AirHockeyStateEvent } from './messages/incoming/airhockey';
+import { AirHockeyLeaveComposer, AirHockeyMoveComposer, AirHockeyReadyComposer } from './messages/outgoing/airhockey';
 import { SpinSlotMachineComposer } from './messages/outgoing/tragaperras';
 import { SlotMachineCloseEvent, SlotMachineOpenEvent, SlotMachineResultEvent, SlotMachineStateEvent } from './messages/incoming/tragaperras';
 import { CoinTossEvent, DuelInviteEvent, DuelPublicEvent, DuelResultEvent, DuelStateEvent, FollowStateEvent } from './messages/incoming/interactions';
@@ -675,6 +695,30 @@ export class NitroMessages implements IMessageConfiguration {
         this._events.set(IncomingHeader.HOLO_SLOT_RESULT, SlotMachineResultEvent);
         this._events.set(IncomingHeader.HOLO_SLOT_STATE, SlotMachineStateEvent);
         this._events.set(IncomingHeader.HOLO_SLOT_CLOSE, SlotMachineCloseEvent);
+
+        // AIR HOCKEY
+        this._events.set(IncomingHeader.AIR_HOCKEY_OPEN, AirHockeyOpenEvent);
+        console.log('[AH-CLIENT-TRACE] MAP_6003_READY', IncomingHeader.AIR_HOCKEY_OPEN);
+        this._events.set(IncomingHeader.AIR_HOCKEY_STATE, AirHockeyStateEvent);
+        this._events.set(IncomingHeader.AIR_HOCKEY_ROUND, AirHockeyRoundEvent);
+        this._events.set(IncomingHeader.AIR_HOCKEY_CLOSE, AirHockeyCloseEvent);
+        this._events.set(IncomingHeader.AIR_HOCKEY_ERROR, AirHockeyErrorEvent);
+        this._events.set(IncomingHeader.HOLO_SPACE_INVADERS_OPEN, SpaceInvadersOpenEvent);
+        this._events.set(IncomingHeader.BIRIBIRI_DUCK_HUNT_OPEN, DuckHuntOpenEvent);
+        this._events.set(IncomingHeader.BIRIBIRI_BLOCK_DROP_OPEN, BlockDropOpenEvent);
+        this._events.set(IncomingHeader.BIRIBIRI_PAC_MAN_OPEN, PacManOpenEvent);
+        this._events.set(IncomingHeader.BIRIBIRI_LIFT_SHIFT_OPEN, LiftShiftOpenEvent);
+        this._events.set(IncomingHeader.BIRIBIRI_SNAKE_OPEN, SnakeOpenEvent);
+        this._events.set(IncomingHeader.BIRIBIRI_ROOFTOP_RESCUE_OPEN, RooftopRescueOpenEvent);
+        this._events.set(IncomingHeader.BIRIBIRI_ARKANOID_OPEN, ArkanoidOpenEvent);
+        this._events.set(IncomingHeader.BIRIBIRI_PINBALL_OPEN, PinballOpenEvent);
+        this._events.set(IncomingHeader.BIRIBIRI_ASTEROIDS_OPEN, AsteroidsOpenEvent);
+        this._events.set(IncomingHeader.BIRIBIRI_ARCADE_STARTED, ArcadeGameStartedEvent);
+        this._events.set(IncomingHeader.BIRIBIRI_ARCADE_LEADERBOARD, ArcadeLeaderboardEvent);
+        this._events.set(IncomingHeader.BIRIBIRI_ARCADE_CLOSE, ArcadeCloseEvent);
+        this._events.set(IncomingHeader.BIRIBIRI_WARDROBE_STATE, BiribiriWardrobeStateEvent);
+        this._events.set(IncomingHeader.BIRIBIRI_WARDROBE_NAMES, BiribiriWardrobeNamesEvent);
+        this._events.set(IncomingHeader.BIRIBIRI_WARDROBE_PURCHASE_RESULT, BiribiriWardrobePurchaseResultEvent);
     }
 
     private registerComposers(): void {
@@ -1314,6 +1358,17 @@ export class NitroMessages implements IMessageConfiguration {
         this._composers.set(OutgoingHeader.OBTENER_PROXIMA_SUBASTA, ObtenerProximaSubastaComposer);
         this._composers.set(OutgoingHeader.OBTENER_RECORDS_SUBASTAS, ObtenerRecordsSubastasComposer);
         this._composers.set(OutgoingHeader.HOLO_SLOT_SPIN, SpinSlotMachineComposer);
+
+        // AIR HOCKEY
+        this._composers.set(OutgoingHeader.AIR_HOCKEY_MOVE, AirHockeyMoveComposer);
+        this._composers.set(OutgoingHeader.AIR_HOCKEY_READY, AirHockeyReadyComposer);
+        this._composers.set(OutgoingHeader.AIR_HOCKEY_LEAVE, AirHockeyLeaveComposer);
+        this._composers.set(OutgoingHeader.BIRIBIRI_ARCADE_START, ArcadeGameStartComposer);
+        this._composers.set(OutgoingHeader.BIRIBIRI_ARCADE_SUBMIT, ArcadeScoreSubmitComposer);
+        this._composers.set(OutgoingHeader.BIRIBIRI_WARDROBE_STATE_REQUEST, BiribiriWardrobeStateRequestComposer);
+        this._composers.set(OutgoingHeader.BIRIBIRI_WARDROBE_NAME_SAVE, BiribiriWardrobeNameSaveComposer);
+        this._composers.set(OutgoingHeader.BIRIBIRI_WARDROBE_PURCHASE_REQUEST, BiribiriWardrobePurchaseRequestComposer);
+        this._composers.set(OutgoingHeader.BIRIBIRI_WARDROBE_NAMES_REQUEST, BiribiriWardrobeNamesRequestComposer);
     }
 
     public get events(): Map<number, Function> {

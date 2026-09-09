@@ -25,7 +25,13 @@ public final class SpaceInvadersPlugin
     public static final int PACKET_DUCK_HUNT_OPEN = 6110;
     public static final int PACKET_BLOCK_DROP_OPEN = 6120;
     public static final int PACKET_PAC_MAN_OPEN = 6130;
+    public static final int PACKET_LIFT_SHIFT_OPEN = 6141;
+    public static final int PACKET_SNAKE_OPEN = 6140;
 
+    public static final int PACKET_ROOFTOP_RESCUE_OPEN = 6150;
+    public static final int PACKET_ARKANOID_OPEN = 6160;
+    public static final int PACKET_PINBALL_OPEN = 6170;
+    public static final int PACKET_ASTEROIDS_OPEN = 6180;
     public static final String INTERACTION = "holo_arcade_space";
     public static final String INTERACTION_DUCK_HUNT =
             "biribiri_arcade_duckhunt";
@@ -33,7 +39,22 @@ public final class SpaceInvadersPlugin
             "biribiri_arcade_blockdrop";
     public static final String INTERACTION_PAC_MAN =
             "biribiri_arcade_pacman";
+    public static final String INTERACTION_LIFT_SHIFT =
+            "biribiri_arcade_liftshift";
+    public static final String INTERACTION_SNAKE =
+            "biribiri_arcade_snake";
 
+    public static final String INTERACTION_ROOFTOP_RESCUE =
+            "biribiri_arcade_rooftop_rescue";
+
+    public static final String INTERACTION_ARKANOID =
+            "biribiri_arcade_arkanoid";
+
+    public static final String INTERACTION_PINBALL =
+            "biribiri_arcade_pinball";
+
+    public static final String INTERACTION_ASTEROIDS =
+            "biribiri_arcade_asteroids";
     public static final String BUILD =
             "biribiri-arcade-v1-space-invaders-v3";
 
@@ -46,6 +67,12 @@ public final class SpaceInvadersPlugin
     public static final String PAC_MAN_BUILD =
             "biribiri-pac-man-v1";
 
+    public static final String LIFT_SHIFT_BUILD =
+            "biribiri-lift-shift-v1";
+
+    public static final String SNAKE_BUILD =
+            "biribiri-snake-v1";
+
     private static SpaceInvadersPlugin instance;
 
     private final ArcadeManager manager =
@@ -55,6 +82,12 @@ public final class SpaceInvadersPlugin
     private boolean duckHuntInteractionRegistered = false;
     private boolean blockDropInteractionRegistered = false;
     private boolean pacManInteractionRegistered = false;
+    private boolean liftShiftInteractionRegistered = false;
+    private boolean snakeInteractionRegistered = false;
+    private boolean rooftopRescueInteractionRegistered = false;
+    private boolean arkanoidInteractionRegistered = false;
+    private boolean pinballInteractionRegistered = false;
+    private boolean asteroidsInteractionRegistered = false;
     private boolean packetsRegistered = false;
 
     public static SpaceInvadersPlugin getInstance()
@@ -252,6 +285,216 @@ public final class SpaceInvadersPlugin
                         source +
                         "): " +
                         INTERACTION_PAC_MAN +
+                        " - " +
+                        throwable.getClass().getSimpleName()
+                );
+            }
+        }
+
+        if(!this.liftShiftInteractionRegistered)
+        {
+            try
+            {
+                Emulator.getGameEnvironment()
+                        .getItemManager()
+                        .addItemInteraction(
+                                new ItemInteraction(
+                                        INTERACTION_LIFT_SHIFT,
+                                        InteractionLiftShift.class
+                                )
+                        );
+
+                this.liftShiftInteractionRegistered = true;
+
+                System.out.println(
+                        "[BiribiriArcade] interaction registrada (" +
+                        source +
+                        "): " +
+                        INTERACTION_LIFT_SHIFT
+                );
+            }
+            catch(Throwable throwable)
+            {
+                System.out.println(
+                        "[BiribiriArcade] interaction pendiente (" +
+                        source +
+                        "): " +
+                        INTERACTION_LIFT_SHIFT +
+                        " - " +
+                        throwable.getClass().getSimpleName()
+                );
+            }
+        }
+
+        if(!this.snakeInteractionRegistered)
+        {
+            try
+            {
+                Emulator.getGameEnvironment()
+                        .getItemManager()
+                        .addItemInteraction(
+                                new ItemInteraction(
+                                        INTERACTION_SNAKE,
+                                        InteractionSnake.class
+                                )
+                        );
+
+                this.snakeInteractionRegistered = true;
+
+                System.out.println(
+                        "[BiribiriArcade] interaction registrada (" +
+                        source +
+                        "): " +
+                        INTERACTION_SNAKE
+                );
+            }
+            catch(Throwable throwable)
+            {
+                System.out.println(
+                        "[BiribiriArcade] interaction pendiente (" +
+                        source +
+                        "): " +
+                        INTERACTION_SNAKE +
+                        " - " +
+                        throwable.getClass().getSimpleName()
+                );
+            }
+        }
+
+if(!this.rooftopRescueInteractionRegistered)
+        {
+            try
+            {
+                Emulator.getGameEnvironment()
+                        .getItemManager()
+                        .addItemInteraction(
+                                new ItemInteraction(
+                                        INTERACTION_ROOFTOP_RESCUE,
+                                        InteractionRooftopRescue.class
+                                )
+                        );
+
+                this.rooftopRescueInteractionRegistered = true;
+
+                System.out.println(
+                        "[BiribiriArcade] interaction registrada (" +
+                        source +
+                        "): " +
+                        INTERACTION_ROOFTOP_RESCUE
+                );
+            }
+            catch(Throwable throwable)
+            {
+                System.out.println(
+                        "[BiribiriArcade] interaction pendiente (" +
+                        source +
+                        "): " +
+                        INTERACTION_ROOFTOP_RESCUE +
+                        " - " +
+                        throwable.getClass().getSimpleName()
+                );
+            }
+        }
+
+if(!this.arkanoidInteractionRegistered)
+        {
+            try
+            {
+                Emulator.getGameEnvironment()
+                        .getItemManager()
+                        .addItemInteraction(
+                                new ItemInteraction(
+                                        INTERACTION_ARKANOID,
+                                        InteractionArkanoid.class
+                                )
+                        );
+
+                this.arkanoidInteractionRegistered = true;
+
+                System.out.println(
+                        "[BiribiriArcade] interaction registrada (" +
+                        source +
+                        "): " +
+                        INTERACTION_ARKANOID
+                );
+            }
+            catch(Throwable throwable)
+            {
+                System.out.println(
+                        "[BiribiriArcade] interaction pendiente (" +
+                        source +
+                        "): " +
+                        INTERACTION_ARKANOID +
+                        " - " +
+                        throwable.getClass().getSimpleName()
+                );
+            }
+        }
+
+if(!this.pinballInteractionRegistered)
+        {
+            try
+            {
+                Emulator.getGameEnvironment()
+                        .getItemManager()
+                        .addItemInteraction(
+                                new ItemInteraction(
+                                        INTERACTION_PINBALL,
+                                        InteractionPinball.class
+                                )
+                        );
+
+                this.pinballInteractionRegistered = true;
+
+                System.out.println(
+                        "[BiribiriArcade] interaction registrada (" +
+                        source +
+                        "): " +
+                        INTERACTION_PINBALL
+                );
+            }
+            catch(Throwable throwable)
+            {
+                System.out.println(
+                        "[BiribiriArcade] interaction pendiente (" +
+                        source +
+                        "): " +
+                        INTERACTION_PINBALL +
+                        " - " +
+                        throwable.getClass().getSimpleName()
+                );
+            }
+        }
+
+if(!this.asteroidsInteractionRegistered)
+        {
+            try
+            {
+                Emulator.getGameEnvironment()
+                        .getItemManager()
+                        .addItemInteraction(
+                                new ItemInteraction(
+                                        INTERACTION_ASTEROIDS,
+                                        InteractionAsteroids.class
+                                )
+                        );
+
+                this.asteroidsInteractionRegistered = true;
+
+                System.out.println(
+                        "[BiribiriArcade] interaction registrada (" +
+                        source +
+                        "): " +
+                        INTERACTION_ASTEROIDS
+                );
+            }
+            catch(Throwable throwable)
+            {
+                System.out.println(
+                        "[BiribiriArcade] interaction pendiente (" +
+                        source +
+                        "): " +
+                        INTERACTION_ASTEROIDS +
                         " - " +
                         throwable.getClass().getSimpleName()
                 );

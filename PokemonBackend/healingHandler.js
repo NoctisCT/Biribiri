@@ -21,7 +21,6 @@ function healTeamAtBot(ws, db, data) {
     const userId = data.userId;
     const PRECIO_CURACION = 50; // 💰 Coste en PokéDollars de la curación del bot
 
-    // 🛡️ Filtro de seguridad: validamos que llegue un ID de usuario legítimo
     if (!userId) {
         if (ws && ws.readyState === 1) {
             ws.send(JSON.stringify({
@@ -32,7 +31,6 @@ function healTeamAtBot(ws, db, data) {
         return;
     }
 
-    // 🛡️ Filtro de seguridad extra: Bloqueamos curación si está en mitad de un combate activo
     if (ws.battle && !ws.battle.ended) {
         if (ws && ws.readyState === 1) {
             ws.send(JSON.stringify({
@@ -43,7 +41,6 @@ function healTeamAtBot(ws, db, data) {
         return;
     }
 
-    // 🌟 UNA SOLA CONSULTA MULTI-TABLA: Une carteras con almacenamiento, resta saldo y cura al equipo activo
     const singleQuery = `
         UPDATE pokemon_trainers t
         JOIN pokemon_storage s ON t.user_id = s.user_id
@@ -52,7 +49,6 @@ function healTeamAtBot(ws, db, data) {
         WHERE t.user_id = ? AND t.money >= ? AND s.slot BETWEEN 1 AND 6
     `;
 
-    // 🔬 Usamos db.query obligatoriamente para soportar consultas UPDATE compuestas con JOIN sin romper el pool binario
     db.query(singleQuery, [PRECIO_CURACION, userId, PRECIO_CURACION], (err, result) => {
         if (err) {
             console.error('[DATABASE ERROR] Fallo crítico en el tratamiento de la Enfermera Joy:', err);
@@ -65,7 +61,6 @@ function healTeamAtBot(ws, db, data) {
             return;
         }
 
-        // Si affectedRows es 0 significa que el WHERE rechazó la transacción (dinero insuficiente o equipo vacío)
         if (result.affectedRows === 0) {
             if (ws && ws.readyState === 1) {
                 ws.send(JSON.stringify({
@@ -78,14 +73,11 @@ function healTeamAtBot(ws, db, data) {
 
         console.log(`[CENTRO POKÉMON] Cobrados ${PRECIO_CURACION}₽ y salud restaurada por SQL para el Entrenador ID: ${userId}`);
 
-        // Confirmación para la UI si el socket sigue vivo
         if (ws && ws.readyState === 1) {
             ws.send(JSON.stringify({
                 type: 'TEAM_HEALED_BY_BOT',
                 message: `¡Tu equipo Pokémon ha sido restaurado por completo por ${PRECIO_CURACION} ₽! ¡Vuelve cuando quieras! ❤️`
             }));
-
-            // 🔄 SINCRONIZACIÓN RADIAL: Forzamos el refresco inmediato de datos en el cliente
             ws.send(JSON.stringify({ type: 'REFRESH_PC_DATA', userId: userId }));
         }
     });
@@ -97,21 +89,18 @@ function healTeamAtBot(ws, db, data) {
 function processUseHealingItem(ws, db, data) {
     const { userId, itemId, pokemonStorageId } = data;
 
-    // 🛡️ FILTRO 1: Validamos que el ítem exista en nuestro diccionario médico
     const itemEffect = CONSUMABLES_DICTIONARY[itemId];
     if (!itemEffect) {
-        if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'ITEM_ERROR', message: '¡Este objeto no se puede consumable o no está catalogado!' }));
+        if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'ITEM_ERROR', message: '¡Este objeto no se puede consumir o no está catalogado!' }));
         return;
     }
 
-    // 🛡️ REGLA MODIFICADA: Quitamos el bloqueo restrictivo tosco. Como el front ya bloquea la mochila ordinaria, 
-    // cualquier curación con ws.battle activo es una acción legítima de combate que consume turno.
     if (ws.battle && !ws.battle.ended && ws.battle.type === 'PVP') {
         if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'ITEM_ERROR', message: '¡No puedes usar objetos de soporte médico en batallas clasificatorias PVP contra otros entrenadores!' }));
         return;
     }
 
-    // 🔍 PASO 1: Verificamos que el usuario posee el ítem en la BD
+    // 🔍 PASO 1: Verificamos inventario
     const invQuery = 'SELECT quantity FROM pokemon_inventory WHERE user_id = ? AND item_id = ?';
     db.execute(invQuery, [userId, itemId], (errInv, invRows) => {
         if (errInv || !invRows || invRows.length === 0 || invRows[0].quantity <= 0) {
@@ -119,9 +108,9 @@ function processUseHealingItem(ws, db, data) {
             return;
         }
 
-        // 🔍 PASO 2: Consultamos el estado biológico actual del Pokémon objetivo
+        // 🔍 PASO 2: Extraemos salud usando alias "pokedex_name" para evitar colisiones SQL
         const pokeQuery = `
-            SELECT s.*, p.base_hp, p.base_attack, p.base_defense, p.base_sp_attack, p.base_sp_defense, p.base_speed
+            SELECT s.*, p.name AS pokedex_name, p.base_hp, p.base_attack, p.base_defense, p.base_sp_attack, p.base_sp_defense, p.base_speed
             FROM pokemon_storage s
             INNER JOIN pokemon_pokedex p ON s.pokemon_id = p.pokemon_id
             WHERE s.id = ? AND s.user_id = ?
@@ -133,8 +122,8 @@ function processUseHealingItem(ws, db, data) {
             }
 
             const pokemon = pokeRows[0];
+            const finalPokeName = pokemon.pokedex_name || pokemon.name || 'Pokémon';
 
-            // Calculamos sus stats máximos en vivo para saber su tope de HP real actual
             const baseStats = {
                 base_hp: pokemon.base_hp,
                 base_attack: pokemon.base_attack,
@@ -146,25 +135,23 @@ function processUseHealingItem(ws, db, data) {
             const realStats = statCalculator.calculateStats(baseStats, pokemon);
             const maxHp = realStats.maxHp;
 
-            // 🛡️ FILTROS DE ESTADO CLÁSICOS DE LA SAGA POKÉMON
             if (pokemon.hp === 0 && !itemEffect.isRevive) {
-                if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'ITEM_ERROR', message: `¡${pokemon.name} está debilitado! Las pociones no le harán efecto. Usa un Revivir.` }));
+                if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'ITEM_ERROR', message: `¡${finalPokeName} está debilitado! Las pociones no le harán efecto. Usa un Revivir.` }));
                 return;
             }
 
             if (pokemon.hp > 0 && itemEffect.isRevive) {
-                if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'ITEM_ERROR', message: `¡${pokemon.name} no está debilitado! No puedes usar un Revivir en él.` }));
+                if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'ITEM_ERROR', message: `¡${finalPokeName} no está debilitado! No puedes usar un Revivir en él.` }));
                 return;
             }
 
             if (pokemon.hp === maxHp) {
-                if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'ITEM_ERROR', message: `¡La salud de ${pokemon.name} ya está al máximo de sus capacidades!` }));
+                if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'ITEM_ERROR', message: `¡La salud de ${finalPokeName} ya está al máximo de sus capacidades!` }));
                 return;
             }
 
-            // 🧮 PASO 3: Ejecución matemática del efecto curativo según categoría
+            // 🧮 PASO 3: Curación
             let finalHp = pokemon.hp;
-
             if (itemEffect.isRevive) {
                 finalHp = Math.floor(maxHp * itemEffect.healPercentage);
             } else {
@@ -175,43 +162,64 @@ function processUseHealingItem(ws, db, data) {
                 }
             }
 
-            // 💾 PASO 4: Transacción asíncrona controlada en la Base de Datos
+            // 💾 PASO 4: Descontar ítem
             db.execute('UPDATE pokemon_inventory SET quantity = quantity - 1 WHERE user_id = ? AND item_id = ?', [userId, itemId], (errSubItem) => {
                 if (errSubItem) return;
 
+                let rivalActionLog = '';
+
+                // ⚔️ PASO 5: Si está en combate, aplicamos curación en RAM y forzamos contraataque inmediato del rival
+                if (ws.battle && !ws.battle.ended) {
+                    const p = ws.battle.player;
+                    const r = ws.battle.rival;
+
+                    if (p && p.id === pokemonStorageId) {
+                        p.hp = finalHp;
+                    }
+
+                    // IA ataca cruzando su estadística ofensiva con la defensiva de tu bicho activo
+                    let rivalAtkStat = r.moveCategory === 'special' ? r.stats.spAttack : r.stats.attack;
+                    let playerDefStat = r.moveCategory === 'special' ? p.stats.spDefense : p.stats.defense;
+
+                    const baseValue = Math.floor((2 * r.level) / 5 + 2);
+                    const splitCalc = Math.floor((baseValue * r.movePower * rivalAtkStat) / playerDefStat);
+                    const preDamage = Math.floor(splitCalc / 50) + 2;
+                    const randomFactor = (Math.floor(Math.random() * 16) + 85) / 100;
+                    const rivalDmg = Math.floor(preDamage * randomFactor);
+
+                    p.hp -= rivalDmg;
+                    rivalActionLog = `¡El ${r.name} rival respondió con ${r.moveName} e infligió ${rivalDmg} de daño!`;
+
+                    if (p.hp <= 0) {
+                        p.hp = 0;
+                        ws.battle.ended = true;
+                        rivalActionLog += `\n¡Tu ${p.name} cayó debilitado! Has perdido el combate. 💀`;
+                        ws.battle.turn = 'rival';
+                    } else {
+                        ws.battle.turn = 'player'; // Devuelve el control total al jugador para seguir atacando
+                    }
+
+                    // Sincronizamos daños colaterales del equipo en la base de datos
+                    if (p.id === pokemonStorageId) {
+                        finalHp = p.hp;
+                    } else {
+                        db.execute('UPDATE pokemon_storage SET hp = ? WHERE id = ?', [p.hp, p.id]);
+                    }
+                }
+
+                // Guardamos salud definitiva en la base de datos
                 db.execute('UPDATE pokemon_storage SET hp = ? WHERE id = ?', [finalHp, pokemonStorageId], (errHeal) => {
                     if (errHeal) return;
 
-                    console.log(`[MOCHILA] Ítem ${itemEffect.name} consumido. Pokémon ID ${pokemonStorageId} sanado a ${finalHp}/${maxHp} HP.`);
+                    console.log(`[MOCHILA] Ítem ${itemEffect.name} consumido con éxito.`);
 
-                    // ⚔️ PASO 4.5: GASTO DE TURNO EN ARENA (Sincronizamos la RAM del encuentro vivo en el Servidor)
-                    if (ws.battle && !ws.battle.ended) {
-                        // Si el bicho curado es el que está en combate activo, actualizamos sus HP en la arena
-                        if (ws.battle.player && (ws.battle.player.id === pokemonStorageId || ws.battle.player.storageId === pokemonStorageId)) {
-                            ws.battle.player.hp = finalHp;
-                        }
-
-                        // Inyectamos el suceso en el log global para renderizarlo en el pie de la arena
-                        const stringLog = `\n¡Has usado ${itemEffect.name} en ${pokemon.name}! Recuperó salud.`;
-                        ws.battle.log = ws.battle.log ? ws.battle.log + stringLog : stringLog;
-
-                        // 🔄 CEDER EL TURNO: Pasamos el token al bot para que ejecute su ataque de respuesta
-                        ws.battle.turn = 'rival';
-
-                        // Despachamos la actualización de la arena viva a React para refrescar barras y congelar botones
-                        if (ws && ws.readyState === 1) {
-                            ws.send(JSON.stringify({
-                                type: 'BATTLE_UPDATE',
-                                battleState: ws.battle
-                            }));
-                        }
-                    }
-
-                    // 🥳 PASO 5: Éxito y sincronización radial con la UI
+                    // 🥳 PASO 6: Payload unificada compatible con tu usePokemonSocket de React
                     if (ws && ws.readyState === 1) {
                         ws.send(JSON.stringify({
                             type: 'ITEM_CONSUMED_SUCCESS',
-                            message: `¡Has usado ${itemEffect.name} en ${pokemon.name} con éxito! 💊`
+                            message: `¡Has usado ${itemEffect.name} en ${finalPokeName} con éxito! 💊`,
+                            battle: ws.battle,
+                            log: rivalActionLog || null
                         }));
 
                         ws.send(JSON.stringify({ type: 'REFRESH_PC_DATA', userId: userId }));

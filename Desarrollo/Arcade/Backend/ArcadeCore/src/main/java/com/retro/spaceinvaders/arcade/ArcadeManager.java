@@ -765,11 +765,81 @@ public final class ArcadeManager
                         8
                 ) % 8;
 
-        return room.getLayout()
-                .getTileInFront(
-                        machineTile,
-                        visualFrontRotation
+        RoomTile front =
+                room.getLayout()
+                        .getTileInFront(
+                                machineTile,
+                                visualFrontRotation
+                        );
+        /*
+         * BIRIBIRI_PINBALL_FRONT_EXACT_V2
+         *
+         * arcade_c23_pinball is a two-tile table.
+         * Its visual player side is one quarter-turn from the generic
+         * arcade direction (frontRotationOffset=2).
+         *
+         * The anchor is the first occupied tile, so the correct player
+         * position is TWO cells along that visual front direction:
+         * one across the table footprint and one outside it.
+         */
+        if(game == ArcadeGameDefinition.PINBALL)
+        {
+            if(front == null)
+            {
+                return null;
+            }
+
+            RoomTile pinballFront =
+                    room.getLayout()
+                            .getTileInFront(
+                                    front,
+                                    visualFrontRotation
+                            );
+
+            return pinballFront != null
+                    ? pinballFront
+                    : front;
+        }
+
+        if(game != ArcadeGameDefinition.LIFT_SHIFT ||
+                front == null)
+        {
+            return front;
+        }
+
+        int rotation =
+                (
+                        item.getRotation() +
+                        8
+                ) % 8;
+
+        boolean horizontal =
+                rotation == 2 ||
+                rotation == 6;
+
+        short secondX =
+                (short)(
+                        item.getX() +
+                        (horizontal ? 1 : 0)
                 );
+
+        short secondY =
+                (short)(
+                        item.getY() +
+                        (horizontal ? 0 : 1)
+                );
+
+        if(front.x == secondX &&
+                front.y == secondY)
+        {
+            return room.getLayout()
+                    .getTileInFront(
+                            front,
+                            visualFrontRotation
+                    );
+        }
+
+        return front;
     }
 
     private boolean isOnTile(

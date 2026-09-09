@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Client;
 use App\Exceptions\CreditTransactionException;
 use App\Http\Controllers\Controller;
 use App\Services\CreditTransactionService;
+use App\Services\EmulatorPresenceService;
 use App\Models\User;
 use App\Rules\WebsiteWordfilterRule;
 use Illuminate\Http\RedirectResponse;
@@ -23,6 +24,9 @@ class CharacterSelectController extends Controller
 
     public function __invoke(): View
     {
+        app(EmulatorPresenceService::class)
+            ->normalizeGlobalPresence();
+
         $accountId = $this->accountId();
 
         $account = DB::table('accounts')

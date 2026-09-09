@@ -21,7 +21,7 @@
             <artifactId>arcturus</artifactId>
             <version>3.6.1</version>
             <scope>system</scope>
-            <systemPath>${project.basedir}/../../Emulator/Habbo-3.6.0-jar-with-dependencies.jar</systemPath>
+            <systemPath>${project.basedir}/../../../../Emulator/Habbo-3.6.0-jar-with-dependencies.jar</systemPath>
         </dependency>
     </dependencies>
 </project>

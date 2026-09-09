@@ -11,6 +11,9 @@ import com.retro.rpgengine.ServicioRpgEngine.Encounter;
 import com.retro.rpgengine.ServicioRpgEngine.EncounterConfig;
 import com.retro.rpgengine.ServicioRpgEngine.EncounterParticipant;
 import com.retro.rpgengine.ServicioRpgEngine.EncounterReservation;
+import com.retro.rpgengine.RpgSheetTemplateService.SheetTemplate;
+import com.retro.rpgengine.RpgSheetTemplateService.SheetSection;
+import com.retro.rpgengine.RpgSheetTemplateService.SheetField;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,6 +40,23 @@ public final class RpgEnginePackets
             EncounterConfig encounterConfig,
             Encounter encounter)
     {
+        return result(action, success, message, projects, rooms, stats, statValue,
+                context, encounterConfig, encounter, null);
+    }
+
+    public static ServerMessage result(
+            int action,
+            boolean success,
+            String message,
+            List<Proyecto> projects,
+            List<Sala> rooms,
+            List<StatDefinition> stats,
+            StatValue statValue,
+            Contexto context,
+            EncounterConfig encounterConfig,
+            Encounter encounter,
+            SheetTemplate sheetTemplate)
+    {
         ServerMessage response = new ServerMessage(RESULT_PACKET);
 
         response.appendInt(action);
@@ -50,6 +70,7 @@ public final class RpgEnginePackets
         appendContext(response, context);
         appendEncounterConfig(response, encounterConfig);
         appendEncounter(response, encounter);
+        appendSheetTemplate(response, sheetTemplate);
 
         return response;
     }
@@ -266,4 +287,41 @@ public final class RpgEnginePackets
         }
     }
 
+
+    private static void appendSheetTemplate(ServerMessage response, SheetTemplate template)
+    {
+        response.appendBoolean(template != null);
+        if(template == null) return;
+
+        response.appendInt(template.rpgId);
+        List<SheetSection> sections = template.sections == null
+                ? new ArrayList<SheetSection>() : template.sections;
+        response.appendInt(sections.size());
+
+        for(SheetSection section : sections)
+        {
+            response.appendInt(section.id);
+            response.appendInt(section.rpgId);
+            response.appendString(section.title == null ? "" : section.title);
+            response.appendInt(section.sortOrder);
+
+            List<SheetField> fields = section.fields == null
+                    ? new ArrayList<SheetField>() : section.fields;
+            response.appendInt(fields.size());
+
+            for(SheetField field : fields)
+            {
+                response.appendInt(field.id);
+                response.appendInt(field.rpgId);
+                response.appendInt(field.sectionId);
+                response.appendString(field.label == null ? "" : field.label);
+                response.appendString(field.fieldType == null ? "" : field.fieldType);
+                response.appendBoolean(field.required);
+                response.appendString(field.visibility == null ? "" : field.visibility);
+                response.appendString(field.controlMode == null ? "" : field.controlMode);
+                response.appendInt(field.sortOrder);
+                response.appendString(field.optionsText == null ? "" : field.optionsText);
+            }
+        }
+    }
 }

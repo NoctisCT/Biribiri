@@ -17,9 +17,9 @@ export const ModToolsMyIssuesTabView: FC<ModToolsMyIssuesTabViewProps> = props =
         <Column gap={ 0 } overflow="hidden">
             <Column gap={ 2 }>
                 <Grid gap={ 1 } className="text-black fw-bold border-bottom pb-1">
-                    <Base className="g-col-2">Type</Base>
-                    <Base className="g-col-3">Room/Player</Base>
-                    <Base className="g-col-3">Opened</Base>
+                    <Base className="g-col-2">Tipo</Base>
+                    <Base className="g-col-3">Sala/Usuario</Base>
+                    <Base className="g-col-3">Abierto</Base>
                     <Base className="g-col-2"></Base>
                     <Base className="g-col-2"></Base>
                 </Grid>
@@ -33,10 +33,10 @@ export const ModToolsMyIssuesTabView: FC<ModToolsMyIssuesTabViewProps> = props =
                             <Base className="g-col-3">{ issue.reportedUserName }</Base>
                             <Base className="g-col-3">{ new Date(Date.now() - issue.issueAgeInMilliseconds).toLocaleTimeString() }</Base>
                             <Base className="g-col-2">
-                                <Button variant="primary" onClick={ event => handleIssue(issue.issueId) }>Handle</Button>
+                                <Button variant="primary" onClick={ event => handleIssue(issue.issueId) }>Gestionar</Button>
                             </Base>
                             <Base className="g-col-2">
-                                <Button variant="danger" onClick={ event => SendMessageComposer(new ReleaseIssuesMessageComposer([ issue.issueId ])) }>Release</Button>
+                                <Button variant="danger" onClick={ event => SendMessageComposer(new ReleaseIssuesMessageComposer([ issue.issueId ])) }>Liberar</Button>
                             </Base>
                         </Grid>
                     );

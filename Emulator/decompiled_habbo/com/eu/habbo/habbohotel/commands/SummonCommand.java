@@ -7,6 +7,7 @@ import com.eu.habbo.Emulator;
 import com.eu.habbo.habbohotel.commands.Command;
 import com.eu.habbo.habbohotel.gameclients.GameClient;
 import com.eu.habbo.habbohotel.rooms.Room;
+import com.eu.habbo.habbohotel.rooms.ForcedRoomEntryRegistry;
 import com.eu.habbo.habbohotel.rooms.RoomChatMessageBubbles;
 import com.eu.habbo.habbohotel.users.Habbo;
 import com.eu.habbo.messages.outgoing.rooms.ForwardToRoomComposer;
@@ -42,7 +43,7 @@ extends Command {
                 room.removeHabbo(habbo, true);
                 habbo.getHabboInfo().setCurrentRoom(null);
             }
-            Emulator.getGameEnvironment().getRoomManager().enterRoom(habbo, gameClient.getHabbo().getHabboInfo().getCurrentRoom().getId(), "", true);
+            ForcedRoomEntryRegistry.arm(habbo, gameClient.getHabbo().getHabboInfo().getCurrentRoom().getId());
             habbo.getClient().sendResponse(new ForwardToRoomComposer(gameClient.getHabbo().getHabboInfo().getCurrentRoom().getId()));
             gameClient.getHabbo().whisper(Emulator.getTexts().getValue("commands.succes.cmd_summon.summoned").replace("%user%", params[1]), RoomChatMessageBubbles.ALERT);
             habbo.alert(Emulator.getTexts().getValue("commands.generic.cmd_summon.been_summoned").replace("%user%", gameClient.getHabbo().getHabboInfo().getUsername()));

@@ -35,8 +35,8 @@ class EditBadgeTextEditor extends EditRecord
                   Log::error('Duplicate badge key error: ' . $e->getMessage());
 
                 Notification::make()
-                    ->title('Duplicate Badge Key')
-                    ->body('The badge key already exists. Please use a unique badge key.')
+                    ->title('Clave de placa duplicada')
+                    ->body('La clave de la placa ya existe. Usa una clave única.')
                     ->danger()
                     ->persistent()
                     ->send();

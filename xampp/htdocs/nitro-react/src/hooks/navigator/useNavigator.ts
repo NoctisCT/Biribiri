@@ -41,7 +41,14 @@ const useNavigatorState = () => {
 			});
 		});
 		
-		useMessageEvent<RoomForwardEvent>(RoomForwardEvent, (event) => { const parser = event.getParser(); TryVisitRoom(parser.roomId); });
+		// FORCE_ROOM_FORWARD_DIRECT_SESSION
+		// A RoomForward is a server-directed transition. Do not preflight the
+		// room through navigator doorbell/password UI; create the room session
+		// directly and let Arcturus perform the authoritative access decision.
+		useMessageEvent<RoomForwardEvent>(RoomForwardEvent, (event) => {
+			const parser = event.getParser();
+			CreateRoomSession(parser.roomId);
+		});
 		
 		useMessageEvent<RoomEntryInfoMessageEvent>(
 			RoomEntryInfoMessageEvent, (event) => {

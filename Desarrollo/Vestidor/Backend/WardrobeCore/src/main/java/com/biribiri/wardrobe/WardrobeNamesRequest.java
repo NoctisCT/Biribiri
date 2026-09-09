@@ -1,0 +1,23 @@
+package com.biribiri.wardrobe;
+
+import com.eu.habbo.messages.incoming.MessageHandler;
+
+public final class WardrobeNamesRequest extends MessageHandler
+{
+    @Override
+    public void handle() throws Exception
+    {
+        BiribiriWardrobePlugin plugin =
+            BiribiriWardrobePlugin.getInstance();
+
+        if(plugin == null) return;
+
+        plugin.getManager().sendNames(this.client);
+    }
+
+    @Override
+    public int getRatelimit()
+    {
+        return 500;
+    }
+}

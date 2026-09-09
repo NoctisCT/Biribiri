@@ -16,9 +16,9 @@ export const ModToolsOpenIssuesTabView: FC<ModToolsOpenIssuesTabViewProps> = pro
         <Column gap={ 0 } overflow="hidden">
             <Column gap={ 2 }>
                 <Grid gap={ 1 } className="text-black fw-bold border-bottom pb-1">
-                    <Base className="g-col-2">Type</Base>
-                    <Base className="g-col-3">Room/Player</Base>
-                    <Base className="g-col-4">Opened</Base>
+                    <Base className="g-col-2">Tipo</Base>
+                    <Base className="g-col-3">Sala/Usuario</Base>
+                    <Base className="g-col-4">Abierto</Base>
                     <Base className="g-col-3"></Base>
                 </Grid>
             </Column>
@@ -31,7 +31,7 @@ export const ModToolsOpenIssuesTabView: FC<ModToolsOpenIssuesTabViewProps> = pro
                             <Base className="g-col-3">{ issue.reportedUserName }</Base>
                             <Base className="g-col-4">{ new Date(Date.now() - issue.issueAgeInMilliseconds).toLocaleTimeString() }</Base>
                             <Base className="g-col-3">
-                                <Button variant="success" onClick={ event => SendMessageComposer(new PickIssuesMessageComposer([ issue.issueId ], false, 0, 'pick issue button')) }>Pick Issue</Button>
+                                <Button variant="success" onClick={ event => SendMessageComposer(new PickIssuesMessageComposer([ issue.issueId ], false, 0, 'pick issue button')) }>Tomar reporte</Button>
                             </Base>
                         </Grid>
                     );

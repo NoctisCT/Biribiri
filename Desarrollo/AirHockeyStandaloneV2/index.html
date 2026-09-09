@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  />
+  <title>Air Hockey Multiplayer V2</title>
+  <link
+    rel="stylesheet"
+    href="./styles.css"
+  />
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <h1>Air Hockey Multiplayer V2</h1>
+        <p>
+          Juego independiente · física servidor 240 Hz · snapshots 120 Hz
+        </p>
+      </div>
+
+      <div class="actions">
+        <span id="side" class="pill">
+          CONECTANDO
+        </span>
+
+        <button
+          id="openSecondBtn"
+          type="button"
+        >
+          Abrir jugador 2
+        </button>
+
+        <button
+          id="resetBtn"
+          type="button"
+        >
+          Reiniciar
+        </button>
+
+        <button
+          id="debugBtn"
+          type="button"
+        >
+          Debug: OFF
+        </button>
+      </div>
+    </header>
+
+    <section class="scoreboard">
+      <div class="player blue">
+        <span>AZUL</span>
+        <strong id="leftScore">0</strong>
+      </div>
+
+      <div class="center">
+        <strong id="status">
+          Conectando...
+        </strong>
+
+        <small>
+          Ping:
+          <span id="ping">--</span>
+          · tick:
+          <span id="tick">0</span>
+        </small>
+      </div>
+
+      <div class="player red">
+        <strong id="rightScore">0</strong>
+        <span>ROJO</span>
+      </div>
+    </section>
+
+    <div class="canvas-wrap">
+      <canvas
+        id="game"
+        width="1000"
+        height="600"
+      ></canvas>
+    </div>
+
+    <footer>
+      Tu mazo se dibuja 1:1 con el ratón.
+      Puck, marcador, colisiones y rival proceden del servidor autoritativo.
+      V1 permanece intacta como referencia.
+    </footer>
+  </main>
+
+  <script src="./physics.js"></script>
+  <script src="./client.js"></script>
+</body>
+</html>
