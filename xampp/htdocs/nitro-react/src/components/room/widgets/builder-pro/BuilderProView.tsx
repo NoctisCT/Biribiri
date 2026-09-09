@@ -1,4 +1,4 @@
-import { RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomObjectCategory, Vector3d, RoomObjectVariable} from '@nitrots/nitro-renderer';
+import { RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomObjectCategory, Vector3d, RoomObjectVariable} from '@nitrots/nitro-renderer';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { BuilderProSelectionVisualizer, CanManipulateFurniture, GetRoomEngine, GetSessionDataManager, SendMessageComposer, SetBuilderProSelectionModeActive } from '../../../../api';
 import { useMessageEvent, useRoom, useRoomEngineEvent } from '../../../../hooks';
@@ -58,6 +58,9 @@ export const BuilderProView: FC<{}> = props =>
     const [ canRedo, setCanRedo ] = useState(false);
     const [ moveStep, setMoveStep ] = useState(1);
     const [ heightStep, setHeightStep ] = useState(0.1);
+    const [ offsetX, setOffsetX ] = useState('');
+    const [ offsetY, setOffsetY ] = useState('');
+    const [ offsetZ, setOffsetZ ] = useState('');
     const [ highlightSelection, setHighlightSelection ] =
         useState(BuilderProSelectionVisualizer.enabled);
     const [ pivotId, setPivotId ] =
@@ -1933,6 +1936,78 @@ export const BuilderProView: FC<{}> = props =>
         }
     );
 
+
+    useMessageEvent<BuilderProOffsetGroupResultEvent>(
+        BuilderProOffsetGroupResultEvent,
+        event =>
+        {
+            const parser =
+                event.getParser();
+
+            if(!parser) return;
+
+            const requestId =
+                parser.requestId;
+
+            if(
+                pendingRequestIdRef.current
+                !== requestId
+            )
+            {
+                return;
+            }
+
+            if(!pendingRef.current)
+            {
+                return;
+            }
+
+            if(pendingTimeoutRef.current !== null)
+            {
+                window.clearTimeout(
+                    pendingTimeoutRef.current
+                );
+
+                pendingTimeoutRef.current =
+                    null;
+            }
+
+            pendingRef.current = false;
+            pendingRequestIdRef.current =
+                null;
+
+            pendingStartedAtRef.current =
+                0;
+
+            setPending(false);
+
+            if(parser.success)
+            {
+                setCanUndo(true);
+                setCanRedo(false);
+
+                setStatus(
+                    `Offset aplicado a ${ parser.affectedCount } furnis.`
+                );
+
+                window.requestAnimationFrame(
+                    () =>
+                    {
+                        BuilderProSelectionVisualizer.refresh(
+                            selectedIdsRef.current
+                        );
+                    }
+                );
+
+                return;
+            }
+
+            setStatus(
+                `Error ${ parser.code }: ${ parser.message }`
+            );
+        }
+    );
+
     useMessageEvent<BuilderProTransformGroupResultEvent>(
         BuilderProTransformGroupResultEvent,
         event =>
@@ -2647,6 +2722,259 @@ export const BuilderProView: FC<{}> = props =>
         },
         [ applyPreviewLocations ]
     );
+
+
+    const applyNumericOffset =
+        useCallback(() =>
+        {
+            if(!activeRef.current) return;
+            if(pendingRef.current) return;
+
+            const ids = [
+                ...selectedIdsRef.current
+            ];
+
+            if(!ids.length)
+            {
+                setStatus(
+                    'Selecciona al menos un furni.'
+                );
+
+                return;
+            }
+
+            const parseValue = (
+                raw: string
+            ) =>
+            {
+                const normalized =
+                    raw.trim()
+                        .replace(',', '.');
+
+                if(!normalized.length)
+                {
+                    return 0;
+                }
+
+                const value =
+                    Number(normalized);
+
+                return Number.isFinite(value)
+                    ? value
+                    : null;
+            };
+
+            const parsedX =
+                parseValue(offsetX);
+
+            const parsedY =
+                parseValue(offsetY);
+
+            const parsedZ =
+                parseValue(offsetZ);
+
+            if(
+                parsedX === null ||
+                parsedY === null ||
+                parsedZ === null
+            )
+            {
+                setStatus(
+                    'Offset invalido.'
+                );
+
+                return;
+            }
+
+            if(
+                !Number.isSafeInteger(parsedX) ||
+                !Number.isSafeInteger(parsedY)
+            )
+            {
+                setStatus(
+                    'X e Y deben ser numeros enteros.'
+                );
+
+                return;
+            }
+
+            const deltaZMillis =
+                Math.round(
+                    parsedZ * 1000
+                );
+
+            if(
+                deltaZMillis < -40000 ||
+                deltaZMillis > 40000
+            )
+            {
+                setStatus(
+                    'Z debe estar entre -40 y 40.'
+                );
+
+                return;
+            }
+
+            if(
+                parsedX === 0 &&
+                parsedY === 0 &&
+                deltaZMillis === 0
+            )
+            {
+                setStatus(
+                    'Introduce un offset distinto de cero.'
+                );
+
+                return;
+            }
+
+            duplicateRequestedRef.current =
+                false;
+
+            duplicateModeRef.current =
+                false;
+
+            setDuplicateMode(false);
+
+            clearPastePreview();
+
+            pasteModeRef.current =
+                false;
+
+            setPasteMode(false);
+
+            heldArrowRef.current =
+                null;
+
+            if(
+                keyboardRepeatTimerRef.current
+                !== null
+            )
+            {
+                window.clearTimeout(
+                    keyboardRepeatTimerRef.current
+                );
+
+                keyboardRepeatTimerRef.current =
+                    null;
+            }
+
+            requestIdRef.current++;
+
+            if(requestIdRef.current > 2000000000)
+            {
+                requestIdRef.current = 1;
+            }
+
+            const requestId =
+                requestIdRef.current;
+
+            pendingRef.current = true;
+            pendingRequestIdRef.current =
+                requestId;
+
+            pendingStartedAtRef.current =
+                performance.now();
+
+            setPending(true);
+
+            const format = (
+                value: number
+            ) =>
+                value > 0
+                    ? `+${ value }`
+                    : `${ value }`;
+
+            setStatus(
+                `Aplicando offset X ${ format(parsedX) }, Y ${ format(parsedY) }, Z ${ format(deltaZMillis / 1000) }...`
+            );
+
+            try
+            {
+                SendMessageComposer(
+                    new BuilderProOffsetGroupComposer(
+                        ids,
+                        parsedX,
+                        parsedY,
+                        deltaZMillis,
+                        requestId
+                    )
+                );
+
+                if(
+                    pendingTimeoutRef.current
+                    !== null
+                )
+                {
+                    window.clearTimeout(
+                        pendingTimeoutRef.current
+                    );
+                }
+
+                pendingTimeoutRef.current =
+                    window.setTimeout(
+                        () =>
+                        {
+                            pendingTimeoutRef.current =
+                                null;
+
+                            if(!pendingRef.current)
+                            {
+                                return;
+                            }
+
+                            if(
+                                pendingRequestIdRef.current
+                                !== requestId
+                            )
+                            {
+                                return;
+                            }
+
+                            pendingRef.current =
+                                false;
+
+                            pendingRequestIdRef.current =
+                                null;
+
+                            pendingStartedAtRef.current =
+                                0;
+
+                            setPending(false);
+
+                            setStatus(
+                                'Offset sin confirmacion del servidor.'
+                            );
+                        },
+                        MOVE_CONFIRM_TIMEOUT_MS
+                    );
+            }
+            catch(error)
+            {
+                console.error(
+                    `[BuilderProTrace] CLIENT OFFSET_SEND_ERROR #${ requestId }`,
+                    error
+                );
+
+                pendingRef.current = false;
+                pendingRequestIdRef.current =
+                    null;
+
+                pendingStartedAtRef.current =
+                    0;
+
+                setPending(false);
+
+                setStatus(
+                    'No se pudo enviar el offset al servidor.'
+                );
+            }
+        }, [
+            clearPastePreview,
+            offsetX,
+            offsetY,
+            offsetZ
+        ]);
 
     const historyAction = useCallback((
         action: number
@@ -3902,6 +4230,62 @@ export const BuilderProView: FC<{}> = props =>
                                 () => historyAction(2)
                             }>
                             Rehacer
+                        </button>
+                    </div>
+
+
+                    <div className="builder-pro-offset">
+                        <span>Offset exacto</span>
+
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            value={ offsetX }
+                            disabled={ pending }
+                            placeholder="X"
+                            onChange={
+                                event =>
+                                    setOffsetX(
+                                        event.target.value
+                                    )
+                            } />
+
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            value={ offsetY }
+                            disabled={ pending }
+                            placeholder="Y"
+                            onChange={
+                                event =>
+                                    setOffsetY(
+                                        event.target.value
+                                    )
+                            } />
+
+                        <input
+                            type="text"
+                            inputMode="decimal"
+                            value={ offsetZ }
+                            disabled={ pending }
+                            placeholder="Z"
+                            onChange={
+                                event =>
+                                    setOffsetZ(
+                                        event.target.value
+                                    )
+                            } />
+
+                        <button
+                            type="button"
+                            disabled={
+                                pending ||
+                                !selectedIds.length
+                            }
+                            onClick={
+                                applyNumericOffset
+                            }>
+                            Aplicar
                         </button>
                     </div>
 

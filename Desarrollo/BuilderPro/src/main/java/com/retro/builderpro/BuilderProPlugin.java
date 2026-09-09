@@ -12,6 +12,7 @@ import com.eu.habbo.plugin.events.furniture.FurniturePlacedEvent;
 import com.retro.builderpro.handlers.CopyGroupRequest;
 import com.retro.builderpro.handlers.PasteGroupRequest;
 import com.retro.builderpro.handlers.MoveGroupRequest;
+import com.retro.builderpro.handlers.OffsetGroupRequest;
 import com.retro.builderpro.handlers.TransformGroupRequest;
 import com.retro.builderpro.handlers.HistoryRequest;
 
@@ -64,6 +65,13 @@ public class BuilderProPlugin
                 .registerHandler(
                         BuilderProPackets.HISTORY_REQUEST,
                         HistoryRequest.class
+                );
+
+        Emulator.getGameServer()
+                .getPacketManager()
+                .registerHandler(
+                        BuilderProPackets.OFFSET_GROUP_REQUEST,
+                        OffsetGroupRequest.class
                 );
 
         System.out.println(

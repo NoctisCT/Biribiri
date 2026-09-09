@@ -521,4 +521,5 @@ export class OutgoingHeader
     public static BUILDER_PRO_COPY_GROUP = 6304;
     public static BUILDER_PRO_PASTE_GROUP = 6306;
     public static BUILDER_PRO_HISTORY = 6308;
+    public static BUILDER_PRO_OFFSET_GROUP = 6310;
 }

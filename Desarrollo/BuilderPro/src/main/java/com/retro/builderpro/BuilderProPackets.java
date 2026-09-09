@@ -20,4 +20,7 @@ public final class BuilderProPackets
 
     public static final int HISTORY_REQUEST = 6308;
     public static final int HISTORY_RESULT = 6309;
+
+    public static final int OFFSET_GROUP_REQUEST = 6310;
+    public static final int OFFSET_GROUP_RESULT = 6311;
 }

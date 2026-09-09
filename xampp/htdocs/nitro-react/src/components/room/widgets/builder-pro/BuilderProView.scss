@@ -160,3 +160,63 @@
     background: rgba(85, 183, 255, 0.14);
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18);
 }
+
+
+.builder-pro-offset {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-bottom: 8px;
+    font-size: 11px;
+}
+
+.builder-pro-offset > span {
+    grid-column: 1 / -1;
+    opacity: 0.75;
+}
+
+.builder-pro-offset input {
+    width: 100%;
+    min-width: 0;
+    height: 28px;
+    padding: 0 7px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    font-size: 12px;
+    outline: none;
+}
+
+.builder-pro-offset input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.builder-pro-offset input:focus {
+    border-color: rgba(85, 183, 255, 0.9);
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.builder-pro-offset input:disabled {
+    opacity: 0.35;
+}
+
+.builder-pro-offset button {
+    grid-column: 1 / -1;
+    min-height: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.builder-pro-offset button:hover:not(:disabled) {
+    background: rgba(85, 183, 255, 0.22);
+}
+
+.builder-pro-offset button:disabled {
+    cursor: default;
+    opacity: 0.35;
+}
