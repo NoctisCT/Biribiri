@@ -1,0 +1,122 @@
+.builder-pro-shell {
+    position: absolute;
+    right: 16px;
+    bottom: 88px;
+    z-index: 1100;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    pointer-events: auto;
+}
+
+.builder-pro-toggle {
+    min-width: 118px;
+    padding: 7px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 5px;
+    background: rgba(24, 29, 38, 0.94);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+}
+
+.builder-pro-toggle:hover,
+.builder-pro-toggle.is-active {
+    background: rgba(35, 91, 129, 0.96);
+}
+
+.builder-pro-panel {
+    width: 260px;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 6px;
+    background: rgba(20, 24, 31, 0.96);
+    color: #ffffff;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.36);
+}
+
+.builder-pro-header,
+.builder-pro-step {
+    display: flex;
+    align-items: center;
+}
+
+.builder-pro-header {
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 13px;
+}
+
+.builder-pro-header span {
+    opacity: 0.72;
+    font-size: 12px;
+}
+
+.builder-pro-status {
+    min-height: 34px;
+    margin-bottom: 10px;
+    font-size: 11px;
+    line-height: 1.35;
+    opacity: 0.88;
+}
+
+.builder-pro-step {
+    gap: 6px;
+    margin-bottom: 8px;
+    font-size: 11px;
+}
+
+.builder-pro-step span {
+    margin-right: auto;
+    opacity: 0.75;
+}
+
+.builder-pro-step button {
+    min-width: 32px;
+    min-height: 26px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    cursor: pointer;
+}
+
+.builder-pro-step button.is-selected {
+    background: rgba(85, 183, 255, 0.28);
+}
+
+.builder-pro-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.builder-pro-actions button,
+.builder-pro-clear {
+    min-height: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.builder-pro-actions button:hover:not(:disabled),
+.builder-pro-clear:hover:not(:disabled) {
+    background: rgba(85, 183, 255, 0.22);
+}
+
+.builder-pro-actions button:disabled,
+.builder-pro-clear:disabled {
+    cursor: default;
+    opacity: 0.35;
+}
+
+.builder-pro-clear {
+    width: 100%;
+}

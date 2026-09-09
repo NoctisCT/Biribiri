@@ -11,6 +11,7 @@ import { FurniChooserWidgetView } from './choosers/FurniChooserWidgetView';
 import { UserChooserWidgetView } from './choosers/UserChooserWidgetView';
 import { DoorbellWidgetView } from './doorbell/DoorbellWidgetView';
 import { FriendRequestWidgetView } from './friend-request/FriendRequestWidgetView';
+import { BuilderProView } from './builder-pro/BuilderProView';
 import { FurnitureWidgetsView } from './furniture/FurnitureWidgetsView';
 import { PetPackageWidgetView } from './pet-package/PetPackageWidgetView';
 import { RoomFilterWordsWidgetView } from './room-filter-words/RoomFilterWordsWidgetView';
@@ -157,6 +158,7 @@ export const RoomWidgetsView: FC<{}> = props => {
             <ChatWidgetView />
             <ChatInputView />
             <DoorbellWidgetView />
+            <BuilderProView />
             <FurnitureWidgetsView />
             <RoomToolsWidgetView />
             <RoomFilterWordsWidgetView />

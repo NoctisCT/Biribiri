@@ -1,6 +1,6 @@
 import { ContextMenuEnum, GroupFurniContextMenuInfoMessageEvent, GroupFurniContextMenuInfoMessageParser, RoomEngineTriggerWidgetEvent, RoomObjectCategory, RoomObjectVariable } from '@nitrots/nitro-renderer';
 import { useState } from 'react';
-import { GetRoomEngine, IsOwnerOfFurniture, TryJoinGroup, TryVisitRoom } from '../../../../api';
+import { GetRoomEngine, IsBuilderProSelectionModeActive, IsOwnerOfFurniture, TryJoinGroup, TryVisitRoom } from '../../../../api';
 import { useMessageEvent, useRoomEngineEvent } from '../../../events';
 import { useRoom } from '../../useRoom';
 
@@ -85,6 +85,13 @@ const useFurnitureContextMenuWidgetState = () =>
         RoomEngineTriggerWidgetEvent.REQUEST_MYSTERYTROPHY_OPEN_DIALOG
     ], event =>
     {
+        if(IsBuilderProSelectionModeActive())
+        {
+            onClose();
+            closeConfirm();
+            return;
+        }
+
         const object = GetRoomEngine().getRoomObject(roomSession.roomId, event.objectId, event.category);
 
         if(!object) return;
