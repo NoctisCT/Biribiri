@@ -8,6 +8,9 @@ import com.eu.habbo.plugin.HabboPlugin;
 import com.eu.habbo.plugin.events.emulator.EmulatorLoadedEvent;
 import com.eu.habbo.plugin.events.furniture.FurnitureBuildheightEvent;
 import com.eu.habbo.plugin.events.furniture.FurnitureMovedEvent;
+import com.eu.habbo.plugin.events.furniture.FurniturePlacedEvent;
+import com.retro.builderpro.handlers.CopyGroupRequest;
+import com.retro.builderpro.handlers.PasteGroupRequest;
 import com.retro.builderpro.handlers.MoveGroupRequest;
 import com.retro.builderpro.handlers.TransformGroupRequest;
 
@@ -41,9 +44,51 @@ public class BuilderProPlugin
                         TransformGroupRequest.class
                 );
 
+        Emulator.getGameServer()
+                .getPacketManager()
+                .registerHandler(
+                        BuilderProPackets.COPY_GROUP_REQUEST,
+                        CopyGroupRequest.class
+                );
+
+        Emulator.getGameServer()
+                .getPacketManager()
+                .registerHandler(
+                        BuilderProPackets.PASTE_GROUP_REQUEST,
+                        PasteGroupRequest.class
+                );
+
         System.out.println(
                 "[BuilderPro] Backend MVP 0 cargado."
         );
+    }
+
+    @EventHandler
+    public void onFurniturePlaced(
+            FurniturePlacedEvent event)
+    {
+        if(event == null
+                || event.habbo == null
+                || event.furniture == null)
+        {
+            return;
+        }
+
+        int actorId =
+                event.habbo
+                        .getHabboInfo()
+                        .getId();
+
+        int itemId =
+                event.furniture
+                        .getId();
+
+        if(BuilderProContext.appliesTo(
+                actorId,
+                itemId))
+        {
+            event.setPluginHelper(true);
+        }
     }
 
     @EventHandler
@@ -107,6 +152,7 @@ public class BuilderProPlugin
     @Override
     public void onDisable()
     {
+        CopyGroupService.clearAll();
         BuilderProContext.clear();
     }
 

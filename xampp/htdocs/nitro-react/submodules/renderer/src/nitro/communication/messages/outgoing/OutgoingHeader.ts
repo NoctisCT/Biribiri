@@ -518,4 +518,6 @@ export class OutgoingHeader
 
     public static BUILDER_PRO_MOVE_GROUP = 6300;
     public static BUILDER_PRO_TRANSFORM_GROUP = 6302;
+    public static BUILDER_PRO_COPY_GROUP = 6304;
+    public static BUILDER_PRO_PASTE_GROUP = 6306;
 }

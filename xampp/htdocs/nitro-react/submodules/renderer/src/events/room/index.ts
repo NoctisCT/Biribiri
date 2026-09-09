@@ -33,3 +33,5 @@ export * from './RoomSpriteMouseEvent';
 export * from './RoomToObjectEvent';
 export * from './RoomToObjectOwnAvatarMoveEvent';
 export * from './RoomZoomEvent';
+export * from './RoomEngineTileClickEvent';
+export * from './RoomEngineTileHoverEvent';

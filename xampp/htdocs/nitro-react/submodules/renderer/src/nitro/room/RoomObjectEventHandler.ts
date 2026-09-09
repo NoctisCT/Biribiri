@@ -1,6 +1,6 @@
 import { IFurnitureStackingHeightMap, ILegacyWallGeometry, IObjectData, IRoomCanvasMouseListener, IRoomEngineServices, IRoomGeometry, IRoomObject, IRoomObjectController, IRoomObjectEventManager, ISelectedRoomObjectData, IVector3D, MouseEventType, NitroConfiguration, NitroLogger, RoomObjectCategory, RoomObjectOperationType, RoomObjectPlacementSource, RoomObjectType, RoomObjectUserType, RoomObjectVariable, Vector3d } from '../../api';
 import { Disposable } from '../../core';
-import { RoomEngineDimmerStateEvent, RoomEngineObjectEvent, RoomEngineObjectPlacedEvent, RoomEngineObjectPlacedOnUserEvent, RoomEngineObjectPlaySoundEvent, RoomEngineRoomAdEvent, RoomEngineSamplePlaybackEvent, RoomEngineTriggerWidgetEvent, RoomEngineUseProductEvent, RoomObjectBadgeAssetEvent, RoomObjectDataRequestEvent, RoomObjectDimmerStateUpdateEvent, RoomObjectEvent, RoomObjectFloorHoleEvent, RoomObjectFurnitureActionEvent, RoomObjectHSLColorEnabledEvent, RoomObjectHSLColorEnableEvent, RoomObjectMouseEvent, RoomObjectMoveEvent, RoomObjectPlaySoundIdEvent, RoomObjectRoomAdEvent, RoomObjectSamplePlaybackEvent, RoomObjectSoundMachineEvent, RoomObjectStateChangedEvent, RoomObjectTileMouseEvent, RoomObjectWallMouseEvent, RoomObjectWidgetRequestEvent, RoomSpriteMouseEvent } from '../../events';
+import { RoomEngineDimmerStateEvent, RoomEngineObjectEvent, RoomEngineObjectPlacedEvent, RoomEngineObjectPlacedOnUserEvent, RoomEngineObjectPlaySoundEvent, RoomEngineRoomAdEvent, RoomEngineSamplePlaybackEvent, RoomEngineTriggerWidgetEvent, RoomEngineUseProductEvent, RoomObjectBadgeAssetEvent, RoomObjectDataRequestEvent, RoomObjectDimmerStateUpdateEvent, RoomObjectEvent, RoomObjectFloorHoleEvent, RoomObjectFurnitureActionEvent, RoomObjectHSLColorEnabledEvent, RoomObjectHSLColorEnableEvent, RoomObjectMouseEvent, RoomObjectMoveEvent, RoomObjectPlaySoundIdEvent, RoomObjectRoomAdEvent, RoomObjectSamplePlaybackEvent, RoomObjectSoundMachineEvent, RoomObjectStateChangedEvent, RoomObjectTileMouseEvent, RoomObjectWallMouseEvent, RoomObjectWidgetRequestEvent, RoomSpriteMouseEvent, RoomEngineTileClickEvent, RoomEngineTileHoverEvent } from '../../events';
 import { RoomEnterEffect, RoomId, RoomObjectUpdateMessage } from '../../room';
 import { BotPlaceComposer, FurnitureColorWheelComposer, FurnitureDiceActivateComposer, FurnitureDiceDeactivateComposer, FurnitureFloorUpdateComposer, FurnitureGroupInfoComposer, FurnitureMultiStateComposer, FurnitureOneWayDoorComposer, FurniturePickupComposer, FurniturePlaceComposer, FurniturePostItPlaceComposer, FurnitureRandomStateComposer, FurnitureWallMultiStateComposer, FurnitureWallUpdateComposer, GetItemDataComposer, GetResolutionAchievementsMessageComposer, PetMoveComposer, PetPlaceComposer, RemoveWallItemComposer, RoomUnitLookComposer, RoomUnitWalkComposer, SetItemDataMessageComposer, SetObjectDataMessageComposer } from '../communication';
 import { Nitro } from '../Nitro';
@@ -322,6 +322,29 @@ export class RoomObjectEventHandler extends Disposable implements IRoomCanvasMou
     {
         if(!event) return;
 
+        if(
+            event instanceof RoomObjectTileMouseEvent &&
+            this._roomEngine.events
+        )
+        {
+            const tileClickEvent =
+                new RoomEngineTileClickEvent(
+                    roomId,
+                    event.tileXAsInt,
+                    event.tileYAsInt,
+                    event.tileZAsInt
+                );
+
+            this._roomEngine.events.dispatchEvent(
+                tileClickEvent
+            );
+
+            if(tileClickEvent.consumed)
+            {
+                return;
+            }
+        }
+
         let operation = RoomObjectOperationType.OBJECT_UNDEFINED;
 
         const selectedData = this.getSelectedRoomObjectData(roomId);
@@ -546,6 +569,20 @@ export class RoomObjectEventHandler extends Disposable implements IRoomCanvasMou
                 }
 
                 roomCursor.processUpdateMessage(newEvent);
+
+                if(newEvent && newEvent.visible && newEvent.location && this._roomEngine.events)
+                {
+                    const hoverLocation = newEvent.location;
+
+                    this._roomEngine.events.dispatchEvent(
+                        new RoomEngineTileHoverEvent(
+                            roomId,
+                            Math.trunc(hoverLocation.x + 0.5),
+                            Math.trunc(hoverLocation.y + 0.5),
+                            hoverLocation.z
+                        )
+                    );
+                }
             }
         }
 

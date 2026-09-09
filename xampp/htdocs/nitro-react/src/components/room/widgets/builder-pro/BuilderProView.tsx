@@ -1,4 +1,4 @@
-import { BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomObjectCategory, Vector3d, RoomObjectVariable} from '@nitrots/nitro-renderer';
+import { RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomObjectCategory, Vector3d, RoomObjectVariable} from '@nitrots/nitro-renderer';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { BuilderProSelectionVisualizer, CanManipulateFurniture, GetRoomEngine, GetSessionDataManager, SendMessageComposer, SetBuilderProSelectionModeActive } from '../../../../api';
 import { useMessageEvent, useRoom, useRoomEngineEvent } from '../../../../hooks';
@@ -29,6 +29,21 @@ type BuilderProTransformSnapshot = {
     directionZ: number;
 };
 
+type BuilderProClipboardPreviewEntry = {
+    baseItemId: number;
+    offsetX: number;
+    offsetY: number;
+    offsetZ: number;
+    rotation: number;
+};
+
+type BuilderProClipboardPreview = {
+    sourceAnchorZ: number;
+    entries: BuilderProClipboardPreviewEntry[];
+};
+
+const BUILDER_PRO_PASTE_GHOST_ID_BASE = -1900000000;
+
 export const BuilderProView: FC<{}> = props =>
 {
     const { roomSession = null } = useRoom();
@@ -37,6 +52,8 @@ export const BuilderProView: FC<{}> = props =>
     const [ selectedIds, setSelectedIds ] = useState<number[]>([]);
     const [ pending, setPending ] = useState(false);
     const [ status, setStatus ] = useState('');
+    const [ pasteMode, setPasteMode ] = useState(false);
+    const [ duplicateMode, setDuplicateMode ] = useState(false);
     const [ moveStep, setMoveStep ] = useState(1);
     const [ heightStep, setHeightStep ] = useState(0.1);
     const [ highlightSelection, setHighlightSelection ] =
@@ -55,6 +72,13 @@ export const BuilderProView: FC<{}> = props =>
 
     const activeRef = useRef(false);
     const pendingRef = useRef(false);
+    const pasteModeRef = useRef(false);
+    const duplicateModeRef = useRef(false);
+    const duplicateRequestedRef = useRef(false);
+    const clipboardPreviewRef = useRef<BuilderProClipboardPreview | null>(null);
+    const pastePreviewAnchorRef = useRef<{ x: number; y: number } | null>(null);
+    const pasteGhostIdsRef = useRef<number[]>([]);
+    const pastePreviewFrameRef = useRef<number | null>(null);
     const heldArrowRef = useRef<string | null>(null);
     const keyboardBlockedRef = useRef(false);
     const keyboardRepeatTimerRef = useRef<number | null>(null);
@@ -95,6 +119,7 @@ export const BuilderProView: FC<{}> = props =>
     const suppressDragClickTimerRef =
         useRef<number | null>(null);
     const areaModeRef = useRef(false);
+    const suppressAreaClickRef = useRef(false);
     const pivotIdRef = useRef<number | null>(null);
     const pivotPickModeRef = useRef(false);
     const areaStartRef = useRef<{
@@ -830,7 +855,7 @@ export const BuilderProView: FC<{}> = props =>
 
         setStatus(
             next
-                ? 'Seleccion por area activa. Arrastra sobre la sala.'
+                ? 'Seleccion por area activa. Arrastra para seleccionar; los clics normales siguen disponibles.'
                 : 'Seleccion por clic activa.'
         );
     }, []);
@@ -1020,6 +1045,7 @@ export const BuilderProView: FC<{}> = props =>
         {
             if(!activeRef.current) return;
             if(!areaModeRef.current) return;
+            if(pasteModeRef.current) return;
             if(event.altKey) return;
             if(pendingRef.current) return;
             if(event.button !== 0) return;
@@ -1064,14 +1090,7 @@ export const BuilderProView: FC<{}> = props =>
                     scaleY
             };
 
-            setSelectionBox({
-                left: event.clientX,
-                top: event.clientY,
-                width: 0,
-                height: 0
-            });
-
-            stopNativeEvent(event);
+            suppressAreaClickRef.current = false;
         };
 
         const onMouseMove = (
@@ -1082,6 +1101,29 @@ export const BuilderProView: FC<{}> = props =>
                 areaStartRef.current;
 
             if(!start) return;
+
+            const dragWidth = Math.abs(
+                event.clientX -
+                start.startClientX
+            );
+
+            const dragHeight = Math.abs(
+                event.clientY -
+                start.startClientY
+            );
+
+            if(!suppressAreaClickRef.current)
+            {
+                if(
+                    dragWidth < 4 &&
+                    dragHeight < 4
+                )
+                {
+                    return;
+                }
+
+                suppressAreaClickRef.current = true;
+            }
 
             const left = Math.min(
                 start.startClientX,
@@ -1096,14 +1138,8 @@ export const BuilderProView: FC<{}> = props =>
             setSelectionBox({
                 left,
                 top,
-                width: Math.abs(
-                    event.clientX -
-                    start.startClientX
-                ),
-                height: Math.abs(
-                    event.clientY -
-                    start.startClientY
-                )
+                width: dragWidth,
+                height: dragHeight
             });
 
             stopNativeEvent(event);
@@ -1119,31 +1155,18 @@ export const BuilderProView: FC<{}> = props =>
             if(!start) return;
 
             areaStartRef.current = null;
-            setSelectionBox(null);
 
-            const dragWidth = Math.abs(
-                event.clientX -
-                start.startClientX
-            );
+            const wasAreaDrag =
+                suppressAreaClickRef.current;
 
-            const dragHeight = Math.abs(
-                event.clientY -
-                start.startClientY
-            );
-
-            stopNativeEvent(event);
-
-            if(
-                dragWidth < 4 &&
-                dragHeight < 4
-            )
+            if(!wasAreaDrag)
             {
-                setStatus(
-                    'Arrastra para trazar un area de seleccion.'
-                );
-
+                setSelectionBox(null);
                 return;
             }
+
+            stopNativeEvent(event);
+            setSelectionBox(null);
 
             selectObjectsInArea(
                 start.canvas,
@@ -1158,8 +1181,10 @@ export const BuilderProView: FC<{}> = props =>
             event: globalThis.MouseEvent
         ) =>
         {
-            if(!areaModeRef.current) return;
-            if(event.altKey) return;
+            if(!suppressAreaClickRef.current)
+            {
+                return;
+            }
 
             if(
                 !(event.target instanceof
@@ -1169,6 +1194,7 @@ export const BuilderProView: FC<{}> = props =>
                 return;
             }
 
+            suppressAreaClickRef.current = false;
             stopNativeEvent(event);
         };
 
@@ -1223,6 +1249,7 @@ export const BuilderProView: FC<{}> = props =>
             );
 
             areaStartRef.current = null;
+            suppressAreaClickRef.current = false;
             setSelectionBox(null);
         };
     }, [
@@ -1776,6 +1803,59 @@ export const BuilderProView: FC<{}> = props =>
         }
     );
 
+    useMessageEvent<BuilderProCopyGroupResultEvent>(
+        BuilderProCopyGroupResultEvent,
+        event =>
+        {
+            const parser = event.getParser();
+
+            if(!parser) return;
+
+            const requestId = parser.requestId;
+
+            if(
+                pendingRequestIdRef.current !==
+                requestId
+            )
+            {
+                return;
+            }
+
+            if(!pendingRef.current)
+            {
+                return;
+            }
+
+            if(pendingTimeoutRef.current !== null)
+            {
+                window.clearTimeout(
+                    pendingTimeoutRef.current
+                );
+
+                pendingTimeoutRef.current = null;
+            }
+
+            pendingRef.current = false;
+            pendingRequestIdRef.current = null;
+            pendingStartedAtRef.current = 0;
+
+            setPending(false);
+
+            if(parser.success)
+            {
+                setStatus(
+                    `Copiados ${ parser.copiedCount } furnis.`
+                );
+
+                return;
+            }
+
+            setStatus(
+                `Error ${ parser.code }: ${ parser.message }`
+            );
+        }
+    );
+
     useMessageEvent<BuilderProTransformGroupResultEvent>(
         BuilderProTransformGroupResultEvent,
         event =>
@@ -1856,6 +1936,441 @@ export const BuilderProView: FC<{}> = props =>
                 restoreTransformSnapshots(
                     preview.snapshots
                 );
+            }
+
+            setStatus(
+                `Error ${ parser.code }: ${ parser.message }`
+            );
+        }
+    );
+
+
+    const clearPastePreview = useCallback(() =>
+    {
+        if(pastePreviewFrameRef.current !== null)
+        {
+            window.cancelAnimationFrame(pastePreviewFrameRef.current);
+            pastePreviewFrameRef.current = null;
+        }
+
+        const currentRoomSession = roomSessionRef.current;
+        const roomEngine = GetRoomEngine();
+
+        if(currentRoomSession && roomEngine)
+        {
+            for(const ghostId of pasteGhostIdsRef.current)
+            {
+                roomEngine.removeRoomObjectFloor(currentRoomSession.roomId, ghostId);
+            }
+        }
+
+        pasteGhostIdsRef.current = [];
+        pastePreviewAnchorRef.current = null;
+    }, []);
+
+    const syncPastePreview = useCallback(() =>
+    {
+        if(!pasteModeRef.current) return;
+
+        const preview = clipboardPreviewRef.current;
+        const anchor = pastePreviewAnchorRef.current;
+        const currentRoomSession = roomSessionRef.current;
+        const roomEngine = GetRoomEngine();
+
+        if(!preview || !anchor || !currentRoomSession || !roomEngine) return;
+
+        const roomId = currentRoomSession.roomId;
+
+        for(let index = 0; index < preview.entries.length; index++)
+        {
+            const entry = preview.entries[index];
+            const ghostId = BUILDER_PRO_PASTE_GHOST_ID_BASE - index;
+            const x = anchor.x + entry.offsetX;
+            const y = anchor.y + entry.offsetY;
+            const z = preview.sourceAnchorZ + entry.offsetZ;
+
+            if(!pasteGhostIdsRef.current.includes(ghostId))
+            {
+                const queued = roomEngine.addFurnitureFloor(
+                    roomId,
+                    ghostId,
+                    entry.baseItemId,
+                    new Vector3d(x, y, z),
+                    new Vector3d(entry.rotation * 45),
+                    0,
+                    null,
+                    Number.NaN,
+                    -1,
+                    0,
+                    0,
+                    '',
+                    false,
+                    false
+                );
+
+                if(queued) pasteGhostIdsRef.current.push(ghostId);
+            }
+
+            const roomObject = roomEngine.getRoomObject(roomId, ghostId, RoomObjectCategory.FLOOR) as any;
+            if(!roomObject) continue;
+
+            roomObject.setLocation(new Vector3d(x, y, z));
+            roomObject.setDirection(new Vector3d(entry.rotation * 45));
+
+            if(roomObject.model)
+            {
+                roomObject.model.setValue(RoomObjectVariable.FURNITURE_ALPHA_MULTIPLIER, 0.5);
+            }
+
+            const sprites = (roomObject.visualization as any)?.sprites;
+            if(Array.isArray(sprites))
+            {
+                for(const sprite of sprites)
+                {
+                    if(sprite) sprite.clickHandling = false;
+                }
+            }
+        }
+    }, []);
+
+    const renderPastePreview = useCallback((anchorX: number, anchorY: number) =>
+    {
+        pastePreviewAnchorRef.current = { x: Math.trunc(anchorX), y: Math.trunc(anchorY) };
+        syncPastePreview();
+
+        if(pastePreviewFrameRef.current !== null)
+        {
+            window.cancelAnimationFrame(pastePreviewFrameRef.current);
+        }
+
+        pastePreviewFrameRef.current = window.requestAnimationFrame(() =>
+        {
+            pastePreviewFrameRef.current = null;
+            syncPastePreview();
+            window.requestAnimationFrame(() => syncPastePreview());
+        });
+    }, [ syncPastePreview ]);
+
+    useMessageEvent<BuilderProCopyGroupResultEvent>(
+        BuilderProCopyGroupResultEvent,
+        event =>
+        {
+            const parser = event.getParser();
+            if(!parser) return;
+
+            if(!parser.success)
+            {
+                duplicateRequestedRef.current = false;
+                return;
+            }
+
+            const entries = parser.previewEntries;
+            if(entries.length !== parser.copiedCount)
+            {
+                clipboardPreviewRef.current = null;
+                duplicateRequestedRef.current = false;
+                return;
+            }
+
+            clearPastePreview();
+
+            clipboardPreviewRef.current = {
+                sourceAnchorZ: parser.sourceAnchorZ,
+                entries: entries.map(entry => ({ ...entry }))
+            };
+
+            if(duplicateRequestedRef.current)
+            {
+                duplicateRequestedRef.current = false;
+                duplicateModeRef.current = true;
+                setDuplicateMode(true);
+
+                pasteModeRef.current = true;
+                setPasteMode(true);
+
+                setStatus(
+                    'Duplicar: mueve el cursor y haz clic para crear copias.'
+                );
+            }
+            else
+            {
+                duplicateModeRef.current = false;
+                setDuplicateMode(false);
+
+                pasteModeRef.current = false;
+                setPasteMode(false);
+            }
+        }
+    );
+
+    useRoomEngineEvent<RoomEngineTileHoverEvent>(
+        RoomEngineTileHoverEvent.TILE_HOVER,
+        event =>
+        {
+            if(!activeRef.current || !pasteModeRef.current || pendingRef.current) return;
+            renderPastePreview(event.tileX, event.tileY);
+        }
+    );
+
+    const togglePasteMode = useCallback(() =>
+    {
+        if(!activeRef.current) return;
+        if(pendingRef.current) return;
+
+        duplicateRequestedRef.current = false;
+        duplicateModeRef.current = false;
+        setDuplicateMode(false);
+
+        if(!pasteModeRef.current && !clipboardPreviewRef.current)
+        {
+            setStatus('Copia una estructura antes de pegar.');
+            return;
+        }
+
+        const next =
+            !pasteModeRef.current;
+
+        pasteModeRef.current =
+            next;
+
+        setPasteMode(
+            next
+        );
+
+        if(!next) clearPastePreview();
+
+        heldArrowRef.current = null;
+        keyboardBlockedRef.current = false;
+
+        if(keyboardRepeatTimerRef.current !== null)
+        {
+            window.clearTimeout(
+                keyboardRepeatTimerRef.current
+            );
+
+            keyboardRepeatTimerRef.current =
+                null;
+        }
+
+        setStatus(
+            next
+                ? 'Pegar: mueve el cursor y haz clic en el destino.'
+                : 'Pegado cancelado.'
+        );
+    }, [ clearPastePreview ]);
+
+    useEffect(() =>
+    {
+        if(active) return;
+
+        clearPastePreview();
+
+        duplicateRequestedRef.current = false;
+        duplicateModeRef.current = false;
+        setDuplicateMode(false);
+
+        pasteModeRef.current = false;
+        setPasteMode(false);
+    }, [ active, clearPastePreview ]);
+
+    useEffect(() =>
+    {
+        return () =>
+        {
+            clearPastePreview();
+        };
+    }, [ clearPastePreview ]);
+
+    useRoomEngineEvent<RoomEngineTileClickEvent>(
+        RoomEngineTileClickEvent.TILE_CLICK,
+        event =>
+        {
+            if(!activeRef.current) return;
+            if(!pasteModeRef.current) return;
+
+            event.consume();
+
+            if(pendingRef.current)
+            {
+                return;
+            }
+
+            clearPastePreview();
+
+            if(!duplicateModeRef.current)
+            {
+                pasteModeRef.current = false;
+                setPasteMode(false);
+            }
+
+            requestIdRef.current++;
+
+            if(requestIdRef.current > 2000000000)
+            {
+                requestIdRef.current = 1;
+            }
+
+            const requestId =
+                requestIdRef.current;
+
+            pendingRef.current = true;
+            pendingRequestIdRef.current =
+                requestId;
+
+            pendingStartedAtRef.current =
+                performance.now();
+
+            setPending(true);
+
+            setStatus(
+                `Pegando en ${ event.tileX }, ${ event.tileY }...`
+            );
+
+            try
+            {
+                SendMessageComposer(
+                    new BuilderProPasteGroupComposer(
+                        event.tileX,
+                        event.tileY,
+                        requestId
+                    )
+                );
+
+                if(pendingTimeoutRef.current !== null)
+                {
+                    window.clearTimeout(
+                        pendingTimeoutRef.current
+                    );
+                }
+
+                pendingTimeoutRef.current =
+                    window.setTimeout(
+                        () =>
+                        {
+                            pendingTimeoutRef.current =
+                                null;
+
+                            if(!pendingRef.current)
+                            {
+                                return;
+                            }
+
+                            if(
+                                pendingRequestIdRef.current
+                                !== requestId
+                            )
+                            {
+                                return;
+                            }
+
+                            pendingRef.current = false;
+                            pendingRequestIdRef.current =
+                                null;
+
+                            pendingStartedAtRef.current =
+                                0;
+
+                            setPending(false);
+
+                            setStatus(
+                                'Pegado sin confirmacion del servidor.'
+                            );
+                        },
+                        MOVE_CONFIRM_TIMEOUT_MS
+                    );
+            }
+            catch(error)
+            {
+                console.error(
+                    `[BuilderProTrace] CLIENT PASTE_SEND_ERROR #${ requestId }`,
+                    error
+                );
+
+                pendingRef.current = false;
+                pendingRequestIdRef.current =
+                    null;
+
+                pendingStartedAtRef.current =
+                    0;
+
+                setPending(false);
+
+                setStatus(
+                    'No se pudo enviar el pegado al servidor.'
+                );
+            }
+        }
+    );
+
+    useMessageEvent<BuilderProPasteGroupResultEvent>(
+        BuilderProPasteGroupResultEvent,
+        event =>
+        {
+            const parser =
+                event.getParser();
+
+            if(!parser) return;
+
+            const requestId =
+                parser.requestId;
+
+            if(
+                pendingRequestIdRef.current
+                !== requestId
+            )
+            {
+                return;
+            }
+
+            if(!pendingRef.current)
+            {
+                return;
+            }
+
+            if(pendingTimeoutRef.current !== null)
+            {
+                window.clearTimeout(
+                    pendingTimeoutRef.current
+                );
+
+                pendingTimeoutRef.current =
+                    null;
+            }
+
+            pendingRef.current = false;
+            pendingRequestIdRef.current =
+                null;
+
+            pendingStartedAtRef.current =
+                0;
+
+            setPending(false);
+
+            if(parser.success)
+            {
+                const pastedIds =
+                    parser.itemIds;
+
+                applySelection(
+                    pastedIds
+                );
+
+                setStatus(
+                    duplicateModeRef.current
+                        ? `Duplicados ${ parser.placedCount } furnis. Mueve el cursor para seguir duplicando.`
+                        : `Pegados ${ parser.placedCount } furnis.`
+                );
+
+                window.requestAnimationFrame(
+                    () =>
+                    {
+                        BuilderProSelectionVisualizer.refresh(
+                            pastedIds
+                        );
+                    }
+                );
+
+                return;
             }
 
             setStatus(
@@ -2049,6 +2564,125 @@ export const BuilderProView: FC<{}> = props =>
         },
         [ applyPreviewLocations ]
     );
+
+    const copyGroup = useCallback(() =>
+    {
+        if(!activeRef.current) return;
+        if(pendingRef.current) return;
+        if(dragRef.current) return;
+
+        const ids = [
+            ...selectedIdsRef.current
+        ];
+
+        if(!ids.length)
+        {
+            setStatus(
+                'Selecciona al menos un furni.'
+            );
+
+            return;
+        }
+
+        requestIdRef.current++;
+
+        if(requestIdRef.current > 2000000000)
+        {
+            requestIdRef.current = 1;
+        }
+
+        const requestId =
+            requestIdRef.current;
+
+        heldArrowRef.current = null;
+
+        if(keyboardRepeatTimerRef.current !== null)
+        {
+            window.clearTimeout(
+                keyboardRepeatTimerRef.current
+            );
+
+            keyboardRepeatTimerRef.current = null;
+        }
+
+        pendingRef.current = true;
+        pendingRequestIdRef.current =
+            requestId;
+
+        pendingStartedAtRef.current =
+            performance.now();
+
+        setPending(true);
+
+        setStatus(
+            `Copiando ${ ids.length } furnis...`
+        );
+
+        try
+        {
+            SendMessageComposer(
+                new BuilderProCopyGroupComposer(
+                    ids,
+                    requestId
+                )
+            );
+
+            if(pendingTimeoutRef.current !== null)
+            {
+                window.clearTimeout(
+                    pendingTimeoutRef.current
+                );
+            }
+
+            pendingTimeoutRef.current =
+                window.setTimeout(
+                    () =>
+                    {
+                        pendingTimeoutRef.current =
+                            null;
+
+                        if(!pendingRef.current)
+                        {
+                            return;
+                        }
+
+                        pendingRef.current = false;
+                        pendingRequestIdRef.current =
+                            null;
+
+                        pendingStartedAtRef.current =
+                            0;
+
+                        setPending(false);
+
+                        setStatus(
+                            'Copia sin confirmacion del servidor.'
+                        );
+                    },
+                    MOVE_CONFIRM_TIMEOUT_MS
+                );
+        }
+        catch(error)
+        {
+            console.error(
+                `[BuilderProTrace] CLIENT COPY_SEND_ERROR #${ requestId }`,
+                error
+            );
+
+            pendingRef.current = false;
+            pendingRequestIdRef.current =
+                null;
+
+            pendingStartedAtRef.current =
+                0;
+
+            setPending(false);
+
+            setStatus(
+                'No se pudo enviar la copia al servidor.'
+            );
+        }
+    }, []);
 
     const transformGroup = useCallback((
         operation: number,
@@ -3134,6 +3768,98 @@ export const BuilderProView: FC<{}> = props =>
                                 )
                             }>
                             Girar furnis
+                        </button>
+                    </div>
+
+                    <div className="builder-pro-selection-tools">
+                        <button
+                            type="button"
+                            disabled={
+                                pending ||
+                                !selectedIds.length
+                            }
+                            onClick={ () =>
+                            {
+                                duplicateRequestedRef.current = false;
+                                duplicateModeRef.current = false;
+                                setDuplicateMode(false);
+
+                                clearPastePreview();
+                                pasteModeRef.current = false;
+                                setPasteMode(false);
+
+                                copyGroup();
+                            } }>
+                            Copiar
+                        </button>
+
+                        <button
+                            type="button"
+                            className={
+                                duplicateMode
+                                    ? 'is-selected'
+                                    : ''
+                            }
+                            disabled={
+                                pending ||
+                                (
+                                    !duplicateMode &&
+                                    !selectedIds.length
+                                )
+                            }
+                            onClick={ () =>
+                            {
+                                if(duplicateModeRef.current)
+                                {
+                                    duplicateRequestedRef.current = false;
+                                    duplicateModeRef.current = false;
+                                    setDuplicateMode(false);
+
+                                    clearPastePreview();
+                                    pasteModeRef.current = false;
+                                    setPasteMode(false);
+
+                                    setStatus('Duplicado cancelado.');
+                                    return;
+                                }
+
+                                if(
+                                    pendingRef.current ||
+                                    dragRef.current ||
+                                    !selectedIdsRef.current.length
+                                )
+                                {
+                                    return;
+                                }
+
+                                clearPastePreview();
+
+                                pasteModeRef.current = false;
+                                setPasteMode(false);
+
+                                duplicateRequestedRef.current = true;
+
+                                copyGroup();
+                            } }>
+                            { duplicateMode
+                                ? 'Cancelar duplicado'
+                                : 'Duplicar' }
+                        </button>
+                    </div>
+
+                    <div className="builder-pro-selection-tools">
+                        <button
+                            type="button"
+                            className={
+                                pasteMode
+                                    ? 'is-selected'
+                                    : ''
+                            }
+                            disabled={ pending || duplicateMode }
+                            onClick={ togglePasteMode }>
+                            { pasteMode
+                                ? 'Cancelar pegado'
+                                : 'Pegar' }
                         </button>
                     </div>
 
