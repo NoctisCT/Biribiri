@@ -9,6 +9,7 @@ import com.eu.habbo.plugin.events.emulator.EmulatorLoadedEvent;
 import com.eu.habbo.plugin.events.furniture.FurnitureBuildheightEvent;
 import com.eu.habbo.plugin.events.furniture.FurnitureMovedEvent;
 import com.retro.builderpro.handlers.MoveGroupRequest;
+import com.retro.builderpro.handlers.TransformGroupRequest;
 
 public class BuilderProPlugin
         extends HabboPlugin
@@ -31,6 +32,13 @@ public class BuilderProPlugin
                 .registerHandler(
                         BuilderProPackets.MOVE_GROUP_REQUEST,
                         MoveGroupRequest.class
+                );
+
+        Emulator.getGameServer()
+                .getPacketManager()
+                .registerHandler(
+                        BuilderProPackets.TRANSFORM_GROUP_REQUEST,
+                        TransformGroupRequest.class
                 );
 
         System.out.println(

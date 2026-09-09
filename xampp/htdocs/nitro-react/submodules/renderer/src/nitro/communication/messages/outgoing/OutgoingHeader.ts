@@ -517,4 +517,5 @@ export class OutgoingHeader
     public static BIRIBIRI_ARCADE_SUBMIT = 6103;
 
     public static BUILDER_PRO_MOVE_GROUP = 6300;
+    public static BUILDER_PRO_TRANSFORM_GROUP = 6302;
 }

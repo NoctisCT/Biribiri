@@ -521,4 +521,5 @@ export class IncomingHeader {
     public static PARTY_RALLY = 5078;
 
     public static BUILDER_PRO_MOVE_GROUP_RESULT = 6301;
+    public static BUILDER_PRO_TRANSFORM_GROUP_RESULT = 6303;
 }
