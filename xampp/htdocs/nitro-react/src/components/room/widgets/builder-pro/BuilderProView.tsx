@@ -18,7 +18,6 @@ export const BuilderProView: FC<{}> = props =>
 
     const activeRef = useRef(false);
     const pendingRef = useRef(false);
-    const modifierRef = useRef(false);
     const selectedIdsRef = useRef<number[]>([]);
     const roomSessionRef = useRef(roomSession);
 
@@ -98,7 +97,7 @@ export const BuilderProView: FC<{}> = props =>
         setActive(true);
         setPending(false);
         setStatus(
-            'Selecciona un furni. Ctrl o Shift + clic a?ade o quita.'
+            'Haz clic en los furnis para a?adirlos o quitarlos.'
         );
     }, [ canBuild, clearSelection ]);
 
@@ -112,37 +111,6 @@ export const BuilderProView: FC<{}> = props =>
 
         activate();
     }, [ activate, deactivate ]);
-
-    useEffect(() =>
-    {
-        if(!active) return;
-
-        const updateModifier = (event: KeyboardEvent) =>
-        {
-            modifierRef.current =
-                event.ctrlKey ||
-                event.shiftKey ||
-                event.metaKey;
-        };
-
-        const clearModifier = () =>
-        {
-            modifierRef.current = false;
-        };
-
-        window.addEventListener('keydown', updateModifier);
-        window.addEventListener('keyup', updateModifier);
-        window.addEventListener('blur', clearModifier);
-
-        return () =>
-        {
-            window.removeEventListener('keydown', updateModifier);
-            window.removeEventListener('keyup', updateModifier);
-            window.removeEventListener('blur', clearModifier);
-
-            modifierRef.current = false;
-        };
-    }, [ active ]);
 
     useEffect(() =>
     {
@@ -231,18 +199,6 @@ export const BuilderProView: FC<{}> = props =>
             }
 
             const current = selectedIdsRef.current;
-            const additive = modifierRef.current;
-
-            if(!additive)
-            {
-                applySelection([ event.objectId ]);
-
-                setStatus(
-                    '1 furni seleccionado.'
-                );
-
-                return;
-            }
 
             if(current.includes(event.objectId))
             {
