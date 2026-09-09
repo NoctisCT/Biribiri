@@ -1,6 +1,7 @@
 package com.retro.builderpro;
 
 import com.eu.habbo.habbohotel.items.FurnitureType;
+import com.eu.habbo.habbohotel.items.Item;
 import com.eu.habbo.habbohotel.items.interactions.InteractionStackHelper;
 import com.eu.habbo.habbohotel.items.interactions.InteractionTileWalkMagic;
 import com.eu.habbo.habbohotel.rooms.FurnitureMovementError;
@@ -37,7 +38,8 @@ public final class GroupMoveService
             Habbo actor,
             List<Integer> requestedIds,
             int deltaX,
-            int deltaY)
+            int deltaY,
+            int requestId)
     {
         if(actor == null)
         {
@@ -178,6 +180,9 @@ public final class GroupMoveService
         THashSet<RoomTile> affectedTiles =
                 new THashSet<RoomTile>();
 
+        long validationStartedNs =
+                System.nanoTime();
+
         Result validation =
                 validateDestination(
                         room,
@@ -187,6 +192,20 @@ public final class GroupMoveService
                         deltaY,
                         affectedTiles
                 );
+
+        long validationMs =
+                (System.nanoTime()
+                        - validationStartedNs)
+                        / 1_000_000L;
+
+        System.out.println(
+                "[BuilderProTrace] SERVER VALIDATE #"
+                        + requestId
+                        + " ms="
+                        + validationMs
+                        + " success="
+                        + validation.success
+        );
 
         if(!validation.success)
         {
@@ -217,6 +236,16 @@ public final class GroupMoveService
 
         try
         {
+            long moveStartedNs =
+                    System.nanoTime();
+
+            System.out.println(
+                    "[BuilderProTrace] SERVER MOVE_BEGIN #"
+                            + requestId
+                            + " items="
+                            + snapshots.size()
+            );
+
             for(Snapshot snapshot : snapshots)
             {
                 short newX =
@@ -282,19 +311,56 @@ public final class GroupMoveService
             }
 
             /*
-             * Persistencia sincronica al terminar la operacion.
-             * moveFurniTo ya marca cada item para guardar;
-             * run() asegura que el estado definitivo llegue
-             * a base de datos antes de responder al cliente.
+             * moveFurniTo() ya marca el furni para guardar
+             * y programa su persistencia mediante el threading
+             * normal del emulador.
+             *
+             * No forzamos item.run() aqui: hacerlo de forma
+             * sincronica en cada paso del teclado bloqueaba
+             * innecesariamente la confirmacion al cliente.
+             *
+             * El rollback conserva persistencia sincronica,
+             * porque en ese caso prima restaurar el snapshot.
              */
-            for(Snapshot snapshot : snapshots)
-            {
-                snapshot.item.run();
-            }
+            long moveMs =
+                    (System.nanoTime()
+                            - moveStartedNs)
+                            / 1_000_000L;
+
+            System.out.println(
+                    "[BuilderProTrace] SERVER MOVE_END #"
+                            + requestId
+                            + " ms="
+                            + moveMs
+                            + " moved="
+                            + movedCount
+            );
+
+            long refreshStartedNs =
+                    System.nanoTime();
+
+            System.out.println(
+                    "[BuilderProTrace] SERVER REFRESH_BEGIN #"
+                            + requestId
+                            + " tiles="
+                            + affectedTiles.size()
+            );
 
             refreshAffectedTiles(
                     room,
                     affectedTiles
+            );
+
+            long refreshMs =
+                    (System.nanoTime()
+                            - refreshStartedNs)
+                            / 1_000_000L;
+
+            System.out.println(
+                    "[BuilderProTrace] SERVER REFRESH_END #"
+                            + requestId
+                            + " ms="
+                            + refreshMs
             );
 
             return Result.success(
@@ -303,6 +369,15 @@ public final class GroupMoveService
         }
         catch(Exception exception)
         {
+            System.out.println(
+                    "[BuilderProTrace] SERVER EXCEPTION #"
+                            + requestId
+                            + " "
+                            + exception.getClass().getName()
+                            + ": "
+                            + exception.getMessage()
+            );
+
             rollback(
                     room,
                     snapshots,
@@ -408,6 +483,24 @@ public final class GroupMoveService
                             snapshot.rotation
                     );
 
+            /*
+             * Builder Pro trabaja con volumen 3D.
+             *
+             * Dos furnis pueden compartir X/Y si sus
+             * intervalos verticales no se solapan.
+             * Esto permite mover construcciones sobre
+             * pavimentos, tarimas, maderas, etc. sin
+             * incluir el suelo decorativo en la seleccion.
+             */
+            double movingBottom =
+                    snapshot.z;
+
+            double movingTop =
+                    snapshot.z
+                            + Item.getCurrentHeight(
+                                    snapshot.item
+                            );
+
             for(int x = destination.x;
                     x < destination.x + destination.width;
                     x++)
@@ -464,12 +557,38 @@ public final class GroupMoveService
                             continue;
                         }
 
-                        if(!selectedIds.contains(
+                        if(selectedIds.contains(
                                 existing.getId()))
+                        {
+                            continue;
+                        }
+
+                        if(existing.getBaseItem() == null)
                         {
                             return Result.failure(
                                     16,
-                                    "El destino contiene furnis ajenos a la seleccion."
+                                    "El destino contiene un furni externo invalido."
+                            );
+                        }
+
+                        double existingBottom =
+                                existing.getZ();
+
+                        double existingTop =
+                                existing.getZ()
+                                        + Item.getCurrentHeight(
+                                                existing
+                                        );
+
+                        if(verticalRangesOverlap(
+                                movingBottom,
+                                movingTop,
+                                existingBottom,
+                                existingTop))
+                        {
+                            return Result.failure(
+                                    16,
+                                    "El destino contiene un furni que invade el volumen de la seleccion."
                             );
                         }
                     }
@@ -478,6 +597,26 @@ public final class GroupMoveService
         }
 
         return Result.success(0);
+    }
+
+    private static boolean verticalRangesOverlap(
+            double firstBottom,
+            double firstTop,
+            double secondBottom,
+            double secondTop)
+    {
+        /*
+         * Tocar una superficie no es colision.
+         *
+         * Ejemplo:
+         * pavimento 0.00 -> 0.10
+         * furni      0.10 -> 1.10
+         * se permite.
+         */
+        return firstBottom
+                        < secondTop - EPSILON
+                && firstTop
+                        > secondBottom + EPSILON;
     }
 
     private static void addFootprint(

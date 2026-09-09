@@ -20,15 +20,31 @@ public class MoveGroupRequest
             return;
         }
 
+        int requestId =
+                this.packet
+                        .readInt()
+                        .intValue();
+
+        long requestStartedNs =
+                System.nanoTime();
+
         int count =
                 this.packet
                         .readInt()
                         .intValue();
 
+        System.out.println(
+                "[BuilderProTrace] SERVER RECEIVE #"
+                        + requestId
+                        + " count="
+                        + count
+        );
+
         if(count < 1
                 || count > GroupMoveService.MAX_GROUP_SIZE)
         {
             sendResult(
+                    requestId,
                     GroupMoveService.Result.failure(
                             30,
                             "Cantidad de furnis invalida."
@@ -69,19 +85,46 @@ public class MoveGroupRequest
                         this.client.getHabbo(),
                         itemIds,
                         deltaX,
-                        deltaY
+                        deltaY,
+                        requestId
                 );
 
-        sendResult(result);
+        long totalMs =
+                (System.nanoTime()
+                        - requestStartedNs)
+                        / 1_000_000L;
+
+        System.out.println(
+                "[BuilderProTrace] SERVER RESULT #"
+                        + requestId
+                        + " success="
+                        + result.success
+                        + " code="
+                        + result.code
+                        + " moved="
+                        + result.movedCount
+                        + " totalMs="
+                        + totalMs
+        );
+
+        sendResult(
+                requestId,
+                result
+        );
     }
 
     private void sendResult(
+            int requestId,
             GroupMoveService.Result result)
     {
         ServerMessage response =
                 new ServerMessage(
                         BuilderProPackets.MOVE_GROUP_RESULT
                 );
+
+        response.appendInt(
+                requestId
+        );
 
         response.appendBoolean(
                 result.success

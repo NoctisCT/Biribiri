@@ -5,6 +5,8 @@ import { useMessageEvent, useRoom, useRoomEngineEvent } from '../../../../hooks'
 import './BuilderProView.scss';
 
 const MAX_SELECTION = 100;
+const KEYBOARD_REPEAT_INTERVAL_MS = 200;
+const MOVE_CONFIRM_TIMEOUT_MS = 2500;
 
 export const BuilderProView: FC<{}> = props =>
 {
@@ -25,6 +27,15 @@ export const BuilderProView: FC<{}> = props =>
 
     const activeRef = useRef(false);
     const pendingRef = useRef(false);
+    const heldArrowRef = useRef<string | null>(null);
+    const keyboardBlockedRef = useRef(false);
+    const keyboardRepeatTimerRef = useRef<number | null>(null);
+    const pendingTimeoutRef = useRef<number | null>(null);
+    const scheduleKeyboardRepeatRef = useRef<(() => void) | null>(null);
+    const moveStepRef = useRef(moveStep);
+    const requestIdRef = useRef(0);
+    const pendingRequestIdRef = useRef<number | null>(null);
+    const pendingStartedAtRef = useRef(0);
     const areaModeRef = useRef(false);
     const areaStartRef = useRef<{
         canvas: HTMLCanvasElement;
@@ -37,6 +48,7 @@ export const BuilderProView: FC<{}> = props =>
     const roomSessionRef = useRef(roomSession);
 
     roomSessionRef.current = roomSession;
+    moveStepRef.current = moveStep;
 
     const sessionDataManager = GetSessionDataManager();
 
@@ -586,6 +598,20 @@ export const BuilderProView: FC<{}> = props =>
 
             SetBuilderProSelectionModeActive(false);
 
+            if(keyboardRepeatTimerRef.current !== null)
+            {
+                window.clearTimeout(
+                    keyboardRepeatTimerRef.current
+                );
+            }
+
+            if(pendingTimeoutRef.current !== null)
+            {
+                window.clearTimeout(
+                    pendingTimeoutRef.current
+                );
+            }
+
             BuilderProSelectionVisualizer.clear(
                 selectedIdsRef.current
             );
@@ -684,13 +710,58 @@ export const BuilderProView: FC<{}> = props =>
         BuilderProMoveGroupResultEvent,
         event =>
         {
-            if(!pendingRef.current) return;
-
             const parser = event.getParser();
 
             if(!parser) return;
 
+            const receivedRequestId =
+                parser.requestId;
+
+            const receiveAgeMs =
+                pendingStartedAtRef.current > 0
+                    ? Math.round(
+                        performance.now() -
+                        pendingStartedAtRef.current
+                    )
+                    : -1;
+
+            console.log(
+                `[BuilderProTrace] CLIENT RECEIVE #${ receivedRequestId } success=${ parser.success } code=${ parser.code } moved=${ parser.movedCount } ageMs=${ receiveAgeMs } pending=${ pendingRef.current } expected=${ pendingRequestIdRef.current }`
+            );
+
+            if(
+                pendingRequestIdRef.current !==
+                receivedRequestId
+            )
+            {
+                console.warn(
+                    `[BuilderProTrace] CLIENT STALE #${ receivedRequestId } expected=${ pendingRequestIdRef.current }`
+                );
+
+                return;
+            }
+
+            if(!pendingRef.current)
+            {
+                console.warn(
+                    `[BuilderProTrace] CLIENT LATE #${ receivedRequestId } arrived after pending cleared`
+                );
+
+                return;
+            }
+
+            if(pendingTimeoutRef.current !== null)
+            {
+                window.clearTimeout(
+                    pendingTimeoutRef.current
+                );
+
+                pendingTimeoutRef.current = null;
+            }
+
             pendingRef.current = false;
+            pendingRequestIdRef.current = null;
+            pendingStartedAtRef.current = 0;
 
             setPending(false);
 
@@ -707,8 +778,25 @@ export const BuilderProView: FC<{}> = props =>
                     );
                 });
 
+                if(scheduleKeyboardRepeatRef.current)
+                {
+                    scheduleKeyboardRepeatRef.current();
+                }
+
                 return;
             }
+
+            if(keyboardRepeatTimerRef.current !== null)
+            {
+                window.clearTimeout(
+                    keyboardRepeatTimerRef.current
+                );
+
+                keyboardRepeatTimerRef.current = null;
+            }
+
+            heldArrowRef.current = null;
+            keyboardBlockedRef.current = true;
 
             setStatus(
                 `Error ${ parser.code }: ${ parser.message }`
@@ -735,7 +823,24 @@ export const BuilderProView: FC<{}> = props =>
                 return;
             }
 
+            requestIdRef.current++;
+
+            if(requestIdRef.current > 2000000000)
+            {
+                requestIdRef.current = 1;
+            }
+
+            const requestId =
+                requestIdRef.current;
+
             pendingRef.current = true;
+            pendingRequestIdRef.current = requestId;
+            pendingStartedAtRef.current =
+                performance.now();
+
+            console.log(
+                `[BuilderProTrace] CLIENT SEND #${ requestId } count=${ ids.length } dx=${ deltaX } dy=${ deltaY }`
+            );
 
             setPending(true);
             setStatus(
@@ -748,13 +853,80 @@ export const BuilderProView: FC<{}> = props =>
                     new BuilderProMoveGroupComposer(
                         ids,
                         deltaX,
-                        deltaY
+                        deltaY,
+                        requestId
                     )
                 );
+
+                if(pendingTimeoutRef.current !== null)
+                {
+                    window.clearTimeout(
+                        pendingTimeoutRef.current
+                    );
+                }
+
+                pendingTimeoutRef.current =
+                    window.setTimeout(
+                        () =>
+                        {
+                            pendingTimeoutRef.current = null;
+
+                            if(!pendingRef.current)
+                            {
+                                return;
+                            }
+
+                            const timedOutRequestId =
+                                pendingRequestIdRef.current;
+
+                            const timeoutAgeMs =
+                                pendingStartedAtRef.current > 0
+                                    ? Math.round(
+                                        performance.now() -
+                                        pendingStartedAtRef.current
+                                    )
+                                    : -1;
+
+                            console.warn(
+                                `[BuilderProTrace] CLIENT TIMEOUT #${ timedOutRequestId } ageMs=${ timeoutAgeMs }`
+                            );
+
+                            pendingRef.current = false;
+
+                            heldArrowRef.current = null;
+                            keyboardBlockedRef.current = true;
+
+                            if(
+                                keyboardRepeatTimerRef.current
+                                !== null
+                            )
+                            {
+                                window.clearTimeout(
+                                    keyboardRepeatTimerRef.current
+                                );
+
+                                keyboardRepeatTimerRef.current = null;
+                            }
+
+                            setPending(false);
+
+                            setStatus(
+                                'Movimiento sin confirmacion. Hold detenido; vuelve a pulsar una flecha.'
+                            );
+                        },
+                        MOVE_CONFIRM_TIMEOUT_MS
+                    );
             }
             catch(error)
             {
+                console.error(
+                    `[BuilderProTrace] CLIENT SEND_ERROR #${ pendingRequestIdRef.current }`,
+                    error
+                );
+
                 pendingRef.current = false;
+                pendingRequestIdRef.current = null;
+                pendingStartedAtRef.current = 0;
 
                 setPending(false);
                 setStatus(
@@ -764,6 +936,225 @@ export const BuilderProView: FC<{}> = props =>
         },
         []
     );
+
+    const moveHeldArrow = useCallback(() =>
+    {
+        if(!activeRef.current) return;
+        if(pendingRef.current) return;
+        if(keyboardBlockedRef.current) return;
+        if(areaStartRef.current) return;
+
+        const key = heldArrowRef.current;
+
+        if(!key) return;
+
+        const step = moveStepRef.current;
+
+        switch(key)
+        {
+            case 'ArrowUp':
+                moveGroup(0, -step);
+                return;
+
+            case 'ArrowDown':
+                moveGroup(0, step);
+                return;
+
+            case 'ArrowLeft':
+                moveGroup(-step, 0);
+                return;
+
+            case 'ArrowRight':
+                moveGroup(step, 0);
+                return;
+        }
+    }, [ moveGroup ]);
+
+    const scheduleKeyboardRepeat = useCallback(() =>
+    {
+        if(!heldArrowRef.current) return;
+        if(keyboardBlockedRef.current) return;
+
+        if(keyboardRepeatTimerRef.current !== null)
+        {
+            window.clearTimeout(
+                keyboardRepeatTimerRef.current
+            );
+        }
+
+        keyboardRepeatTimerRef.current =
+            window.setTimeout(
+                () =>
+                {
+                    keyboardRepeatTimerRef.current = null;
+
+                    moveHeldArrow();
+                },
+                KEYBOARD_REPEAT_INTERVAL_MS
+            );
+    }, [ moveHeldArrow ]);
+
+    scheduleKeyboardRepeatRef.current =
+        scheduleKeyboardRepeat;
+
+    useEffect(() =>
+    {
+        if(!active) return;
+
+        const arrowKeys = new Set([
+            'ArrowUp',
+            'ArrowDown',
+            'ArrowLeft',
+            'ArrowRight'
+        ]);
+
+        const isEditableTarget = (
+            target: EventTarget | null
+        ): boolean =>
+        {
+            if(!(target instanceof HTMLElement))
+            {
+                return false;
+            }
+
+            return (
+                target instanceof HTMLInputElement ||
+                target instanceof HTMLTextAreaElement ||
+                target instanceof HTMLSelectElement ||
+                target.isContentEditable
+            );
+        };
+
+        const stopArrowEvent = (
+            event: globalThis.KeyboardEvent
+        ) =>
+        {
+            if(event.cancelable)
+            {
+                event.preventDefault();
+            }
+
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+        };
+
+        const shouldCapture = (
+            event: globalThis.KeyboardEvent
+        ): boolean =>
+        {
+            if(!activeRef.current) return false;
+            if(!arrowKeys.has(event.key)) return false;
+            if(isEditableTarget(event.target)) return false;
+
+            return (
+                selectedIdsRef.current.length > 0
+            );
+        };
+
+        const onKeyDown = (
+            event: globalThis.KeyboardEvent
+        ) =>
+        {
+            if(!shouldCapture(event)) return;
+
+            stopArrowEvent(event);
+
+            /*
+             * El autorepeat nativo solo se consume.
+             * Builder Pro genera su propia cadena
+             * despues de cada ACK del servidor.
+             */
+            if(event.repeat) return;
+
+            if(keyboardRepeatTimerRef.current !== null)
+            {
+                window.clearTimeout(
+                    keyboardRepeatTimerRef.current
+                );
+
+                keyboardRepeatTimerRef.current = null;
+            }
+
+            heldArrowRef.current = event.key;
+            keyboardBlockedRef.current = false;
+
+            moveHeldArrow();
+        };
+
+        const onKeyUp = (
+            event: globalThis.KeyboardEvent
+        ) =>
+        {
+            if(!activeRef.current) return;
+            if(!arrowKeys.has(event.key)) return;
+            if(isEditableTarget(event.target)) return;
+
+            if(selectedIdsRef.current.length)
+            {
+                stopArrowEvent(event);
+            }
+
+            if(
+                heldArrowRef.current === event.key
+            )
+            {
+                heldArrowRef.current = null;
+            }
+
+            if(keyboardRepeatTimerRef.current !== null)
+            {
+                window.clearTimeout(
+                    keyboardRepeatTimerRef.current
+                );
+
+                keyboardRepeatTimerRef.current = null;
+            }
+
+            keyboardBlockedRef.current = false;
+        };
+
+        window.addEventListener(
+            'keydown',
+            onKeyDown,
+            true
+        );
+
+        window.addEventListener(
+            'keyup',
+            onKeyUp,
+            true
+        );
+
+        return () =>
+        {
+            window.removeEventListener(
+                'keydown',
+                onKeyDown,
+                true
+            );
+
+            window.removeEventListener(
+                'keyup',
+                onKeyUp,
+                true
+            );
+
+            heldArrowRef.current = null;
+            keyboardBlockedRef.current = false;
+
+            if(keyboardRepeatTimerRef.current !== null)
+            {
+                window.clearTimeout(
+                    keyboardRepeatTimerRef.current
+                );
+
+                keyboardRepeatTimerRef.current = null;
+            }
+        };
+    }, [
+        active,
+        moveHeldArrow
+    ]);
 
     if(!roomSession || !canBuild) return null;
 
@@ -815,7 +1206,7 @@ export const BuilderProView: FC<{}> = props =>
                     </div>
 
                     <div className="builder-pro-step">
-                        <span>Paso</span>
+                        <span>Paso ? mantener flecha</span>
 
                         <button
                             type="button"

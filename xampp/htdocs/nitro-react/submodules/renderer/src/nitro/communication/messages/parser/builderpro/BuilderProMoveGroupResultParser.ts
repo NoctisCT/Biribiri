@@ -2,6 +2,7 @@ import { IMessageDataWrapper, IMessageParser } from '../../../../../api';
 
 export class BuilderProMoveGroupResultParser implements IMessageParser
 {
+    private _requestId = 0;
     private _success = false;
     private _code = 0;
     private _message = '';
@@ -9,6 +10,7 @@ export class BuilderProMoveGroupResultParser implements IMessageParser
 
     public flush(): boolean
     {
+        this._requestId = 0;
         this._success = false;
         this._code = 0;
         this._message = '';
@@ -21,12 +23,18 @@ export class BuilderProMoveGroupResultParser implements IMessageParser
     {
         if(!wrapper) return false;
 
+        this._requestId = wrapper.readInt();
         this._success = wrapper.readBoolean();
         this._code = wrapper.readInt();
         this._message = wrapper.readString();
         this._movedCount = wrapper.readInt();
 
         return true;
+    }
+
+    public get requestId(): number
+    {
+        return this._requestId;
     }
 
     public get success(): boolean
