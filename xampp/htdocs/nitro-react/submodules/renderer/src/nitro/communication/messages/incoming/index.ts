@@ -94,3 +94,4 @@ export * from './arkanoid';
 export * from './pinball';
 export * from './asteroids';
 export * from './wardrobe-biribiri';
+export * from './builderpro';

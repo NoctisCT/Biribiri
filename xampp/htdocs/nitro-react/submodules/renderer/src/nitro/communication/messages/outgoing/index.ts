@@ -81,3 +81,4 @@ export * from './tragaperras';
 export * from './airhockey';
 export * from './arcade';
 export * from './wardrobe-biribiri';
+export * from './builderpro';

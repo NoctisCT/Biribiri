@@ -519,4 +519,6 @@ export class IncomingHeader {
     public static PARTY_INVITE_EVENT = 5072;
     public static PARTY_STATE = 5074;
     public static PARTY_RALLY = 5078;
+
+    public static BUILDER_PRO_MOVE_GROUP_RESULT = 6301;
 }

@@ -28,9 +28,11 @@ import { GetReactionProfileComposer, SaveReactionDisplayModeComposer, SaveReacti
 import { AvatarReactionComposer } from './messages/outgoing/reactions';
 import { EstadoBloqueoInventarioEvent, ResultadoConfigurarPatronEvent, ResultadoPatronInventarioEvent } from './messages/incoming/inventorylock';
 import { HoloGridWalkabilityEvent } from './messages/incoming/hologrid';
+import { BuilderProMoveGroupResultEvent } from './messages/incoming/builderpro';
 import { RpgEngineResultEvent } from './messages/incoming/rpgengine';
 import { CerrarSesionInventarioComposer, ConfigurarPatronInventarioComposer, ConsultarBloqueoInventarioComposer, VerificarPatronInventarioComposer } from './messages/outgoing/inventorylock';
 import { GetHoloGridWalkabilityComposer } from './messages/outgoing/hologrid';
+import { BuilderProMoveGroupComposer } from './messages/outgoing/builderpro';
 import { RpgEngineCommandComposer } from './messages/outgoing/rpgengine';
 import { ObtenerRecordsSubastasComposer } from './messages/outgoing/subastas';
 import { RecordsSubastasEvent } from './messages/incoming/subastas';
@@ -120,6 +122,7 @@ export class NitroMessages implements IMessageConfiguration {
         this._events.set(IncomingHeader.RESULTADO_PATRON_INVENTARIO, ResultadoPatronInventarioEvent);
         this._events.set(IncomingHeader.RESULTADO_CONFIGURAR_PATRON, ResultadoConfigurarPatronEvent);
         this._events.set(IncomingHeader.HOLO_GRID_WALKABILITY, HoloGridWalkabilityEvent);
+        this._events.set(IncomingHeader.BUILDER_PRO_MOVE_GROUP_RESULT, BuilderProMoveGroupResultEvent);
         this._events.set(IncomingHeader.RPG_ENGINE_RESULT, RpgEngineResultEvent);
         this._events.set(IncomingHeader.ROOM_AD_ERROR, RoomAdErrorEvent);
 
@@ -729,6 +732,7 @@ export class NitroMessages implements IMessageConfiguration {
         this._composers.set(OutgoingHeader.CONFIGURAR_PATRON_INVENTARIO, ConfigurarPatronInventarioComposer);
         this._composers.set(OutgoingHeader.CERRAR_SESION_INVENTARIO, CerrarSesionInventarioComposer);
         this._composers.set(OutgoingHeader.GET_HOLO_GRID_WALKABILITY, GetHoloGridWalkabilityComposer);
+        this._composers.set(OutgoingHeader.BUILDER_PRO_MOVE_GROUP, BuilderProMoveGroupComposer);
         this._composers.set(OutgoingHeader.RPG_ENGINE_COMMAND, RpgEngineCommandComposer);
 
         // SUBASTAS
