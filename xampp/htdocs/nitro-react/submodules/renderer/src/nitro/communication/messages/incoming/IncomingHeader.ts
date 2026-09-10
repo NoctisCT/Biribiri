@@ -526,4 +526,5 @@ export class IncomingHeader {
     public static BUILDER_PRO_PASTE_GROUP_RESULT = 6307;
     public static BUILDER_PRO_HISTORY_RESULT = 6309;
     public static BUILDER_PRO_OFFSET_GROUP_RESULT = 6311;
+    public static BUILDER_PRO_LAYOUT_GROUP_RESULT = 6313;
 }

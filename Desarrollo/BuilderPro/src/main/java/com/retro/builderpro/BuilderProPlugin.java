@@ -13,6 +13,7 @@ import com.retro.builderpro.handlers.CopyGroupRequest;
 import com.retro.builderpro.handlers.PasteGroupRequest;
 import com.retro.builderpro.handlers.MoveGroupRequest;
 import com.retro.builderpro.handlers.OffsetGroupRequest;
+import com.retro.builderpro.handlers.LayoutGroupRequest;
 import com.retro.builderpro.handlers.TransformGroupRequest;
 import com.retro.builderpro.handlers.HistoryRequest;
 
@@ -72,6 +73,13 @@ public class BuilderProPlugin
                 .registerHandler(
                         BuilderProPackets.OFFSET_GROUP_REQUEST,
                         OffsetGroupRequest.class
+                );
+
+        Emulator.getGameServer()
+                .getPacketManager()
+                .registerHandler(
+                        BuilderProPackets.LAYOUT_GROUP_REQUEST,
+                        LayoutGroupRequest.class
                 );
 
         System.out.println(

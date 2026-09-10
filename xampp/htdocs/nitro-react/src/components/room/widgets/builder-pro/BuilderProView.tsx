@@ -1,4 +1,4 @@
-import { RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomObjectCategory, Vector3d, RoomObjectVariable} from '@nitrots/nitro-renderer';
+import { RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomObjectCategory, Vector3d, RoomObjectVariable} from '@nitrots/nitro-renderer';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { BuilderProSelectionVisualizer, CanManipulateFurniture, GetRoomEngine, GetSessionDataManager, SendMessageComposer, SetBuilderProSelectionModeActive } from '../../../../api';
 import { useMessageEvent, useRoom, useRoomEngineEvent } from '../../../../hooks';
@@ -11,6 +11,12 @@ const MOVE_CONFIRM_TIMEOUT_MS = 2500;
 const TRANSFORM_HEIGHT = 1;
 const TRANSFORM_ROTATE_STRUCTURE = 2;
 const TRANSFORM_ORIENT = 3;
+
+const FORMATION_ROW_LEFT = 1;
+const FORMATION_ROW_RIGHT = 2;
+const FORMATION_COLUMN_UP = 3;
+const FORMATION_COLUMN_DOWN = 4;
+const FORMATION_STACK = 5;
 
 type BuilderProDragLocation = {
     id: number;
@@ -61,6 +67,7 @@ export const BuilderProView: FC<{}> = props =>
     const [ offsetX, setOffsetX ] = useState('');
     const [ offsetY, setOffsetY ] = useState('');
     const [ offsetZ, setOffsetZ ] = useState('');
+    const [ formationSpacing, setFormationSpacing ] = useState('0');
     const [ highlightSelection, setHighlightSelection ] =
         useState(BuilderProSelectionVisualizer.enabled);
     const [ pivotId, setPivotId ] =
@@ -1937,6 +1944,70 @@ export const BuilderProView: FC<{}> = props =>
     );
 
 
+
+    useMessageEvent<BuilderProLayoutGroupResultEvent>(
+        BuilderProLayoutGroupResultEvent,
+        event =>
+        {
+            const parser =
+                event.getParser();
+
+            if(!parser) return;
+
+            const requestId =
+                parser.requestId;
+
+            if(
+                pendingRequestIdRef.current
+                !== requestId
+                || !pendingRef.current
+            )
+            {
+                return;
+            }
+
+            if(pendingTimeoutRef.current !== null)
+            {
+                window.clearTimeout(
+                    pendingTimeoutRef.current
+                );
+
+                pendingTimeoutRef.current = null;
+            }
+
+            pendingRef.current = false;
+            pendingRequestIdRef.current = null;
+            pendingStartedAtRef.current = 0;
+
+            setPending(false);
+
+            if(parser.success)
+            {
+                setCanUndo(true);
+                setCanRedo(false);
+
+                setStatus(
+                    `Formacion aplicada: ${ parser.affectedCount } furnis movidos.`
+                );
+
+                window.requestAnimationFrame(
+                    () =>
+                    {
+                        BuilderProSelectionVisualizer.refresh(
+                            selectedIdsRef.current
+                        );
+                    }
+                );
+
+                return;
+            }
+
+            setStatus(
+                `Error ${ parser.code }: ${ parser.message }`
+            );
+        }
+    );
+
     useMessageEvent<BuilderProOffsetGroupResultEvent>(
         BuilderProOffsetGroupResultEvent,
         event =>
@@ -2974,6 +3045,174 @@ export const BuilderProView: FC<{}> = props =>
             offsetX,
             offsetY,
             offsetZ
+        ]);
+
+
+    const layoutGroup =
+        useCallback((operation: number) =>
+        {
+            if(!activeRef.current) return;
+            if(pendingRef.current) return;
+
+            const ids = [
+                ...selectedIdsRef.current
+            ];
+
+            if(ids.length < 2)
+            {
+                setStatus(
+                    'Selecciona al menos 2 furnis.'
+                );
+
+                return;
+            }
+
+            const axisId =
+                pivotIdRef.current
+                ?? ids[0];
+
+            if(!ids.includes(axisId))
+            {
+                setStatus(
+                    'El eje debe pertenecer a la seleccion.'
+                );
+
+                return;
+            }
+
+            let spacing = 0;
+
+            if(operation !== FORMATION_STACK)
+            {
+                const normalized =
+                    formationSpacing.trim();
+
+                const parsedSpacing =
+                    normalized.length
+                        ? Number(normalized)
+                        : 0;
+
+                if(
+                    !Number.isSafeInteger(parsedSpacing)
+                    || parsedSpacing < 0
+                    || parsedSpacing > 50
+                )
+                {
+                    setStatus(
+                        'La separacion debe ser un entero entre 0 y 50.'
+                    );
+
+                    return;
+                }
+
+                spacing = parsedSpacing;
+            }
+
+            duplicateRequestedRef.current = false;
+            duplicateModeRef.current = false;
+            setDuplicateMode(false);
+
+            clearPastePreview();
+
+            pasteModeRef.current = false;
+            setPasteMode(false);
+
+            heldArrowRef.current = null;
+
+            if(keyboardRepeatTimerRef.current !== null)
+            {
+                window.clearTimeout(
+                    keyboardRepeatTimerRef.current
+                );
+
+                keyboardRepeatTimerRef.current = null;
+            }
+
+            requestIdRef.current++;
+
+            if(requestIdRef.current > 2000000000)
+            {
+                requestIdRef.current = 1;
+            }
+
+            const requestId =
+                requestIdRef.current;
+
+            pendingRef.current = true;
+            pendingRequestIdRef.current = requestId;
+            pendingStartedAtRef.current =
+                performance.now();
+
+            setPending(true);
+            setStatus('Organizando...');
+
+            try
+            {
+                SendMessageComposer(
+                    new BuilderProLayoutGroupComposer(
+                        ids,
+                        operation,
+                        axisId,
+                        spacing,
+                        requestId
+                    )
+                );
+
+                if(pendingTimeoutRef.current !== null)
+                {
+                    window.clearTimeout(
+                        pendingTimeoutRef.current
+                    );
+                }
+
+                pendingTimeoutRef.current =
+                    window.setTimeout(
+                        () =>
+                        {
+                            pendingTimeoutRef.current = null;
+
+                            if(
+                                !pendingRef.current
+                                || pendingRequestIdRef.current
+                                !== requestId
+                            )
+                            {
+                                return;
+                            }
+
+                            pendingRef.current = false;
+                            pendingRequestIdRef.current = null;
+                            pendingStartedAtRef.current = 0;
+
+                            setPending(false);
+
+                            setStatus(
+                                'Operacion sin confirmacion del servidor.'
+                            );
+                        },
+                        MOVE_CONFIRM_TIMEOUT_MS
+                    );
+            }
+            catch(error)
+            {
+                console.error(
+                    `[BuilderProTrace] CLIENT FORMATION_SEND_ERROR #${ requestId }`,
+                    error
+                );
+
+                pendingRef.current = false;
+                pendingRequestIdRef.current = null;
+                pendingStartedAtRef.current = 0;
+
+                setPending(false);
+
+                setStatus(
+                    'No se pudo enviar la operacion al servidor.'
+                );
+            }
+        }, [
+            clearPastePreview,
+            formationSpacing
         ]);
 
     const historyAction = useCallback((
@@ -4233,6 +4472,128 @@ export const BuilderProView: FC<{}> = props =>
                         </button>
                     </div>
 
+
+
+                    <div className="builder-pro-layout">
+                        <span>Formaciones</span>
+
+                        <div className="builder-pro-layout-grid">
+                            <button
+                                type="button"
+                                disabled={
+                                    pending ||
+                                    selectedIds.length < 2
+                                }
+                                onClick={
+                                    () => layoutGroup(
+                                        FORMATION_ROW_LEFT
+                                    )
+                                }>
+                                Izquierda
+                            </button>
+
+                            <button
+                                type="button"
+                                disabled={
+                                    pending ||
+                                    selectedIds.length < 2
+                                }
+                                onClick={
+                                    () => layoutGroup(
+                                        FORMATION_ROW_RIGHT
+                                    )
+                                }>
+                                Derecha
+                            </button>
+
+                            <button
+                                type="button"
+                                disabled={
+                                    pending ||
+                                    selectedIds.length < 2
+                                }
+                                onClick={
+                                    () => layoutGroup(
+                                        FORMATION_COLUMN_UP
+                                    )
+                                }>
+                                Arriba
+                            </button>
+
+                            <button
+                                type="button"
+                                disabled={
+                                    pending ||
+                                    selectedIds.length < 2
+                                }
+                                onClick={
+                                    () => layoutGroup(
+                                        FORMATION_COLUMN_DOWN
+                                    )
+                                }>
+                                Abajo
+                            </button>
+
+                            <button
+                                type="button"
+                                className="builder-pro-layout-stack"
+                                disabled={
+                                    pending ||
+                                    selectedIds.length < 2
+                                }
+                                onClick={
+                                    () => layoutGroup(
+                                        FORMATION_STACK
+                                    )
+                                }>
+                                Apilar
+                            </button>
+                        </div>
+
+                        <span>Separacion</span>
+
+                        <div className="builder-pro-layout-spacing">
+                            { [ 0, 1, 2, 3, 4 ].map(
+                                value =>
+                                    <button
+                                        key={ value }
+                                        type="button"
+                                        className={
+                                            formationSpacing === `${ value }`
+                                                ? 'is-selected'
+                                                : ''
+                                        }
+                                        disabled={ pending }
+                                        onClick={
+                                            () => setFormationSpacing(
+                                                `${ value }`
+                                            )
+                                        }>
+                                        { value }
+                                    </button>
+                            ) }
+
+                            <input
+                                type="number"
+                                min="0"
+                                max="50"
+                                step="1"
+                                value={ formationSpacing }
+                                disabled={ pending }
+                                onChange={
+                                    event =>
+                                        setFormationSpacing(
+                                            event.target.value
+                                        )
+                                } />
+                        </div>
+
+                        <span>
+                            { pivotId !== null
+                                ? `Eje: #${ pivotId }`
+                                : 'Eje: primer seleccionado' }
+                        </span>
+                    </div>
 
                     <div className="builder-pro-offset">
                         <span>Offset exacto</span>

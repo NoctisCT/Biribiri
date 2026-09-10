@@ -4,3 +4,4 @@ export * from './BuilderProTransformGroupResultEvent';
 export * from './BuilderProPasteGroupResultEvent';
 export * from './BuilderProHistoryResultEvent';
 export * from './BuilderProOffsetGroupResultEvent';
+export * from './BuilderProLayoutGroupResultEvent';

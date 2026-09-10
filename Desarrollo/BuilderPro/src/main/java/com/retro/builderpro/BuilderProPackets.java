@@ -23,4 +23,7 @@ public final class BuilderProPackets
 
     public static final int OFFSET_GROUP_REQUEST = 6310;
     public static final int OFFSET_GROUP_RESULT = 6311;
+
+    public static final int LAYOUT_GROUP_REQUEST = 6312;
+    public static final int LAYOUT_GROUP_RESULT = 6313;
 }
