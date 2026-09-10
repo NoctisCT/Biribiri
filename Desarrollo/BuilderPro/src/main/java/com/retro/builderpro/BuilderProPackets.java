@@ -29,4 +29,7 @@ public final class BuilderProPackets
 
     public static final int GROUP_STATE_REQUEST = 6314;
     public static final int GROUP_STATE_RESULT = 6315;
+
+    public static final int TRAVERSAL_STATE_REQUEST = 6316;
+    public static final int TRAVERSAL_STATE_RESULT = 6317;
 }

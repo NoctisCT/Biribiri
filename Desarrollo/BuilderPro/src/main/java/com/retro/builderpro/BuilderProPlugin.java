@@ -1,7 +1,9 @@
 package com.retro.builderpro;
 
 import com.eu.habbo.Emulator;
+import com.eu.habbo.habbohotel.rooms.Room;
 import com.eu.habbo.habbohotel.users.Habbo;
+import com.eu.habbo.messages.outgoing.rooms.users.RoomUserStatusComposer;
 import com.eu.habbo.plugin.EventHandler;
 import com.eu.habbo.plugin.EventListener;
 import com.eu.habbo.plugin.HabboPlugin;
@@ -10,6 +12,9 @@ import com.eu.habbo.plugin.events.furniture.FurnitureBuildheightEvent;
 import com.eu.habbo.plugin.events.furniture.FurnitureMovedEvent;
 import com.eu.habbo.plugin.events.furniture.FurniturePlacedEvent;
 import com.eu.habbo.plugin.events.furniture.FurniturePickedUpEvent;
+import com.eu.habbo.plugin.events.rooms.RoomLoadedEvent;
+import com.eu.habbo.plugin.events.users.UserTakeStepEvent;
+import com.eu.habbo.plugin.events.users.UserCommandEvent;
 import com.retro.builderpro.handlers.CopyGroupRequest;
 import com.retro.builderpro.handlers.PasteGroupRequest;
 import com.retro.builderpro.handlers.MoveGroupRequest;
@@ -18,6 +23,7 @@ import com.retro.builderpro.handlers.LayoutGroupRequest;
 import com.retro.builderpro.handlers.TransformGroupRequest;
 import com.retro.builderpro.handlers.HistoryRequest;
 import com.retro.builderpro.handlers.GroupStateRequest;
+import com.retro.builderpro.handlers.TraversalStateRequest;
 
 public class BuilderProPlugin
         extends HabboPlugin
@@ -36,6 +42,7 @@ public class BuilderProPlugin
             throws Exception
     {
         BuilderProGroupRepository.initialize();
+        BuilderProTraversalService.initialize();
 
         Emulator.getGameServer()
                 .getPacketManager()
@@ -93,6 +100,13 @@ public class BuilderProPlugin
                         GroupStateRequest.class
                 );
 
+        Emulator.getGameServer()
+                .getPacketManager()
+                .registerHandler(
+                        BuilderProPackets.TRAVERSAL_STATE_REQUEST,
+                        TraversalStateRequest.class
+                );
+
         System.out.println(
                 "[BuilderPro] Backend MVP 0 cargado."
         );
@@ -111,6 +125,9 @@ public class BuilderProPlugin
         final int itemId =
                 event.furniture.getId();
 
+        final int roomId =
+                event.furniture.getRoomId();
+
         Emulator.getThreading().run(
                 () ->
                 {
@@ -124,6 +141,23 @@ public class BuilderProPlugin
                         BuilderProGroupRepository.removeItem(
                                 itemId
                         );
+
+                        BuilderProTraversalService.removeItem(
+                                roomId,
+                                itemId
+                        );
+
+                        Room room =
+                                Emulator.getGameEnvironment()
+                                        .getRoomManager()
+                                        .getRoom(
+                                                roomId
+                                        );
+
+                        BuilderProTraversalService
+                                .refreshRoomCollision(
+                                        room
+                                );
                     }
                     catch(Exception exception)
                     {
@@ -137,6 +171,51 @@ public class BuilderProPlugin
                     }
                 },
                 50L
+        );
+    }
+
+    @EventHandler
+    public void onRoomLoaded(
+            RoomLoadedEvent event)
+    {
+        if(event == null
+                || event.room == null)
+        {
+            return;
+        }
+
+        final Room room =
+                event.room;
+
+        Emulator.getThreading().run(
+                () ->
+                    BuilderProTraversalService
+                            .refreshRoomCollision(
+                                    room
+                            ),
+                50L
+        );
+    }
+
+
+
+    @EventHandler
+    public void onUserTakeStep(
+            UserTakeStepEvent event)
+    {
+        if(event == null
+                || event.habbo == null)
+        {
+            return;
+        }
+
+        BuilderProTraversalService.prepareStep(
+                event.habbo,
+                event.habbo
+                        .getHabboInfo()
+                        .getCurrentRoom(),
+                event.fromLocation,
+                event.toLocation
         );
     }
 
@@ -166,6 +245,23 @@ public class BuilderProPlugin
         {
             event.setPluginHelper(true);
         }
+
+        final Room room =
+                event.habbo
+                        .getHabboInfo()
+                        .getCurrentRoom();
+
+        if(room != null)
+        {
+            Emulator.getThreading().run(
+                    () ->
+                        BuilderProTraversalService
+                                .refreshRoomCollision(
+                                        room
+                                ),
+                    50L
+            );
+        }
     }
 
     @EventHandler
@@ -193,6 +289,23 @@ public class BuilderProPlugin
                 itemId))
         {
             event.setPluginHelper(true);
+        }
+
+        final Room room =
+                event.habbo
+                        .getHabboInfo()
+                        .getCurrentRoom();
+
+        if(room != null)
+        {
+            Emulator.getThreading().run(
+                    () ->
+                        BuilderProTraversalService
+                                .refreshRoomCollision(
+                                        room
+                                ),
+                    50L
+            );
         }
     }
 
@@ -226,11 +339,74 @@ public class BuilderProPlugin
         }
     }
 
+    @EventHandler
+    public void onUserCommand(
+            UserCommandEvent event)
+    {
+        if(event == null
+                || event.habbo == null
+                || event.args == null
+                || event.args.length == 0
+                || !event.succes
+                || !event.args[0]
+                        .equalsIgnoreCase(
+                                "lay"
+                        )
+                || event.habbo.getRoomUnit() == null)
+        {
+            return;
+        }
+
+        Room room =
+                event.habbo
+                        .getHabboInfo()
+                        .getCurrentRoom();
+
+        if(room == null)
+        {
+            return;
+        }
+
+        Double surfaceZ =
+                BuilderProTraversalService
+                        .getTraversalSurfaceZ(
+                                room,
+                                event.habbo
+                                        .getRoomUnit()
+                                        .getCurrentLocation()
+                        );
+
+        if(surfaceZ == null)
+        {
+            return;
+        }
+
+        event.habbo
+                .getRoomUnit()
+                .setZ(
+                        surfaceZ.doubleValue()
+                );
+
+        event.habbo
+                .getRoomUnit()
+                .setPreviousLocationZ(
+                        surfaceZ.doubleValue()
+                );
+
+        room.sendComposer(
+                new RoomUserStatusComposer(
+                        event.habbo
+                                .getRoomUnit()
+                ).compose()
+        );
+    }
+
     @Override
     public void onDisable()
     {
         CopyGroupService.clearAll();
         BuilderProHistoryService.clearAll();
+        BuilderProTraversalService.clearAll();
         BuilderProContext.clear();
     }
 

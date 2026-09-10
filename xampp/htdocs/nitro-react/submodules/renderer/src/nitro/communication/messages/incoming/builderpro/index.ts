@@ -6,3 +6,4 @@ export * from './BuilderProHistoryResultEvent';
 export * from './BuilderProOffsetGroupResultEvent';
 export * from './BuilderProLayoutGroupResultEvent';
 export * from './BuilderProGroupStateEvent';
+export * from './BuilderProTraversalStateEvent';

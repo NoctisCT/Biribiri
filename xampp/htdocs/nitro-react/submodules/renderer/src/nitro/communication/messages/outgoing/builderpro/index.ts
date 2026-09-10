@@ -6,3 +6,4 @@ export * from './BuilderProHistoryComposer';
 export * from './BuilderProOffsetGroupComposer';
 export * from './BuilderProLayoutGroupComposer';
 export * from './BuilderProGroupStateComposer';
+export * from './BuilderProTraversalStateComposer';

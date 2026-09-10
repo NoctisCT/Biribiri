@@ -1,4 +1,4 @@
-import { RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
+import { RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, BuilderProTraversalStateComposer, BuilderProTraversalStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { FaClone, FaCopy, FaMinus, FaPaste, FaQuestion, FaRedo, FaUndo } from 'react-icons/fa';
 import { AddEventLinkTracker, BuilderProSelectionVisualizer, CanManipulateFurniture, GetRoomEngine, GetSessionDataManager, RemoveLinkEventTracker, SendMessageComposer, SetBuilderProSelectionModeActive } from '../../../../api';
@@ -27,6 +27,9 @@ const GROUP_OP_RENAME = 2;
 const GROUP_OP_SET_LOCKED = 3;
 const GROUP_OP_DELETE = 4;
 const GROUP_OP_REPLACE_MEMBERS = 5;
+
+const TRAVERSAL_OP_QUERY = 0;
+const TRAVERSAL_OP_SET = 1;
 
 type BuilderProSavedGroupState = {
     id: number;
@@ -87,6 +90,10 @@ export const BuilderProView: FC<{}> = props =>
         useState<number | null>(null);
     const [ groupName, setGroupName ] = useState('');
     const [ groupPending, setGroupPending ] = useState(false);
+    const [ traversableIds, setTraversableIds ] =
+        useState<number[]>([]);
+    const [ traversalPending, setTraversalPending ] =
+        useState(false);
     const [ moveStep, setMoveStep ] = useState(1);
     const [ heightStep, setHeightStep ] = useState(1);
     const [ offsetX, setOffsetX ] = useState('');
@@ -162,6 +169,14 @@ export const BuilderProView: FC<{}> = props =>
     const groupRequestIdRef = useRef(0);
     const groupOperationRef = useRef(GROUP_OP_LIST);
     const groupPendingTimeoutRef =
+        useRef<number | null>(null);
+    const traversableIdsRef =
+        useRef<Set<number>>(new Set());
+    const traversalPendingRef = useRef(false);
+    const traversalRequestIdRef = useRef(0);
+    const traversalOperationRef =
+        useRef(TRAVERSAL_OP_QUERY);
+    const traversalTimeoutRef =
         useRef<number | null>(null);
     const suppressAreaClickRef = useRef(false);
     const pivotIdRef = useRef<number | null>(null);
@@ -922,6 +937,196 @@ export const BuilderProView: FC<{}> = props =>
             selectedSavedGroup
         ]);
 
+    const requestTraversalState =
+        useCallback((
+            operation: number,
+            enabled = false,
+            itemIds: number[] = []
+        ) =>
+        {
+            if(!activeRef.current) return;
+            if(!roomSessionRef.current) return;
+            if(traversalPendingRef.current) return;
+
+            traversalRequestIdRef.current++;
+
+            if(traversalRequestIdRef.current > 2000000000)
+            {
+                traversalRequestIdRef.current = 1;
+            }
+
+            const requestId =
+                traversalRequestIdRef.current;
+
+            traversalOperationRef.current =
+                operation;
+
+            traversalPendingRef.current =
+                true;
+
+            setTraversalPending(
+                true
+            );
+
+            SendMessageComposer(
+                new BuilderProTraversalStateComposer(
+                    requestId,
+                    operation,
+                    enabled,
+                    itemIds
+                )
+            );
+
+            if(traversalTimeoutRef.current !== null)
+            {
+                window.clearTimeout(
+                    traversalTimeoutRef.current
+                );
+            }
+
+            traversalTimeoutRef.current =
+                window.setTimeout(
+                    () =>
+                    {
+                        traversalTimeoutRef.current =
+                            null;
+
+                        if(
+                            !traversalPendingRef.current ||
+                            traversalRequestIdRef.current !==
+                            requestId
+                        )
+                        {
+                            return;
+                        }
+
+                        traversalPendingRef.current =
+                            false;
+
+                        setTraversalPending(
+                            false
+                        );
+
+                        setStatus(
+                            'Sin respuesta al actualizar la colisión.'
+                        );
+                    },
+                    3000
+                );
+        }, []);
+
+    useMessageEvent<BuilderProTraversalStateEvent>(
+        BuilderProTraversalStateEvent,
+        event =>
+        {
+            const parser =
+                event.getParser();
+
+            if(!parser) return;
+
+            if(
+                parser.requestId !==
+                traversalRequestIdRef.current
+            )
+            {
+                return;
+            }
+
+            if(traversalTimeoutRef.current !== null)
+            {
+                window.clearTimeout(
+                    traversalTimeoutRef.current
+                );
+
+                traversalTimeoutRef.current =
+                    null;
+            }
+
+            traversalPendingRef.current =
+                false;
+
+            setTraversalPending(
+                false
+            );
+
+            const ids = [
+                ...parser.itemIds
+            ];
+
+            traversableIdsRef.current =
+                new Set(
+                    ids
+                );
+
+            setTraversableIds(
+                ids
+            );
+
+            if(
+                traversalOperationRef.current !==
+                TRAVERSAL_OP_QUERY ||
+                !parser.success
+            )
+            {
+                setStatus(
+                    parser.success
+                        ? parser.message
+                        : `Error ${ parser.code }: ${ parser.message }`
+                );
+            }
+        }
+    );
+
+    useEffect(() =>
+    {
+        if(!active) return;
+        if(!roomSession) return;
+
+        traversalPendingRef.current =
+            false;
+
+        setTraversalPending(
+            false
+        );
+
+        requestTraversalState(
+            TRAVERSAL_OP_QUERY
+        );
+    }, [
+        active,
+        roomSession?.roomId,
+        requestTraversalState
+    ]);
+
+    const toggleTraversableSelection =
+        useCallback(() =>
+        {
+            if(!selectedIdsRef.current.length)
+            {
+                setStatus(
+                    'Selecciona furnis para cambiar su colisión.'
+                );
+
+                return;
+            }
+
+            const allEnabled =
+                selectedIdsRef.current.every(
+                    itemId =>
+                        traversableIdsRef.current.has(
+                            itemId
+                        )
+                );
+
+            requestTraversalState(
+                TRAVERSAL_OP_SET,
+                !allEnabled,
+                selectedIdsRef.current
+            );
+        }, [
+            requestTraversalState
+        ]);
+
     const captureTransformSnapshots =
         useCallback((
             orderedIds?: number[]
@@ -1388,6 +1593,21 @@ export const BuilderProView: FC<{}> = props =>
         setHelpOpen(false);
         setGroupPending(false);
         setSavedGroups([]);
+
+        if(traversalTimeoutRef.current !== null)
+        {
+            window.clearTimeout(
+                traversalTimeoutRef.current
+            );
+
+            traversalTimeoutRef.current = null;
+        }
+
+        traversalPendingRef.current = false;
+        traversableIdsRef.current = new Set();
+
+        setTraversalPending(false);
+        setTraversableIds([]);
         setSelectedGroupId(null);
         setGroupName('');
         setStatus('');
@@ -1426,6 +1646,21 @@ export const BuilderProView: FC<{}> = props =>
         setHelpOpen(false);
         setGroupPending(false);
         setSavedGroups([]);
+
+        if(traversalTimeoutRef.current !== null)
+        {
+            window.clearTimeout(
+                traversalTimeoutRef.current
+            );
+
+            traversalTimeoutRef.current = null;
+        }
+
+        traversalPendingRef.current = false;
+        traversableIdsRef.current = new Set();
+
+        setTraversalPending(false);
+        setTraversableIds([]);
         setSelectedGroupId(null);
         setGroupName('');
         setStatus('');
@@ -2388,6 +2623,31 @@ export const BuilderProView: FC<{}> = props =>
             {
                 const removedId =
                     event.objectId;
+
+                if(
+                    traversableIdsRef.current.has(
+                        removedId
+                    )
+                )
+                {
+                    const nextTraversable =
+                        new Set(
+                            traversableIdsRef.current
+                        );
+
+                    nextTraversable.delete(
+                        removedId
+                    );
+
+                    traversableIdsRef.current =
+                        nextTraversable;
+
+                    setTraversableIds(
+                        Array.from(
+                            nextTraversable
+                        )
+                    );
+                }
 
                 const currentGroups =
                     savedGroupsRef.current;
@@ -5299,6 +5559,21 @@ export const BuilderProView: FC<{}> = props =>
 
     if(!roomSession || !canBuild) return null;
 
+
+    const selectedTraversableCount =
+        selectedIds.filter(
+            itemId =>
+                traversableIdsRef.current.has(
+                    itemId
+                )
+        ).length;
+
+    const allSelectedTraversable =
+        selectedIds.length > 0 &&
+        selectedTraversableCount ===
+        selectedIds.length;
+
+
     return (
         <>
             { active &&
@@ -5675,6 +5950,40 @@ export const BuilderProView: FC<{}> = props =>
                                     Desagrupar
                                 </button>
 
+                            </div>
+                        </details>
+
+                        <details className="builder-pro-section">
+                            <summary>Colisión</summary>
+
+                            <div className="builder-pro-section-body">
+                                <button
+                                    type="button"
+                                    className={
+                                        `builder-pro-full ${
+                                            allSelectedTraversable
+                                                ? 'is-selected'
+                                                : ''
+                                        }`
+                                    }
+                                    disabled={
+                                        pending ||
+                                        traversalPending ||
+                                        !selectedIds.length
+                                    }
+                                    onClick={
+                                        toggleTraversableSelection
+                                    }>
+                                    { allSelectedTraversable
+                                        ? 'Quitar atravesable'
+                                        : 'Hacer atravesable' }
+                                </button>
+
+                                <div className="builder-pro-hint">
+                                    { selectedIds.length
+                                        ? `${ selectedTraversableCount }/${ selectedIds.length } seleccionados son atravesables`
+                                        : 'El avatar podrá pasar por el furni sin alterar su posición ni su apilado.' }
+                                </div>
                             </div>
                         </details>
 
