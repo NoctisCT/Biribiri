@@ -1,7 +1,9 @@
-import { RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomObjectCategory, Vector3d, RoomObjectVariable} from '@nitrots/nitro-renderer';
+import { RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
-import { BuilderProSelectionVisualizer, CanManipulateFurniture, GetRoomEngine, GetSessionDataManager, SendMessageComposer, SetBuilderProSelectionModeActive } from '../../../../api';
+import { FaClone, FaCopy, FaMinus, FaPaste, FaQuestion, FaRedo, FaUndo } from 'react-icons/fa';
+import { AddEventLinkTracker, BuilderProSelectionVisualizer, CanManipulateFurniture, GetRoomEngine, GetSessionDataManager, RemoveLinkEventTracker, SendMessageComposer, SetBuilderProSelectionModeActive } from '../../../../api';
 import { useMessageEvent, useRoom, useRoomEngineEvent } from '../../../../hooks';
+import { NitroCardContentView, NitroCardHeaderView, NitroCardView } from '../../../../common';
 import './BuilderProView.scss';
 
 const MAX_SELECTION = 100;
@@ -11,6 +13,7 @@ const MOVE_CONFIRM_TIMEOUT_MS = 2500;
 const TRANSFORM_HEIGHT = 1;
 const TRANSFORM_ROTATE_STRUCTURE = 2;
 const TRANSFORM_ORIENT = 3;
+const TRANSFORM_FLOOR = 4;
 
 const FORMATION_ROW_LEFT = 1;
 const FORMATION_ROW_RIGHT = 2;
@@ -62,8 +65,10 @@ export const BuilderProView: FC<{}> = props =>
     const [ duplicateMode, setDuplicateMode ] = useState(false);
     const [ canUndo, setCanUndo ] = useState(false);
     const [ canRedo, setCanRedo ] = useState(false);
+    const [ minimized, setMinimized ] = useState(false);
+    const [ helpOpen, setHelpOpen ] = useState(false);
     const [ moveStep, setMoveStep ] = useState(1);
-    const [ heightStep, setHeightStep ] = useState(0.1);
+    const [ heightStep, setHeightStep ] = useState(1);
     const [ offsetX, setOffsetX ] = useState('');
     const [ offsetY, setOffsetY ] = useState('');
     const [ offsetZ, setOffsetZ ] = useState('');
@@ -290,7 +295,7 @@ export const BuilderProView: FC<{}> = props =>
             setPivotPickMode(false);
 
             setStatus(
-                'Pivote automatico: primer furni de la seleccion.'
+                'Pivote automático: primer furni de la selección.'
             );
         }, []);
 
@@ -342,7 +347,7 @@ export const BuilderProView: FC<{}> = props =>
             setStatus(
                 pivotIdRef.current !== null
                     ? `Pivote actual: furni #${ pivotIdRef.current }.`
-                    : 'Pivote automatico: primer furni seleccionado.'
+                    : 'Pivote automático: primer furni seleccionado.'
             );
         }, []);
 
@@ -360,8 +365,8 @@ export const BuilderProView: FC<{}> = props =>
 
         setStatus(
             next
-                ? 'Resaltado de seleccion visible.'
-                : 'Resaltado oculto. La seleccion sigue activa.'
+                ? 'Resaltado de selección visible.'
+                : 'Resaltado oculto. La selección sigue activa.'
         );
     }, []);
 
@@ -815,6 +820,8 @@ export const BuilderProView: FC<{}> = props =>
         setPending(false);
         setAreaMode(false);
         setSelectionBox(null);
+        setMinimized(false);
+        setHelpOpen(false);
         setStatus('');
     }, [ clearSelection ]);
 
@@ -835,9 +842,9 @@ export const BuilderProView: FC<{}> = props =>
         setPending(false);
         setAreaMode(false);
         setSelectionBox(null);
-        setStatus(
-            'Haz clic para seleccionar. Alt + arrastra un furni seleccionado para mover el grupo.'
-        );
+        setMinimized(false);
+        setHelpOpen(false);
+        setStatus('');
     }, [ canBuild, clearSelection ]);
 
     const toggleMode = useCallback(() =>
@@ -850,6 +857,43 @@ export const BuilderProView: FC<{}> = props =>
 
         activate();
     }, [ activate, deactivate ]);
+
+    useEffect(() =>
+    {
+        const linkTracker: ILinkEventTracker = {
+            linkReceived: (url: string) =>
+            {
+                const parts = url.split('/');
+
+                if(parts.length < 2) return;
+
+                switch(parts[1])
+                {
+                    case 'show':
+                        activate();
+                        return;
+
+                    case 'hide':
+                        deactivate();
+                        return;
+
+                    case 'toggle':
+                        toggleMode();
+                        return;
+                }
+            },
+            eventUrlPrefix: 'builder-pro/'
+        };
+
+        AddEventLinkTracker(linkTracker);
+
+        return () =>
+            RemoveLinkEventTracker(linkTracker);
+    }, [
+        activate,
+        deactivate,
+        toggleMode
+    ]);
 
     const toggleAreaMode = useCallback(() =>
     {
@@ -867,8 +911,8 @@ export const BuilderProView: FC<{}> = props =>
 
         setStatus(
             next
-                ? 'Seleccion por area activa. Arrastra para seleccionar; los clics normales siguen disponibles.'
-                : 'Seleccion por clic activa.'
+                ? 'Selección por área activa. Arrastra sobre la sala.'
+                : 'Selección por clic activa.'
         );
     }, []);
 
@@ -1022,21 +1066,20 @@ export const BuilderProView: FC<{}> = props =>
         )
         {
             setStatus(
-                `Area: ${ added } anadidos. Limite ${ MAX_SELECTION } alcanzado.`
+                `Área: ${ added } añadidos. Límite ${ MAX_SELECTION } alcanzado.`
             );
 
             return;
         }
 
         setStatus(
-            `Area: ${ added } anadidos. ${ next.length } seleccionados.`
+            `Área: ${ added } añadidos. ${ next.length } seleccionados.`
         );
     }, [ applySelection ]);
 
     useEffect(() =>
     {
         if(!active) return;
-        if(!areaMode) return;
 
         const stopNativeEvent = (
             event: globalThis.MouseEvent
@@ -1056,11 +1099,30 @@ export const BuilderProView: FC<{}> = props =>
         ) =>
         {
             if(!activeRef.current) return;
-            if(!areaModeRef.current) return;
             if(pasteModeRef.current) return;
-            if(event.altKey) return;
             if(pendingRef.current) return;
             if(event.button !== 0) return;
+
+            const altDrag =
+                event.altKey &&
+                !event.ctrlKey &&
+                !event.metaKey &&
+                !event.shiftKey;
+
+            /*
+             * El arrastre de area puede comenzar:
+             *
+             * - por Alt+arrastrar, siempre;
+             * - sin Alt cuando el usuario ha pulsado
+             *   el boton Seleccionar area.
+             */
+            if(
+                !altDrag &&
+                !areaModeRef.current
+            )
+            {
+                return;
+            }
 
             if(
                 !(event.target instanceof
@@ -1090,16 +1152,79 @@ export const BuilderProView: FC<{}> = props =>
             const scaleY =
                 canvas.height / rect.height;
 
+            const startCanvasX =
+                (event.clientX - rect.left) *
+                scaleX;
+
+            const startCanvasY =
+                (event.clientY - rect.top) *
+                scaleY;
+
+            /*
+             * REGLA DE PRIORIDAD:
+             *
+             * Alt + arrastrar iniciado sobre un
+             * furni YA seleccionado pertenece al
+             * movimiento del grupo.
+             *
+             * Solo discriminamos asi cuando Alt
+             * es el gesto utilizado. El modo
+             * manual de Area sigue disponible
+             * para tactil/movil.
+             */
+            if(altDrag)
+            {
+                const currentRoomSession =
+                    roomSessionRef.current;
+
+                const roomEngine =
+                    GetRoomEngine();
+
+                if(currentRoomSession && roomEngine)
+                {
+                    for(const id of selectedIdsRef.current)
+                    {
+                        const bounds =
+                            roomEngine
+                                .getRoomObjectBoundingRectangle(
+                                    currentRoomSession.roomId,
+                                    id,
+                                    RoomObjectCategory.FLOOR,
+                                    1
+                                );
+
+                        if(!bounds)
+                        {
+                            continue;
+                        }
+
+                        const right =
+                            bounds.x +
+                            bounds.width;
+
+                        const bottom =
+                            bounds.y +
+                            bounds.height;
+
+                        if(
+                            startCanvasX >= bounds.x &&
+                            startCanvasX <= right &&
+                            startCanvasY >= bounds.y &&
+                            startCanvasY <= bottom
+                        )
+                        {
+                            return;
+                        }
+                    }
+                }
+            }
+
             areaStartRef.current = {
                 canvas,
                 startClientX: event.clientX,
                 startClientY: event.clientY,
-                startCanvasX:
-                    (event.clientX - rect.left) *
-                    scaleX,
-                startCanvasY:
-                    (event.clientY - rect.top) *
-                    scaleY
+                startCanvasX,
+                startCanvasY
             };
 
             suppressAreaClickRef.current = false;
@@ -1113,6 +1238,19 @@ export const BuilderProView: FC<{}> = props =>
                 areaStartRef.current;
 
             if(!start) return;
+
+            /*
+             * Si Nitro ya ha convertido el gesto
+             * en movimiento de grupo, abandonamos
+             * inmediatamente la seleccion de area.
+             */
+            if(dragRef.current)
+            {
+                areaStartRef.current = null;
+                suppressAreaClickRef.current = false;
+                setSelectionBox(null);
+                return;
+            }
 
             const dragWidth = Math.abs(
                 event.clientX -
@@ -1165,6 +1303,14 @@ export const BuilderProView: FC<{}> = props =>
                 areaStartRef.current;
 
             if(!start) return;
+
+            if(dragRef.current)
+            {
+                areaStartRef.current = null;
+                suppressAreaClickRef.current = false;
+                setSelectionBox(null);
+                return;
+            }
 
             areaStartRef.current = null;
 
@@ -1266,7 +1412,6 @@ export const BuilderProView: FC<{}> = props =>
         };
     }, [
         active,
-        areaMode,
         selectObjectsInArea
     ]);
 
@@ -1387,7 +1532,7 @@ export const BuilderProView: FC<{}> = props =>
                 if(!anchorObject || !geometry)
                 {
                     setStatus(
-                        'No se pudo leer la geometria de la sala.'
+                        'No se pudo leer la geometría de la sala.'
                     );
 
                     return;
@@ -2499,7 +2644,7 @@ export const BuilderProView: FC<{}> = props =>
                             setPending(false);
 
                             setStatus(
-                                'Pegado sin confirmacion del servidor.'
+                                'Pegado sin confirmación del servidor.'
                             );
                         },
                         MOVE_CONFIRM_TIMEOUT_MS
@@ -2750,7 +2895,7 @@ export const BuilderProView: FC<{}> = props =>
                             setPending(false);
 
                             setStatus(
-                                'Movimiento sin confirmacion. Hold detenido; vuelve a pulsar una flecha.'
+                                'Movimiento sin confirmación. Hold detenido; vuelve a pulsar una flecha.'
                             );
                         },
                         MOVE_CONFIRM_TIMEOUT_MS
@@ -2787,7 +2932,7 @@ export const BuilderProView: FC<{}> = props =>
 
                 setPending(false);
                 setStatus(
-                    'No se pudo enviar la operaci?n al servidor.'
+                    'No se pudo enviar la operación al servidor.'
                 );
             }
         },
@@ -3014,7 +3159,7 @@ export const BuilderProView: FC<{}> = props =>
                             setPending(false);
 
                             setStatus(
-                                'Offset sin confirmacion del servidor.'
+                                'Offset sin confirmación del servidor.'
                             );
                         },
                         MOVE_CONFIRM_TIMEOUT_MS
@@ -3187,7 +3332,7 @@ export const BuilderProView: FC<{}> = props =>
                             setPending(false);
 
                             setStatus(
-                                'Operacion sin confirmacion del servidor.'
+                                'Operacion sin confirmación del servidor.'
                             );
                         },
                         MOVE_CONFIRM_TIMEOUT_MS
@@ -3313,7 +3458,7 @@ export const BuilderProView: FC<{}> = props =>
                         setPending(false);
 
                         setStatus(
-                            'Undo/Redo sin confirmacion del servidor.'
+                            'Undo/Redo sin confirmación del servidor.'
                         );
                     },
                     MOVE_CONFIRM_TIMEOUT_MS
@@ -3432,7 +3577,7 @@ export const BuilderProView: FC<{}> = props =>
                         setPending(false);
 
                         setStatus(
-                            'Copia sin confirmacion del servidor.'
+                            'Copia sin confirmación del servidor.'
                         );
                     },
                     MOVE_CONFIRM_TIMEOUT_MS
@@ -3507,20 +3652,23 @@ export const BuilderProView: FC<{}> = props =>
         if(!snapshots)
         {
             setStatus(
-                'No se pudo capturar la geometria completa.'
+                'No se pudo capturar la geometría completa.'
             );
 
             return;
         }
 
-        if(!applyTransformPreview(
-            snapshots,
-            operation,
-            argument
-        ))
+        if(
+            operation !== TRANSFORM_FLOOR &&
+            !applyTransformPreview(
+                snapshots,
+                operation,
+                argument
+            )
+        )
         {
             setStatus(
-                'No se pudo mostrar el preview de la transformacion.'
+                'No se pudo mostrar el preview de la transformación.'
             );
 
             return;
@@ -3569,10 +3717,13 @@ export const BuilderProView: FC<{}> = props =>
         pendingStartedAtRef.current =
             performance.now();
 
-        pendingTransformPreviewRef.current = {
-            requestId,
-            snapshots
-        };
+        pendingTransformPreviewRef.current =
+            operation === TRANSFORM_FLOOR
+                ? null
+                : {
+                    requestId,
+                    snapshots
+                };
 
         heldArrowRef.current = null;
         keyboardBlockedRef.current = false;
@@ -3593,7 +3744,13 @@ export const BuilderProView: FC<{}> = props =>
 
         setPending(true);
 
-        if(operation === TRANSFORM_HEIGHT)
+        if(operation === TRANSFORM_FLOOR)
+        {
+            setStatus(
+                `Bajando ${ ids.length } furnis al suelo...`
+            );
+        }
+        else if(operation === TRANSFORM_HEIGHT)
         {
             const delta =
                 argument / 1000;
@@ -3605,7 +3762,7 @@ export const BuilderProView: FC<{}> = props =>
         else if(operation === TRANSFORM_ORIENT)
         {
             setStatus(
-                `Girando orientacion de ${ ids.length } furnis como Holo...`
+                `Girando orientación de ${ ids.length } furnis como Holo...`
             );
         }
         else
@@ -3681,7 +3838,7 @@ export const BuilderProView: FC<{}> = props =>
                         setPending(false);
 
                         setStatus(
-                            'Transformacion sin confirmacion. Preview restaurado.'
+                            'Transformacion sin confirmación. Preview restaurado.'
                         );
                     },
                     MOVE_CONFIRM_TIMEOUT_MS
@@ -3711,7 +3868,7 @@ export const BuilderProView: FC<{}> = props =>
             setPending(false);
 
             setStatus(
-                'No se pudo enviar la transformacion al servidor.'
+                'No se pudo enviar la transformación al servidor.'
             );
         }
     }, [
@@ -4310,634 +4467,778 @@ export const BuilderProView: FC<{}> = props =>
     if(!roomSession || !canBuild) return null;
 
     return (
-        <div className="builder-pro-shell">
-            <button
-                type="button"
-                className={
-                    `builder-pro-toggle ${
-                        active
-                            ? 'is-active'
-                            : ''
-                    }`
-                }
-                onClick={ toggleMode }>
-                { active
-                    ? 'Cerrar Builder Pro'
-                    : 'Builder Pro' }
-            </button>
-
+        <>
             { active &&
-                <div className="builder-pro-panel">
-                    <div className="builder-pro-header">
-                        <strong>Builder Pro</strong>
+                <NitroCardView
+                    uniqueKey="builder-pro"
+                    className="builder-pro-panel no-resize"
+                    theme="primary-slim">
+                    <NitroCardHeaderView
+                        headerText="Construcción"
+                        onCloseClick={ deactivate } />
 
-                        <span>
-                            { selectedIds.length } / { MAX_SELECTION }
+                    <div className="builder-pro-header-actions">
+                        <button
+                            type="button"
+                            className="builder-pro-header-button"
+                            title={
+                                minimized
+                                    ? 'Restaurar'
+                                    : 'Minimizar'
+                            }
+                            aria-label={
+                                minimized
+                                    ? 'Restaurar'
+                                    : 'Minimizar'
+                            }
+                            onClick={ () =>
+                            {
+                                setMinimized(
+                                    current => !current
+                                );
+
+                                setHelpOpen(false);
+                            } }>
+                            <FaMinus />
+                        </button>
+
+                        <button
+                            type="button"
+                            className={
+                                `builder-pro-header-button ${
+                                    helpOpen
+                                        ? 'is-active'
+                                        : ''
+                                }`
+                            }
+                            title="Ayuda"
+                            aria-label="Ayuda"
+                            onClick={ () =>
+                            {
+                                const next =
+                                    !helpOpen;
+
+                                setHelpOpen(next);
+
+                                if(next)
+                                {
+                                    setMinimized(false);
+                                }
+                            } }>
+                            <FaQuestion />
+                        </button>
+                    </div>
+
+                    { helpOpen &&
+                        <div className="builder-pro-help">
+                            <div className="builder-pro-help-title">
+                                Ayuda
+                            </div>
+
+                            <div className="builder-pro-help-row">
+                                <strong>Clic en furni</strong>
+                                <span>
+                                    Añadir o quitar de la selección
+                                </span>
+                            </div>
+
+                            <div className="builder-pro-help-row">
+                                <strong>Alt + arrastrar en suelo</strong>
+                                <span>
+                                    Seleccionar varios furnis por área
+                                </span>
+                            </div>
+
+                            <div className="builder-pro-help-row">
+                                <strong>
+                                    Alt + arrastrar desde furni seleccionado
+                                </strong>
+                                <span>
+                                    Mover todo el grupo
+                                </span>
+                            </div>
+
+                            <div className="builder-pro-help-row">
+                                <strong>Flechas del teclado</strong>
+                                <span>
+                                    Mover el grupo según el valor de Casillas
+                                </span>
+                            </div>
+
+                            <div className="builder-pro-help-row">
+                                <strong>Mantener una flecha</strong>
+                                <span>
+                                    Movimiento continuo
+                                </span>
+                            </div>
+
+                        </div> }
+
+
+                    { !minimized &&
+                    <NitroCardContentView
+                        className="builder-pro-content">
+                    <div className="builder-pro-status">
+                        <span className="builder-pro-status-text">
+                            { status }
+                        </span>
+
+                        <span
+                            className="builder-pro-counter"
+                            title="Furnis seleccionados">
+                            { selectedIds.length }/{ MAX_SELECTION }
                         </span>
                     </div>
 
-                    <div className="builder-pro-status">
-                        { status }
-                    </div>
+                    <div className="builder-pro-sections">
 
-                    <div className="builder-pro-selection-tools">
-                        <button
-                            type="button"
-                            className={
-                                areaMode
-                                    ? 'is-selected'
-                                    : ''
-                            }
-                            disabled={ pending }
-                            onClick={ toggleAreaMode }>
-                            { areaMode
-                                ? 'Area: activa'
-                                : 'Seleccion por area' }
-                        </button>
+                        <details className="builder-pro-section">
+                            <summary>Selección</summary>
 
-                        <button
-                            type="button"
-                            className={
-                                !highlightSelection
-                                    ? 'is-selected'
-                                    : ''
-                            }
-                            disabled={ pending }
-                            onClick={ toggleHighlight }>
-                            { highlightSelection
-                                ? 'Resaltado: visible'
-                                : 'Resaltado: oculto' }
-                        </button>
-                    </div>
-
-                    <div className="builder-pro-step">
-                        <span>Paso ? mantener flecha</span>
-
-                        <button
-                            type="button"
-                            className={
-                                moveStep === 1
-                                    ? 'is-selected'
-                                    : ''
-                            }
-                            onClick={ () => setMoveStep(1) }>
-                            1
-                        </button>
-
-                        <button
-                            type="button"
-                            className={
-                                moveStep === 3
-                                    ? 'is-selected'
-                                    : ''
-                            }
-                            onClick={ () => setMoveStep(3) }>
-                            3
-                        </button>
-                    </div>
-
-                    <div className="builder-pro-actions">
-                        <button
-                            type="button"
-                            disabled={
-                                pending ||
-                                !selectedIds.length
-                            }
-                            onClick={
-                                () => moveGroup(-moveStep, 0)
-                            }>
-                            X ?
-                        </button>
-
-                        <button
-                            type="button"
-                            disabled={
-                                pending ||
-                                !selectedIds.length
-                            }
-                            onClick={
-                                () => moveGroup(moveStep, 0)
-                            }>
-                            X +
-                        </button>
-
-                        <button
-                            type="button"
-                            disabled={
-                                pending ||
-                                !selectedIds.length
-                            }
-                            onClick={
-                                () => moveGroup(0, -moveStep)
-                            }>
-                            Y ?
-                        </button>
-
-                        <button
-                            type="button"
-                            disabled={
-                                pending ||
-                                !selectedIds.length
-                            }
-                            onClick={
-                                () => moveGroup(0, moveStep)
-                            }>
-                            Y +
-                        </button>
-                    </div>
-
-                    <div className="builder-pro-actions">
-                        <button
-                            type="button"
-                            disabled={
-                                pending ||
-                                !canUndo
-                            }
-                            onClick={
-                                () => historyAction(1)
-                            }>
-                            Deshacer
-                        </button>
-
-                        <button
-                            type="button"
-                            disabled={
-                                pending ||
-                                !canRedo
-                            }
-                            onClick={
-                                () => historyAction(2)
-                            }>
-                            Rehacer
-                        </button>
-                    </div>
-
-
-
-                    <div className="builder-pro-layout">
-                        <span>Formaciones</span>
-
-                        <div className="builder-pro-layout-grid">
-                            <button
-                                type="button"
-                                disabled={
-                                    pending ||
-                                    selectedIds.length < 2
-                                }
-                                onClick={
-                                    () => layoutGroup(
-                                        FORMATION_ROW_LEFT
-                                    )
-                                }>
-                                Izquierda
-                            </button>
-
-                            <button
-                                type="button"
-                                disabled={
-                                    pending ||
-                                    selectedIds.length < 2
-                                }
-                                onClick={
-                                    () => layoutGroup(
-                                        FORMATION_ROW_RIGHT
-                                    )
-                                }>
-                                Derecha
-                            </button>
-
-                            <button
-                                type="button"
-                                disabled={
-                                    pending ||
-                                    selectedIds.length < 2
-                                }
-                                onClick={
-                                    () => layoutGroup(
-                                        FORMATION_COLUMN_UP
-                                    )
-                                }>
-                                Arriba
-                            </button>
-
-                            <button
-                                type="button"
-                                disabled={
-                                    pending ||
-                                    selectedIds.length < 2
-                                }
-                                onClick={
-                                    () => layoutGroup(
-                                        FORMATION_COLUMN_DOWN
-                                    )
-                                }>
-                                Abajo
-                            </button>
-
-                            <button
-                                type="button"
-                                className="builder-pro-layout-stack"
-                                disabled={
-                                    pending ||
-                                    selectedIds.length < 2
-                                }
-                                onClick={
-                                    () => layoutGroup(
-                                        FORMATION_STACK
-                                    )
-                                }>
-                                Apilar
-                            </button>
-                        </div>
-
-                        <span>Separacion</span>
-
-                        <div className="builder-pro-layout-spacing">
-                            { [ 0, 1, 2, 3, 4 ].map(
-                                value =>
+                            <div className="builder-pro-section-body">
+                                <div className="builder-pro-grid-2">
                                     <button
-                                        key={ value }
                                         type="button"
                                         className={
-                                            formationSpacing === `${ value }`
+                                            areaMode
                                                 ? 'is-selected'
                                                 : ''
                                         }
                                         disabled={ pending }
+                                        onClick={ toggleAreaMode }>
+                                        { areaMode
+                                            ? 'Área activa'
+                                            : 'Seleccionar área' }
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className={
+                                            !highlightSelection
+                                                ? 'is-selected'
+                                                : ''
+                                        }
+                                        disabled={ pending }
+                                        onClick={ toggleHighlight }>
+                                        { highlightSelection
+                                            ? 'Ocultar resaltado'
+                                            : 'Mostrar resaltado' }
+                                    </button>
+                                </div>
+
+                                <div className="builder-pro-subtitle">
+                                    Pivote
+                                </div>
+
+                                <div className="builder-pro-grid-2">
+                                    <button
+                                        type="button"
+                                        className={
+                                            pivotPickMode
+                                                ? 'is-selected'
+                                                : ''
+                                        }
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={ togglePivotPick }>
+                                        { pivotPickMode
+                                            ? 'Haz clic en el pivote'
+                                            : (
+                                                pivotId !== null
+                                                    ? `Cambiar #${ pivotId }`
+                                                    : 'Elegir pivote'
+                                            ) }
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            pivotId === null
+                                        }
+                                        onClick={ clearStructuralPivot }>
+                                        Automático
+                                    </button>
+                                </div>
+
+                                <div className="builder-pro-hint">
+                                    { pivotId !== null
+                                        ? `Pivote actual: furni #${ pivotId }`
+                                        : 'Pivote automático: primer furni seleccionado' }
+                                </div>
+
+                                <button
+                                    type="button"
+                                    className="builder-pro-full"
+                                    disabled={
+                                        pending ||
+                                        !selectedIds.length
+                                    }
+                                    onClick={ clearSelection }>
+                                    Limpiar selección
+                                </button>
+                            </div>
+                        </details>
+
+                        <details className="builder-pro-section">
+                            <summary>Movimiento</summary>
+
+                            <div className="builder-pro-section-body">
+                                <label className="builder-pro-field-row">
+                                    <span>Casillas</span>
+
+                                    <input
+                                        className="builder-pro-small-input"
+                                        type="number"
+                                        min="1"
+                                        max="50"
+                                        step="1"
+                                        value={ moveStep }
+                                        disabled={ pending }
+                                        onChange={
+                                            event =>
+                                            {
+                                                const value =
+                                                    Number(
+                                                        event.target.value
+                                                    );
+
+                                                if(
+                                                    Number.isSafeInteger(value) &&
+                                                    value >= 1 &&
+                                                    value <= 50
+                                                )
+                                                {
+                                                    setMoveStep(value);
+                                                }
+                                            }
+                                        } />
+                                </label>
+
+                                <div className="builder-pro-grid-2">
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
                                         onClick={
-                                            () => setFormationSpacing(
-                                                `${ value }`
+                                            () => moveGroup(
+                                                -moveStep,
+                                                0
                                             )
                                         }>
-                                        { value }
+                                        Izquierda
                                     </button>
-                            ) }
 
-                            <input
-                                type="number"
-                                min="0"
-                                max="50"
-                                step="1"
-                                value={ formationSpacing }
-                                disabled={ pending }
-                                onChange={
-                                    event =>
-                                        setFormationSpacing(
-                                            event.target.value
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () => moveGroup(
+                                                moveStep,
+                                                0
+                                            )
+                                        }>
+                                        Derecha
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () => moveGroup(
+                                                0,
+                                                -moveStep
+                                            )
+                                        }>
+                                        Arriba
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () => moveGroup(
+                                                0,
+                                                moveStep
+                                            )
+                                        }>
+                                        Abajo
+                                    </button>
+                                </div>
+
+                                <div className="builder-pro-subtitle">
+                                    Desplazamiento exacto
+                                </div>
+
+                                <div className="builder-pro-offset-row">
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={ offsetX }
+                                        disabled={ pending }
+                                        placeholder="X"
+                                        title="Desplazamiento X"
+                                        onChange={
+                                            event =>
+                                                setOffsetX(
+                                                    event.target.value
+                                                )
+                                        } />
+
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={ offsetY }
+                                        disabled={ pending }
+                                        placeholder="Y"
+                                        title="Desplazamiento Y"
+                                        onChange={
+                                            event =>
+                                                setOffsetY(
+                                                    event.target.value
+                                                )
+                                        } />
+
+                                    <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={ offsetZ }
+                                        disabled={ pending }
+                                        placeholder="Z"
+                                        title="Desplazamiento Z"
+                                        onChange={
+                                            event =>
+                                                setOffsetZ(
+                                                    event.target.value
+                                                )
+                                        } />
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={ applyNumericOffset }>
+                                        Aplicar
+                                    </button>
+                                </div>
+
+                                <label className="builder-pro-field-row">
+                                    <span>Altura</span>
+
+                                    <input
+                                        className="builder-pro-small-input"
+                                        type="number"
+                                        min="0.001"
+                                        max="40"
+                                        step="0.001"
+                                        value={ heightStep }
+                                        disabled={ pending }
+                                        onChange={
+                                            event =>
+                                            {
+                                                const value =
+                                                    Number(
+                                                        event.target.value
+                                                    );
+
+                                                if(
+                                                    Number.isFinite(value) &&
+                                                    value > 0 &&
+                                                    value <= 40
+                                                )
+                                                {
+                                                    setHeightStep(value);
+                                                }
+                                            }
+                                        } />
+                                </label>
+
+                                <div className="builder-pro-grid-2">
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () => transformGroup(
+                                                TRANSFORM_HEIGHT,
+                                                -Math.round(
+                                                    heightStep *
+                                                    1000
+                                                )
+                                            )
+                                        }>
+                                        Bajar
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () => transformGroup(
+                                                TRANSFORM_HEIGHT,
+                                                Math.round(
+                                                    heightStep *
+                                                    1000
+                                                )
+                                            )
+                                        }>
+                                        Subir
+                                    </button>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    className="builder-pro-full"
+                                    disabled={
+                                        pending ||
+                                        !selectedIds.length
+                                    }
+                                    onClick={
+                                        () => transformGroup(
+                                            TRANSFORM_FLOOR,
+                                            0
                                         )
-                                } />
-                        </div>
+                                    }>
+                                    Bajar al suelo
+                                </button>
+                            </div>
+                        </details>
 
-                        <span>
-                            { pivotId !== null
-                                ? `Eje: #${ pivotId }`
-                                : 'Eje: primer seleccionado' }
-                        </span>
+                        <details className="builder-pro-section">
+                            <summary>Formaciones</summary>
+
+                            <div className="builder-pro-section-body">
+                                <div className="builder-pro-grid-2">
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            selectedIds.length < 2
+                                        }
+                                        onClick={
+                                            () => layoutGroup(
+                                                FORMATION_ROW_LEFT
+                                            )
+                                        }>
+                                        Izquierda
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            selectedIds.length < 2
+                                        }
+                                        onClick={
+                                            () => layoutGroup(
+                                                FORMATION_ROW_RIGHT
+                                            )
+                                        }>
+                                        Derecha
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            selectedIds.length < 2
+                                        }
+                                        onClick={
+                                            () => layoutGroup(
+                                                FORMATION_COLUMN_UP
+                                            )
+                                        }>
+                                        Arriba
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            selectedIds.length < 2
+                                        }
+                                        onClick={
+                                            () => layoutGroup(
+                                                FORMATION_COLUMN_DOWN
+                                            )
+                                        }>
+                                        Abajo
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className="builder-pro-full-grid"
+                                        disabled={
+                                            pending ||
+                                            selectedIds.length < 2
+                                        }
+                                        onClick={
+                                            () => layoutGroup(
+                                                FORMATION_STACK
+                                            )
+                                        }>
+                                        Apilar
+                                    </button>
+                                </div>
+
+                                <label className="builder-pro-field-row">
+                                    <span>Separación</span>
+
+                                    <input
+                                        className="builder-pro-small-input"
+                                        type="number"
+                                        min="0"
+                                        max="50"
+                                        step="1"
+                                        value={ formationSpacing }
+                                        disabled={ pending }
+                                        onChange={
+                                            event =>
+                                                setFormationSpacing(
+                                                    event.target.value
+                                                )
+                                        } />
+                                </label>
+
+                                <div className="builder-pro-hint">
+                                    { pivotId !== null
+                                        ? `Pivote: furni #${ pivotId }`
+                                        : 'Pivote: primer furni seleccionado' }
+                                </div>
+                            </div>
+                        </details>
+
+                        <details className="builder-pro-section">
+                            <summary>Rotación</summary>
+
+                            <div className="builder-pro-section-body">
+                                <button
+                                    type="button"
+                                    className="builder-pro-full"
+                                    disabled={
+                                        pending ||
+                                        !selectedIds.length
+                                    }
+                                    onClick={
+                                        () => transformGroup(
+                                            TRANSFORM_ORIENT,
+                                            1
+                                        )
+                                    }>
+                                    Girar furnis
+                                </button>
+
+                                <div className="builder-pro-grid-2">
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () => transformGroup(
+                                                TRANSFORM_ROTATE_STRUCTURE,
+                                                -1
+                                            )
+                                        }>
+                                        Estructura -90°
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () => transformGroup(
+                                                TRANSFORM_ROTATE_STRUCTURE,
+                                                1
+                                            )
+                                        }>
+                                        Estructura +90°
+                                    </button>
+                                </div>
+                            </div>
+                        </details>
+
+
+
                     </div>
 
-                    <div className="builder-pro-offset">
-                        <span>Offset exacto</span>
+                    <div className="builder-pro-bottom-toolbar">
+                        <button
+                                                                type="button"
+                                                                className="btn btn-sm btn-secondary builder-pro-icon-button"
+                                title="Copiar"
+                                                                aria-label="Copiar"
+                                                                disabled={
+                                                                    pending ||
+                                                                    !selectedIds.length
+                                                                }
+                                                                onClick={ () =>
+                                                                {
+                                                                    duplicateRequestedRef.current = false;
+                                                                    duplicateModeRef.current = false;
+                                                                    setDuplicateMode(false);
 
-                        <input
-                            type="text"
-                            inputMode="numeric"
-                            value={ offsetX }
-                            disabled={ pending }
-                            placeholder="X"
-                            onChange={
-                                event =>
-                                    setOffsetX(
-                                        event.target.value
-                                    )
-                            } />
+                                                                    clearPastePreview();
+                                                                    pasteModeRef.current = false;
+                                                                    setPasteMode(false);
 
-                        <input
-                            type="text"
-                            inputMode="numeric"
-                            value={ offsetY }
-                            disabled={ pending }
-                            placeholder="Y"
-                            onChange={
-                                event =>
-                                    setOffsetY(
-                                        event.target.value
-                                    )
-                            } />
-
-                        <input
-                            type="text"
-                            inputMode="decimal"
-                            value={ offsetZ }
-                            disabled={ pending }
-                            placeholder="Z"
-                            onChange={
-                                event =>
-                                    setOffsetZ(
-                                        event.target.value
-                                    )
-                            } />
+                                                                    copyGroup();
+                                                                } }>
+                                                                <FaCopy />
+                                                            </button>
 
                         <button
-                            type="button"
-                            disabled={
-                                pending ||
-                                !selectedIds.length
-                            }
-                            onClick={
-                                applyNumericOffset
-                            }>
-                            Aplicar
-                        </button>
-                    </div>
-
-                    <div className="builder-pro-step">
-                        <span>Altura Z</span>
-
-                        <button
-                            type="button"
-                            className={
-                                heightStep === 0.1
-                                    ? 'is-selected'
-                                    : ''
-                            }
-                            disabled={ pending }
-                            onClick={
-                                () => setHeightStep(0.1)
-                            }>
-                            0.1
-                        </button>
-
-                        <button
-                            type="button"
-                            className={
-                                heightStep === 0.5
-                                    ? 'is-selected'
-                                    : ''
-                            }
-                            disabled={ pending }
-                            onClick={
-                                () => setHeightStep(0.5)
-                            }>
-                            0.5
-                        </button>
-
-                        <button
-                            type="button"
-                            className={
-                                heightStep === 1
-                                    ? 'is-selected'
-                                    : ''
-                            }
-                            disabled={ pending }
-                            onClick={
-                                () => setHeightStep(1)
-                            }>
-                            1
-                        </button>
-                    </div>
-
-                    <div className="builder-pro-actions">
-                        <button
-                            type="button"
-                            disabled={
-                                pending ||
-                                !selectedIds.length
-                            }
-                            onClick={
-                                () => transformGroup(
-                                    TRANSFORM_HEIGHT,
-                                    -Math.round(
-                                        heightStep *
-                                        1000
-                                    )
-                                )
-                            }>
-                            Z -
-                        </button>
-
-                        <button
-                            type="button"
-                            disabled={
-                                pending ||
-                                !selectedIds.length
-                            }
-                            onClick={
-                                () => transformGroup(
-                                    TRANSFORM_HEIGHT,
-                                    Math.round(
-                                        heightStep *
-                                        1000
-                                    )
-                                )
-                            }>
-                            Z +
-                        </button>
-
-
-
-                        <button
-                            type="button"
-                            disabled={
-                                pending ||
-                                !selectedIds.length
-                            }
-                            onClick={
-                                () => transformGroup(
-                                    TRANSFORM_ORIENT,
-                                    1
-                                )
-                            }>
-                            Girar furnis
-                        </button>
-                    </div>
-
-                    <div className="builder-pro-selection-tools">
-                        <button
-                            type="button"
-                            disabled={
-                                pending ||
-                                !selectedIds.length
-                            }
-                            onClick={ () =>
-                            {
-                                duplicateRequestedRef.current = false;
-                                duplicateModeRef.current = false;
-                                setDuplicateMode(false);
-
-                                clearPastePreview();
-                                pasteModeRef.current = false;
-                                setPasteMode(false);
-
-                                copyGroup();
-                            } }>
-                            Copiar
-                        </button>
-
-                        <button
-                            type="button"
-                            className={
-                                duplicateMode
-                                    ? 'is-selected'
-                                    : ''
-                            }
-                            disabled={
-                                pending ||
-                                (
-                                    !duplicateMode &&
-                                    !selectedIds.length
-                                )
-                            }
-                            onClick={ () =>
-                            {
-                                if(duplicateModeRef.current)
-                                {
-                                    duplicateRequestedRef.current = false;
-                                    duplicateModeRef.current = false;
-                                    setDuplicateMode(false);
-
-                                    clearPastePreview();
-                                    pasteModeRef.current = false;
-                                    setPasteMode(false);
-
-                                    setStatus('Duplicado cancelado.');
-                                    return;
+                                                                type="button"
+                                                                className={
+                                    `btn btn-sm ${
+                                        pasteMode
+                                            ? 'btn-primary'
+                                            : 'btn-secondary'
+                                    } builder-pro-icon-button`
                                 }
-
-                                if(
-                                    pendingRef.current ||
-                                    dragRef.current ||
-                                    !selectedIdsRef.current.length
-                                )
-                                {
-                                    return;
+                                title={
+                                                                    pasteMode
+                                                                        ? 'Cancelar pegado'
+                                                                        : 'Pegar'
+                                                                }
+                                                                aria-label={
+                                                                    pasteMode
+                                                                        ? 'Cancelar pegado'
+                                                                        : 'Pegar'
+                                                                }
+                                                                disabled={
+                                    pending ||
+                                    duplicateMode ||
+                                    !clipboardPreviewRef.current
                                 }
-
-                                clearPastePreview();
-
-                                pasteModeRef.current = false;
-                                setPasteMode(false);
-
-                                duplicateRequestedRef.current = true;
-
-                                copyGroup();
-                            } }>
-                            { duplicateMode
-                                ? 'Cancelar duplicado'
-                                : 'Duplicar' }
-                        </button>
-                    </div>
-
-                    <div className="builder-pro-selection-tools">
-                        <button
-                            type="button"
-                            className={
-                                pasteMode
-                                    ? 'is-selected'
-                                    : ''
-                            }
-                            disabled={ pending || duplicateMode }
-                            onClick={ togglePasteMode }>
-                            { pasteMode
-                                ? 'Cancelar pegado'
-                                : 'Pegar' }
-                        </button>
-                    </div>
-
-                    <div className="builder-pro-step">
-                        <span>
-                            Rotar estructura
-                        </span>
-                    </div>
-
-                    <div className="builder-pro-selection-tools">
-                        <button
-                            type="button"
-                            className={
-                                pivotPickMode
-                                    ? 'is-selected'
-                                    : ''
-                            }
-                            disabled={
-                                pending ||
-                                !selectedIds.length
-                            }
-                            onClick={ togglePivotPick }>
-                            { pivotPickMode
-                                ? 'Haz clic en el pivote'
-                                : (
-                                    pivotId !== null
-                                        ? `Cambiar pivote #${ pivotId }`
-                                        : 'Elegir pivote'
-                                ) }
-                        </button>
+                                                                onClick={ togglePasteMode }>
+                                                                <FaPaste />
+                                                            </button>
 
                         <button
-                            type="button"
-                            disabled={
-                                pending ||
-                                pivotId === null
-                            }
-                            onClick={ clearStructuralPivot }>
-                            Pivote automatico
-                        </button>
-                    </div>
+                                                                type="button"
+                                                                className={
+                                    `btn btn-sm ${
+                                        duplicateMode
+                                            ? 'btn-primary'
+                                            : 'btn-secondary'
+                                    } builder-pro-icon-button`
+                                }
+                                title={
+                                                                    duplicateMode
+                                                                        ? 'Cancelar duplicado'
+                                                                        : 'Duplicar'
+                                                                }
+                                                                aria-label={
+                                                                    duplicateMode
+                                                                        ? 'Cancelar duplicado'
+                                                                        : 'Duplicar'
+                                                                }
+                                                                disabled={
+                                                                    pending ||
+                                                                    (
+                                                                        !duplicateMode &&
+                                                                        !selectedIds.length
+                                                                    )
+                                                                }
+                                                                onClick={ () =>
+                                                                {
+                                                                    if(duplicateModeRef.current)
+                                                                    {
+                                                                        duplicateRequestedRef.current = false;
+                                                                        duplicateModeRef.current = false;
+                                                                        setDuplicateMode(false);
 
-                    <div className="builder-pro-step">
-                        <span>
-                            { pivotId !== null
-                                ? `Pivote: furni #${ pivotId }`
-                                : 'Pivote: primer seleccionado (auto)' }
-                        </span>
-                    </div>
+                                                                        clearPastePreview();
+                                                                        pasteModeRef.current = false;
+                                                                        setPasteMode(false);
 
-                    <div className="builder-pro-actions">
+                                                                        setStatus('Duplicado cancelado.');
+                                                                        return;
+                                                                    }
+
+                                                                    if(
+                                                                        pendingRef.current ||
+                                                                        dragRef.current ||
+                                                                        !selectedIdsRef.current.length
+                                                                    )
+                                                                    {
+                                                                        return;
+                                                                    }
+
+                                                                    clearPastePreview();
+
+                                                                    pasteModeRef.current = false;
+                                                                    setPasteMode(false);
+
+                                                                    duplicateRequestedRef.current = true;
+
+                                                                    copyGroup();
+                                                                } }>
+                                                                <FaClone />
+                                                            </button>
+
                         <button
-                            type="button"
-                            disabled={
-                                pending ||
-                                !selectedIds.length
-                            }
-                            onClick={
-                                () => transformGroup(
-                                    TRANSFORM_ROTATE_STRUCTURE,
-                                    -1
-                                )
-                            }>
-                            Estructura -90
-                        </button>
+                                                    type="button"
+                                                    className="btn btn-sm btn-secondary builder-pro-icon-button"
+                                title="Deshacer"
+                                                    aria-label="Deshacer"
+                                                    disabled={
+                                                        pending ||
+                                                        !canUndo
+                                                    }
+                                                    onClick={
+                                                        () => historyAction(1)
+                                                    }>
+                                                    <FaUndo />
+                                                </button>
 
                         <button
-                            type="button"
-                            disabled={
-                                pending ||
-                                !selectedIds.length
-                            }
-                            onClick={
-                                () => transformGroup(
-                                    TRANSFORM_ROTATE_STRUCTURE,
-                                    1
-                                )
-                            }>
-                            Estructura +90
-                        </button>
+                                                    type="button"
+                                                    className="btn btn-sm btn-secondary builder-pro-icon-button"
+                                title="Rehacer"
+                                                    aria-label="Rehacer"
+                                                    disabled={
+                                                        pending ||
+                                                        !canRedo
+                                                    }
+                                                    onClick={
+                                                        () => historyAction(2)
+                                                    }>
+                                                    <FaRedo />
+                                                </button>
                     </div>
-
-                    <button
-                        type="button"
-                        className="builder-pro-clear"
-                        disabled={
-                            pending ||
-                            !selectedIds.length
-                        }
-                        onClick={ clearSelection }>
-                        Limpiar selecci?n
-                    </button>
-                </div> }
+                    </NitroCardContentView> }
+                </NitroCardView> }
 
             { selectionBox &&
                 <div
                     className="builder-pro-selection-box"
                     style={ selectionBox } /> }
-        </div>
+        </>
     );
 }

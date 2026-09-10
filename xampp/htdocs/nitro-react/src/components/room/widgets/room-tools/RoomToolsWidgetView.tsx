@@ -1,6 +1,6 @@
-import { GetGuestRoomResultEvent, NavigatorSearchComposer, RateFlatMessageComposer, RoomDataParser } from '@nitrots/nitro-renderer';
+import { GetGuestRoomResultEvent, NavigatorSearchComposer, RateFlatMessageComposer, RoomControllerLevel, RoomDataParser } from '@nitrots/nitro-renderer';
 import { FC, useEffect, useState } from 'react';
-import { CreateLinkEvent, GetRoomEngine, LocalizeText, SendMessageComposer, SetLocalStorage, TryVisitRoom } from '../../../../api';
+import { CreateLinkEvent, GetRoomEngine, GetSessionDataManager, LocalizeText, SendMessageComposer, SetLocalStorage, TryVisitRoom } from '../../../../api';
 import { Base, Column, Flex, Text, TransitionAnimation, TransitionAnimationTypes, classNames } from '../../../../common';
 import { useMessageEvent, useNavigator, useRoom } from '../../../../hooks';
 
@@ -17,6 +17,16 @@ export const RoomToolsWidgetView: FC<{}> = props =>
     const [ roomHistory, setRoomHistory ] = useState<{ roomId: number, roomName: string }[]>([]);
     const { navigatorData = null } = useNavigator();
     const { roomSession = null } = useRoom();
+
+    const sessionDataManager = GetSessionDataManager();
+
+    const canUseBuilderPro =
+        !!roomSession &&
+        (
+            roomSession.isRoomOwner ||
+            roomSession.controllerLevel >= RoomControllerLevel.GUEST ||
+            !!sessionDataManager?.isModerator
+        );
 
     useEffect(() => { if(!roomName) setRoomName(LocalizeText('landing.view.generic.welcome.first_login')); }, [ roomName ]);
 
@@ -40,6 +50,10 @@ export const RoomToolsWidgetView: FC<{}> = props =>
                     return !prevValue;
                 });
                 return;
+            case 'builder_pro':
+                CreateLinkEvent('builder-pro/toggle');
+                return;
+
             case 'chat_history':
                 CreateLinkEvent('chat-history/toggle');
                 return;
@@ -142,6 +156,22 @@ export const RoomToolsWidgetView: FC<{}> = props =>
                             </Flex>
                             <Text className="holo-room-tool-label">{ LocalizeText('room.zoom.button.text') }</Text>
                         </Flex>
+
+                        { canUseBuilderPro &&
+                            <Flex
+                                pointer
+                                alignItems="center"
+                                className="holo-room-tool-row"
+                                onClick={ () => handleToolClick('builder_pro') }>
+                                <Flex
+                                    center
+                                    className="holo-room-tool-icon">
+                                    <Base className="icon icon-bawtool" />
+                                </Flex>
+                                <Text className="holo-room-tool-label">
+                                    Construcción
+                                </Text>
+                            </Flex> }
 
                         <Flex pointer alignItems="center" className="holo-room-tool-row" onClick={ () => handleToolClick('chat_history') }>
                             <Flex center className="holo-room-tool-icon"><Base className="icon icon-chat-history" /></Flex>

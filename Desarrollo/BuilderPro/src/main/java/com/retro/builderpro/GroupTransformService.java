@@ -31,6 +31,7 @@ public final class GroupTransformService
     public static final int OP_HEIGHT = 1;
     public static final int OP_ROTATE_STRUCTURE = 2;
     public static final int OP_ORIENT = 3;
+    public static final int OP_FLOOR = 4;
 
     private static final double EPSILON = 0.000001D;
 
@@ -111,6 +112,16 @@ public final class GroupTransformService
                 return Result.failure(
                         6,
                         "El desplazamiento Z es demasiado grande."
+                );
+            }
+        }
+        else if(operation == OP_FLOOR)
+        {
+            if(argument != 0)
+            {
+                return Result.failure(
+                        6,
+                        "Bajar al suelo no admite argumento."
                 );
             }
         }
@@ -258,16 +269,129 @@ public final class GroupTransformService
         THashSet<RoomTile> affectedTiles =
                 new THashSet<RoomTile>();
 
+        double floorDelta = 0.0D;
+
+        if(operation == OP_FLOOR)
+        {
+            double minimumClearance =
+                    Double.MAX_VALUE;
+
+            RoomLayout layout =
+                    room.getLayout();
+
+            for(Snapshot snapshot : snapshots)
+            {
+                Rectangle footprint =
+                        RoomLayout.getRectangle(
+                                snapshot.x,
+                                snapshot.y,
+                                snapshot.item
+                                        .getBaseItem()
+                                        .getWidth(),
+                                snapshot.item
+                                        .getBaseItem()
+                                        .getLength(),
+                                snapshot.rotation
+                        );
+
+                double floorHeight =
+                        -Double.MAX_VALUE;
+
+                for(int x = footprint.x;
+                        x < footprint.x + footprint.width;
+                        x++)
+                {
+                    for(int y = footprint.y;
+                            y < footprint.y + footprint.height;
+                            y++)
+                    {
+                        RoomTile tile =
+                                layout.getTile(
+                                        (short)x,
+                                        (short)y
+                                );
+
+                        if(tile == null
+                                || tile.getState()
+                                == RoomTileState.INVALID)
+                        {
+                            return Result.failure(
+                                    14,
+                                    "La seleccion ocupa tiles invalidos."
+                            );
+                        }
+
+                        floorHeight =
+                                Math.max(
+                                        floorHeight,
+                                        layout.getHeightAtSquare(
+                                                x,
+                                                y
+                                        )
+                                );
+                    }
+                }
+
+                double clearance =
+                        snapshot.z -
+                                floorHeight;
+
+                if(clearance < -EPSILON)
+                {
+                    return Result.failure(
+                            15,
+                            "Un furni ya esta por debajo del suelo."
+                    );
+                }
+
+                minimumClearance =
+                        Math.min(
+                                minimumClearance,
+                                clearance
+                        );
+            }
+
+            if(minimumClearance != Double.MAX_VALUE)
+            {
+                floorDelta =
+                        -roundZ(
+                                Math.max(
+                                        0.0D,
+                                        minimumClearance
+                                )
+                        );
+            }
+        }
+
         for(Snapshot snapshot : snapshots)
         {
-            Target target =
-                    buildTarget(
-                            snapshot,
-                            pivot,
-                            operation,
-                            argument,
-                            exactOrientationTargets
-                    );
+            Target target;
+
+            if(operation == OP_FLOOR)
+            {
+                target =
+                        new Target(
+                                snapshot,
+                                snapshot.x,
+                                snapshot.y,
+                                roundZ(
+                                        snapshot.z +
+                                                floorDelta
+                                ),
+                                snapshot.rotation
+                        );
+            }
+            else
+            {
+                target =
+                        buildTarget(
+                                snapshot,
+                                pivot,
+                                operation,
+                                argument,
+                                exactOrientationTargets
+                        );
+            }
 
             Result validation =
                     validateTarget(
