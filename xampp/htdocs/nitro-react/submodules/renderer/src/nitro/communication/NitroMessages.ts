@@ -28,11 +28,11 @@ import { GetReactionProfileComposer, SaveReactionDisplayModeComposer, SaveReacti
 import { AvatarReactionComposer } from './messages/outgoing/reactions';
 import { EstadoBloqueoInventarioEvent, ResultadoConfigurarPatronEvent, ResultadoPatronInventarioEvent } from './messages/incoming/inventorylock';
 import { HoloGridWalkabilityEvent } from './messages/incoming/hologrid';
-import { BuilderProCopyGroupResultEvent, BuilderProPasteGroupResultEvent, BuilderProMoveGroupResultEvent, BuilderProTransformGroupResultEvent, BuilderProHistoryResultEvent, BuilderProOffsetGroupResultEvent, BuilderProLayoutGroupResultEvent } from './messages/incoming/builderpro';
+import { BuilderProCopyGroupResultEvent, BuilderProPasteGroupResultEvent, BuilderProMoveGroupResultEvent, BuilderProTransformGroupResultEvent, BuilderProHistoryResultEvent, BuilderProOffsetGroupResultEvent, BuilderProLayoutGroupResultEvent, BuilderProGroupStateEvent } from './messages/incoming/builderpro';
 import { RpgEngineResultEvent } from './messages/incoming/rpgengine';
 import { CerrarSesionInventarioComposer, ConfigurarPatronInventarioComposer, ConsultarBloqueoInventarioComposer, VerificarPatronInventarioComposer } from './messages/outgoing/inventorylock';
 import { GetHoloGridWalkabilityComposer } from './messages/outgoing/hologrid';
-import { BuilderProCopyGroupComposer, BuilderProPasteGroupComposer, BuilderProMoveGroupComposer, BuilderProTransformGroupComposer, BuilderProHistoryComposer, BuilderProOffsetGroupComposer, BuilderProLayoutGroupComposer } from './messages/outgoing/builderpro';
+import { BuilderProCopyGroupComposer, BuilderProPasteGroupComposer, BuilderProMoveGroupComposer, BuilderProTransformGroupComposer, BuilderProHistoryComposer, BuilderProOffsetGroupComposer, BuilderProLayoutGroupComposer, BuilderProGroupStateComposer } from './messages/outgoing/builderpro';
 import { RpgEngineCommandComposer } from './messages/outgoing/rpgengine';
 import { ObtenerRecordsSubastasComposer } from './messages/outgoing/subastas';
 import { RecordsSubastasEvent } from './messages/incoming/subastas';
@@ -129,6 +129,7 @@ export class NitroMessages implements IMessageConfiguration {
         this._events.set(IncomingHeader.BUILDER_PRO_HISTORY_RESULT, BuilderProHistoryResultEvent);
         this._events.set(IncomingHeader.BUILDER_PRO_OFFSET_GROUP_RESULT, BuilderProOffsetGroupResultEvent);
         this._events.set(IncomingHeader.BUILDER_PRO_LAYOUT_GROUP_RESULT, BuilderProLayoutGroupResultEvent);
+        this._events.set(IncomingHeader.BUILDER_PRO_GROUP_STATE_RESULT, BuilderProGroupStateEvent);
         this._events.set(IncomingHeader.RPG_ENGINE_RESULT, RpgEngineResultEvent);
         this._events.set(IncomingHeader.ROOM_AD_ERROR, RoomAdErrorEvent);
 
@@ -745,6 +746,7 @@ export class NitroMessages implements IMessageConfiguration {
         this._composers.set(OutgoingHeader.BUILDER_PRO_HISTORY, BuilderProHistoryComposer);
         this._composers.set(OutgoingHeader.BUILDER_PRO_OFFSET_GROUP, BuilderProOffsetGroupComposer);
         this._composers.set(OutgoingHeader.BUILDER_PRO_LAYOUT_GROUP, BuilderProLayoutGroupComposer);
+        this._composers.set(OutgoingHeader.BUILDER_PRO_GROUP_STATE, BuilderProGroupStateComposer);
         this._composers.set(OutgoingHeader.RPG_ENGINE_COMMAND, RpgEngineCommandComposer);
 
         // SUBASTAS

@@ -3,6 +3,7 @@ package com.retro.builderpro.handlers;
 import com.eu.habbo.messages.ServerMessage;
 import com.eu.habbo.messages.incoming.MessageHandler;
 import com.retro.builderpro.BuilderProHistoryService;
+import com.retro.builderpro.BuilderProGroupGuard;
 import com.retro.builderpro.BuilderProPackets;
 import com.retro.builderpro.GroupTransformService;
 
@@ -139,6 +140,25 @@ public class TransformGroupRequest
                     GroupTransformService.Result.failure(
                             33,
                             "Esta transformacion no admite orientaciones individuales."
+                    )
+            );
+
+            return;
+        }
+
+        BuilderProGroupGuard.Result groupGuard =
+                BuilderProGroupGuard.validate(
+                        this.client.getHabbo(),
+                        itemIds
+                );
+
+        if(!groupGuard.success)
+        {
+            sendResult(
+                    requestId,
+                    GroupTransformService.Result.failure(
+                            34,
+                            groupGuard.message
                     )
             );
 

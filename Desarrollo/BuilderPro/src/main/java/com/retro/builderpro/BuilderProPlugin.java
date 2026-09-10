@@ -9,6 +9,7 @@ import com.eu.habbo.plugin.events.emulator.EmulatorLoadedEvent;
 import com.eu.habbo.plugin.events.furniture.FurnitureBuildheightEvent;
 import com.eu.habbo.plugin.events.furniture.FurnitureMovedEvent;
 import com.eu.habbo.plugin.events.furniture.FurniturePlacedEvent;
+import com.eu.habbo.plugin.events.furniture.FurniturePickedUpEvent;
 import com.retro.builderpro.handlers.CopyGroupRequest;
 import com.retro.builderpro.handlers.PasteGroupRequest;
 import com.retro.builderpro.handlers.MoveGroupRequest;
@@ -16,6 +17,7 @@ import com.retro.builderpro.handlers.OffsetGroupRequest;
 import com.retro.builderpro.handlers.LayoutGroupRequest;
 import com.retro.builderpro.handlers.TransformGroupRequest;
 import com.retro.builderpro.handlers.HistoryRequest;
+import com.retro.builderpro.handlers.GroupStateRequest;
 
 public class BuilderProPlugin
         extends HabboPlugin
@@ -33,6 +35,8 @@ public class BuilderProPlugin
             EmulatorLoadedEvent event)
             throws Exception
     {
+        BuilderProGroupRepository.initialize();
+
         Emulator.getGameServer()
                 .getPacketManager()
                 .registerHandler(
@@ -82,8 +86,57 @@ public class BuilderProPlugin
                         LayoutGroupRequest.class
                 );
 
+        Emulator.getGameServer()
+                .getPacketManager()
+                .registerHandler(
+                        BuilderProPackets.GROUP_STATE_REQUEST,
+                        GroupStateRequest.class
+                );
+
         System.out.println(
                 "[BuilderPro] Backend MVP 0 cargado."
+        );
+    }
+
+    @EventHandler
+    public void onFurniturePickedUp(
+            FurniturePickedUpEvent event)
+    {
+        if(event == null
+                || event.furniture == null)
+        {
+            return;
+        }
+
+        final int itemId =
+                event.furniture.getId();
+
+        Emulator.getThreading().run(
+                () ->
+                {
+                    if(event.isCancelled())
+                    {
+                        return;
+                    }
+
+                    try
+                    {
+                        BuilderProGroupRepository.removeItem(
+                                itemId
+                        );
+                    }
+                    catch(Exception exception)
+                    {
+                        System.err.println(
+                                "[BuilderPro] No se pudo limpiar el furni "
+                                        + itemId
+                                        + " de su grupo."
+                        );
+
+                        exception.printStackTrace();
+                    }
+                },
+                50L
         );
     }
 

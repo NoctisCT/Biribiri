@@ -3,6 +3,7 @@ package com.retro.builderpro.handlers;
 import com.eu.habbo.messages.ServerMessage;
 import com.eu.habbo.messages.incoming.MessageHandler;
 import com.retro.builderpro.BuilderProHistoryService;
+import com.retro.builderpro.BuilderProGroupGuard;
 import com.retro.builderpro.BuilderProPackets;
 import com.retro.builderpro.GroupLayoutService;
 
@@ -65,6 +66,25 @@ public class LayoutGroupRequest
         int spacing =
                 this.packet.readInt()
                         .intValue();
+
+        BuilderProGroupGuard.Result groupGuard =
+                BuilderProGroupGuard.validate(
+                        this.client.getHabbo(),
+                        itemIds
+                );
+
+        if(!groupGuard.success)
+        {
+            sendResult(
+                    requestId,
+                    GroupLayoutService.Result.failure(
+                            42,
+                            groupGuard.message
+                    )
+            );
+
+            return;
+        }
 
         List<BuilderProHistoryService.ItemState> before =
                 BuilderProHistoryService.capture(

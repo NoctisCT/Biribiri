@@ -1,4 +1,4 @@
-import { RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
+import { RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { FaClone, FaCopy, FaMinus, FaPaste, FaQuestion, FaRedo, FaUndo } from 'react-icons/fa';
 import { AddEventLinkTracker, BuilderProSelectionVisualizer, CanManipulateFurniture, GetRoomEngine, GetSessionDataManager, RemoveLinkEventTracker, SendMessageComposer, SetBuilderProSelectionModeActive } from '../../../../api';
@@ -20,6 +20,20 @@ const FORMATION_ROW_RIGHT = 2;
 const FORMATION_COLUMN_UP = 3;
 const FORMATION_COLUMN_DOWN = 4;
 const FORMATION_STACK = 5;
+
+const GROUP_OP_LIST = 0;
+const GROUP_OP_CREATE = 1;
+const GROUP_OP_RENAME = 2;
+const GROUP_OP_SET_LOCKED = 3;
+const GROUP_OP_DELETE = 4;
+const GROUP_OP_REPLACE_MEMBERS = 5;
+
+type BuilderProSavedGroupState = {
+    id: number;
+    name: string;
+    locked: boolean;
+    itemIds: number[];
+};
 
 type BuilderProDragLocation = {
     id: number;
@@ -67,6 +81,12 @@ export const BuilderProView: FC<{}> = props =>
     const [ canRedo, setCanRedo ] = useState(false);
     const [ minimized, setMinimized ] = useState(false);
     const [ helpOpen, setHelpOpen ] = useState(false);
+    const [ savedGroups, setSavedGroups ] =
+        useState<BuilderProSavedGroupState[]>([]);
+    const [ selectedGroupId, setSelectedGroupId ] =
+        useState<number | null>(null);
+    const [ groupName, setGroupName ] = useState('');
+    const [ groupPending, setGroupPending ] = useState(false);
     const [ moveStep, setMoveStep ] = useState(1);
     const [ heightStep, setHeightStep ] = useState(1);
     const [ offsetX, setOffsetX ] = useState('');
@@ -136,6 +156,13 @@ export const BuilderProView: FC<{}> = props =>
     const suppressDragClickTimerRef =
         useRef<number | null>(null);
     const areaModeRef = useRef(false);
+    const savedGroupsRef =
+        useRef<BuilderProSavedGroupState[]>([]);
+    const groupPendingRef = useRef(false);
+    const groupRequestIdRef = useRef(0);
+    const groupOperationRef = useRef(GROUP_OP_LIST);
+    const groupPendingTimeoutRef =
+        useRef<number | null>(null);
     const suppressAreaClickRef = useRef(false);
     const pivotIdRef = useRef<number | null>(null);
     const pivotPickModeRef = useRef(false);
@@ -150,6 +177,7 @@ export const BuilderProView: FC<{}> = props =>
     const roomSessionRef = useRef(roomSession);
 
     roomSessionRef.current = roomSession;
+    savedGroupsRef.current = savedGroups;
     moveStepRef.current = moveStep;
 
     const sessionDataManager = GetSessionDataManager();
@@ -160,6 +188,16 @@ export const BuilderProView: FC<{}> = props =>
             roomSession.controllerLevel >= RoomControllerLevel.GUEST ||
             !!sessionDataManager?.isModerator
         );
+
+    const selectedSavedGroup =
+        selectedGroupId === null
+            ? null
+            : (
+                savedGroups.find(
+                    group =>
+                        group.id === selectedGroupId
+                ) || null
+            );
 
     const applySelection = useCallback((next: number[]) =>
     {
@@ -369,6 +407,520 @@ export const BuilderProView: FC<{}> = props =>
                 : 'Resaltado oculto. La selección sigue activa.'
         );
     }, []);
+
+
+    const getAvailableGroupItemIds =
+        useCallback((
+            group: BuilderProSavedGroupState
+        ): number[] =>
+        {
+            const currentRoomSession =
+                roomSessionRef.current;
+
+            const roomEngine =
+                GetRoomEngine();
+
+            if(
+                !currentRoomSession ||
+                !roomEngine
+            )
+            {
+                return [];
+            }
+
+            return group.itemIds.filter(
+                itemId =>
+                {
+                    const roomObject =
+                        roomEngine.getRoomObject(
+                            currentRoomSession.roomId,
+                            itemId,
+                            RoomObjectCategory.FLOOR
+                        );
+
+                    if(!roomObject)
+                    {
+                        return false;
+                    }
+
+                    return CanManipulateFurniture(
+                        currentRoomSession,
+                        itemId,
+                        RoomObjectCategory.FLOOR
+                    );
+                }
+            );
+        }, []);
+
+    const requestGroupState =
+        useCallback((
+            operation: number,
+            groupId = 0,
+            name = '',
+            locked = false,
+            itemIds: number[] = []
+        ) =>
+        {
+            if(!activeRef.current) return;
+            if(!roomSessionRef.current) return;
+            if(groupPendingRef.current) return;
+
+            groupRequestIdRef.current++;
+
+            if(groupRequestIdRef.current > 2000000000)
+            {
+                groupRequestIdRef.current = 1;
+            }
+
+            const requestId =
+                groupRequestIdRef.current;
+
+            groupOperationRef.current =
+                operation;
+
+            groupPendingRef.current = true;
+            setGroupPending(true);
+
+            SendMessageComposer(
+                new BuilderProGroupStateComposer(
+                    requestId,
+                    operation,
+                    groupId,
+                    name,
+                    locked,
+                    itemIds
+                )
+            );
+
+            if(groupPendingTimeoutRef.current !== null)
+            {
+                window.clearTimeout(
+                    groupPendingTimeoutRef.current
+                );
+            }
+
+            groupPendingTimeoutRef.current =
+                window.setTimeout(
+                    () =>
+                    {
+                        groupPendingTimeoutRef.current =
+                            null;
+
+                        if(
+                            !groupPendingRef.current ||
+                            groupRequestIdRef.current !==
+                            requestId
+                        )
+                        {
+                            return;
+                        }
+
+                        groupPendingRef.current = false;
+                        setGroupPending(false);
+
+                        setStatus(
+                            'Sin respuesta al gestionar grupos.'
+                        );
+                    },
+                    3000
+                );
+        }, []);
+
+    useMessageEvent<BuilderProGroupStateEvent>(
+        BuilderProGroupStateEvent,
+        event =>
+        {
+            const parser =
+                event.getParser();
+
+            if(!parser) return;
+
+            if(
+                parser.requestId !==
+                groupRequestIdRef.current
+            )
+            {
+                return;
+            }
+
+            if(groupPendingTimeoutRef.current !== null)
+            {
+                window.clearTimeout(
+                    groupPendingTimeoutRef.current
+                );
+
+                groupPendingTimeoutRef.current =
+                    null;
+            }
+
+            groupPendingRef.current = false;
+            setGroupPending(false);
+
+            const nextGroups:
+                BuilderProSavedGroupState[] =
+                parser.groups.map(
+                    group => ({
+                        id: group.id,
+                        name: group.name,
+                        locked: group.locked,
+                        itemIds: [ ...group.itemIds ]
+                    })
+                );
+
+            savedGroupsRef.current =
+                nextGroups;
+
+            setSavedGroups(
+                nextGroups
+            );
+
+            const operation =
+                groupOperationRef.current;
+
+            setSelectedGroupId(
+                current =>
+                {
+                    if(
+                        parser.success &&
+                        operation === GROUP_OP_CREATE &&
+                        nextGroups.length
+                    )
+                    {
+                        return nextGroups[
+                            nextGroups.length - 1
+                        ].id;
+                    }
+
+                    if(
+                        current !== null &&
+                        nextGroups.some(
+                            group =>
+                                group.id === current
+                        )
+                    )
+                    {
+                        return current;
+                    }
+
+                    return nextGroups.length
+                        ? nextGroups[0].id
+                        : null;
+                }
+            );
+
+            /*
+             * Una selección existente nunca puede
+             * quedarse parcialmente dentro de un
+             * grupo que acaba de ser bloqueado.
+             */
+            if(parser.success)
+            {
+                let normalized = [
+                    ...selectedIdsRef.current
+                ];
+
+                const normalizedSet =
+                    new Set(normalized);
+
+                for(const group of nextGroups)
+                {
+                    if(!group.locked)
+                    {
+                        continue;
+                    }
+
+                    const available =
+                        getAvailableGroupItemIds(
+                            group
+                        );
+
+                    if(
+                        !available.some(
+                            itemId =>
+                                normalizedSet.has(
+                                    itemId
+                                )
+                        )
+                    )
+                    {
+                        continue;
+                    }
+
+                    for(const itemId of available)
+                    {
+                        if(
+                            normalizedSet.has(
+                                itemId
+                            )
+                        )
+                        {
+                            continue;
+                        }
+
+                        if(
+                            normalized.length >=
+                            MAX_SELECTION
+                        )
+                        {
+                            break;
+                        }
+
+                        normalized.push(
+                            itemId
+                        );
+
+                        normalizedSet.add(
+                            itemId
+                        );
+                    }
+                }
+
+                if(
+                    normalized.length !==
+                    selectedIdsRef.current.length
+                )
+                {
+                    applySelection(
+                        normalized
+                    );
+                }
+            }
+
+            if(
+                operation !== GROUP_OP_LIST ||
+                !parser.success
+            )
+            {
+                setStatus(
+                    parser.success
+                        ? parser.message
+                        : `Error ${ parser.code }: ${ parser.message }`
+                );
+            }
+        }
+    );
+
+    useEffect(() =>
+    {
+        if(!active) return;
+        if(!roomSession) return;
+
+        if(groupPendingTimeoutRef.current !== null)
+        {
+            window.clearTimeout(
+                groupPendingTimeoutRef.current
+            );
+
+            groupPendingTimeoutRef.current = null;
+        }
+
+        groupPendingRef.current = false;
+        setGroupPending(false);
+
+        requestGroupState(
+            GROUP_OP_LIST
+        );
+    }, [
+        active,
+        roomSession?.roomId,
+        requestGroupState
+    ]);
+
+    useEffect(() =>
+    {
+        if(selectedGroupId === null)
+        {
+            setGroupName('');
+            return;
+        }
+
+        const group =
+            savedGroups.find(
+                entry =>
+                    entry.id ===
+                    selectedGroupId
+            );
+
+        setGroupName(
+            group?.name || ''
+        );
+    }, [
+        savedGroups,
+        selectedGroupId
+    ]);
+
+    const selectSavedGroup =
+        useCallback((
+            group: BuilderProSavedGroupState
+        ) =>
+        {
+            const ids =
+                getAvailableGroupItemIds(
+                    group
+                );
+
+            if(!ids.length)
+            {
+                setStatus(
+                    'Este grupo no contiene furnis disponibles en la sala.'
+                );
+
+                return;
+            }
+
+            applySelection(
+                ids.slice(
+                    0,
+                    MAX_SELECTION
+                )
+            );
+
+            setSelectedGroupId(
+                group.id
+            );
+
+            setStatus(
+                `${ group.name }: ${ ids.length } furnis seleccionados.`
+            );
+        }, [
+            applySelection,
+            getAvailableGroupItemIds
+        ]);
+
+    const createSavedGroup =
+        useCallback(() =>
+        {
+            if(!selectedIdsRef.current.length)
+            {
+                setStatus(
+                    'Selecciona furnis antes de crear un grupo.'
+                );
+
+                return;
+            }
+
+            requestGroupState(
+                GROUP_OP_CREATE,
+                0,
+                '',
+                false,
+                selectedIdsRef.current
+            );
+        }, [ requestGroupState ]);
+
+    const renameSavedGroup =
+        useCallback(() =>
+        {
+            if(!selectedSavedGroup)
+            {
+                return;
+            }
+
+            const name =
+                groupName.trim();
+
+            if(!name)
+            {
+                setStatus(
+                    'Escribe un nombre para el grupo.'
+                );
+
+                return;
+            }
+
+            requestGroupState(
+                GROUP_OP_RENAME,
+                selectedSavedGroup.id,
+                name
+            );
+        }, [
+            groupName,
+            requestGroupState,
+            selectedSavedGroup
+        ]);
+
+    const toggleSavedGroupLock =
+        useCallback(() =>
+        {
+            if(!selectedSavedGroup)
+            {
+                return;
+            }
+
+            requestGroupState(
+                GROUP_OP_SET_LOCKED,
+                selectedSavedGroup.id,
+                '',
+                !selectedSavedGroup.locked
+            );
+        }, [
+            requestGroupState,
+            selectedSavedGroup
+        ]);
+
+    const updateSavedGroupMembers =
+        useCallback(() =>
+        {
+            if(!selectedSavedGroup)
+            {
+                return;
+            }
+
+            if(selectedSavedGroup.locked)
+            {
+                setStatus(
+                    'Desbloquea el grupo antes de cambiar sus miembros.'
+                );
+
+                return;
+            }
+
+            if(!selectedIdsRef.current.length)
+            {
+                setStatus(
+                    'Selecciona los furnis que formarán el grupo.'
+                );
+
+                return;
+            }
+
+            requestGroupState(
+                GROUP_OP_REPLACE_MEMBERS,
+                selectedSavedGroup.id,
+                '',
+                false,
+                selectedIdsRef.current
+            );
+        }, [
+            requestGroupState,
+            selectedSavedGroup
+        ]);
+
+    const deleteSavedGroup =
+        useCallback(() =>
+        {
+            if(!selectedSavedGroup)
+            {
+                return;
+            }
+
+            if(
+                !window.confirm(
+                    `¿Desagrupar "${ selectedSavedGroup.name }"? Los furnis no se eliminarán.`
+                )
+            )
+            {
+                return;
+            }
+
+            requestGroupState(
+                GROUP_OP_DELETE,
+                selectedSavedGroup.id
+            );
+        }, [
+            requestGroupState,
+            selectedSavedGroup
+        ]);
 
     const captureTransformSnapshots =
         useCallback((
@@ -812,6 +1364,18 @@ export const BuilderProView: FC<{}> = props =>
             suppressDragClickTimerRef.current = null;
         }
 
+        if(groupPendingTimeoutRef.current !== null)
+        {
+            window.clearTimeout(
+                groupPendingTimeoutRef.current
+            );
+
+            groupPendingTimeoutRef.current = null;
+        }
+
+        groupPendingRef.current = false;
+        savedGroupsRef.current = [];
+
         SetBuilderProSelectionModeActive(false);
 
         clearSelection();
@@ -822,6 +1386,10 @@ export const BuilderProView: FC<{}> = props =>
         setSelectionBox(null);
         setMinimized(false);
         setHelpOpen(false);
+        setGroupPending(false);
+        setSavedGroups([]);
+        setSelectedGroupId(null);
+        setGroupName('');
         setStatus('');
     }, [ clearSelection ]);
 
@@ -830,6 +1398,18 @@ export const BuilderProView: FC<{}> = props =>
         if(!canBuild) return;
 
         clearSelection();
+
+        if(groupPendingTimeoutRef.current !== null)
+        {
+            window.clearTimeout(
+                groupPendingTimeoutRef.current
+            );
+
+            groupPendingTimeoutRef.current = null;
+        }
+
+        groupPendingRef.current = false;
+        savedGroupsRef.current = [];
 
         activeRef.current = true;
         pendingRef.current = false;
@@ -844,6 +1424,10 @@ export const BuilderProView: FC<{}> = props =>
         setSelectionBox(null);
         setMinimized(false);
         setHelpOpen(false);
+        setGroupPending(false);
+        setSavedGroups([]);
+        setSelectedGroupId(null);
+        setGroupName('');
         setStatus('');
     }, [ canBuild, clearSelection ]);
 
@@ -1058,6 +1642,47 @@ export const BuilderProView: FC<{}> = props =>
             added++;
         }
 
+        for(const group of savedGroupsRef.current)
+        {
+            if(!group.locked)
+            {
+                continue;
+            }
+
+            if(
+                !group.itemIds.some(
+                    itemId =>
+                        nextSet.has(
+                            itemId
+                        )
+                )
+            )
+            {
+                continue;
+            }
+
+            const available =
+                getAvailableGroupItemIds(
+                    group
+                );
+
+            for(const itemId of available)
+            {
+                if(nextSet.has(itemId))
+                {
+                    continue;
+                }
+
+                if(next.length >= MAX_SELECTION)
+                {
+                    break;
+                }
+
+                next.push(itemId);
+                nextSet.add(itemId);
+            }
+        }
+
         applySelection(next);
 
         if(
@@ -1075,7 +1700,10 @@ export const BuilderProView: FC<{}> = props =>
         setStatus(
             `Área: ${ added } añadidos. ${ next.length } seleccionados.`
         );
-    }, [ applySelection ]);
+    }, [
+        applySelection,
+        getAvailableGroupItemIds
+    ]);
 
     useEffect(() =>
     {
@@ -1491,7 +2119,44 @@ export const BuilderProView: FC<{}> = props =>
                     event.objectId
                 ))
                 {
-                    return;
+                    const lockedGroup =
+                        savedGroupsRef.current.find(
+                            group =>
+                                group.locked &&
+                                group.itemIds.includes(
+                                    event.objectId
+                                )
+                        );
+
+                    if(!lockedGroup)
+                    {
+                        return;
+                    }
+
+                    const groupIds =
+                        getAvailableGroupItemIds(
+                            lockedGroup
+                        );
+
+                    if(
+                        !groupIds.includes(
+                            event.objectId
+                        )
+                    )
+                    {
+                        return;
+                    }
+
+                    applySelection(
+                        groupIds.slice(
+                            0,
+                            MAX_SELECTION
+                        )
+                    );
+
+                    setSelectedGroupId(
+                        lockedGroup.id
+                    );
                 }
 
                 const currentRoomSession =
@@ -1721,16 +2386,93 @@ export const BuilderProView: FC<{}> = props =>
 
             if(event.type === RoomEngineObjectEvent.REMOVED)
             {
-                if(!selectedIdsRef.current.includes(event.objectId))
+                const removedId =
+                    event.objectId;
+
+                const currentGroups =
+                    savedGroupsRef.current;
+
+                let groupsChanged =
+                    false;
+
+                const nextGroups =
+                    currentGroups
+                        .map(
+                            group =>
+                            {
+                                if(
+                                    !group.itemIds.includes(
+                                        removedId
+                                    )
+                                )
+                                {
+                                    return group;
+                                }
+
+                                groupsChanged = true;
+
+                                return {
+                                    ...group,
+                                    itemIds:
+                                        group.itemIds.filter(
+                                            itemId =>
+                                                itemId !==
+                                                removedId
+                                        )
+                                };
+                            }
+                        )
+                        .filter(
+                            group =>
+                                group.itemIds.length >
+                                0
+                        );
+
+                if(groupsChanged)
                 {
-                    return;
+                    savedGroupsRef.current =
+                        nextGroups;
+
+                    setSavedGroups(
+                        nextGroups
+                    );
+
+                    setSelectedGroupId(
+                        current =>
+                        {
+                            if(
+                                current !== null &&
+                                nextGroups.some(
+                                    group =>
+                                        group.id ===
+                                        current
+                                )
+                            )
+                            {
+                                return current;
+                            }
+
+                            return nextGroups.length
+                                ? nextGroups[0].id
+                                : null;
+                        }
+                    );
                 }
 
-                applySelection(
-                    selectedIdsRef.current.filter(
-                        id => id !== event.objectId
+                if(
+                    selectedIdsRef.current.includes(
+                        removedId
                     )
-                );
+                )
+                {
+                    applySelection(
+                        selectedIdsRef.current.filter(
+                            id =>
+                                id !==
+                                removedId
+                        )
+                    );
+                }
 
                 return;
             }
@@ -1798,6 +2540,97 @@ export const BuilderProView: FC<{}> = props =>
             }
 
             const current = selectedIdsRef.current;
+
+            const lockedGroup =
+                savedGroupsRef.current.find(
+                    group =>
+                        group.locked &&
+                        group.itemIds.includes(
+                            event.objectId
+                        )
+                );
+
+            if(lockedGroup)
+            {
+                const groupIds =
+                    getAvailableGroupItemIds(
+                        lockedGroup
+                    );
+
+                const groupSet =
+                    new Set(groupIds);
+
+                const allSelected =
+                    groupIds.length > 0 &&
+                    groupIds.every(
+                        itemId =>
+                            current.includes(
+                                itemId
+                            )
+                    );
+
+                if(allSelected)
+                {
+                    const next =
+                        current.filter(
+                            itemId =>
+                                !groupSet.has(
+                                    itemId
+                                )
+                        );
+
+                    applySelection(next);
+
+                    setSelectedGroupId(
+                        lockedGroup.id
+                    );
+
+                    setStatus(
+                        `${ lockedGroup.name } deseleccionado.`
+                    );
+
+                    return;
+                }
+
+                const next = [
+                    ...current
+                ];
+
+                const nextSet =
+                    new Set(next);
+
+                for(const itemId of groupIds)
+                {
+                    if(nextSet.has(itemId))
+                    {
+                        continue;
+                    }
+
+                    if(next.length >= MAX_SELECTION)
+                    {
+                        setStatus(
+                            `El grupo no cabe en el límite de ${ MAX_SELECTION } furnis.`
+                        );
+
+                        return;
+                    }
+
+                    next.push(itemId);
+                    nextSet.add(itemId);
+                }
+
+                applySelection(next);
+
+                setSelectedGroupId(
+                    lockedGroup.id
+                );
+
+                setStatus(
+                    `${ lockedGroup.name }: ${ groupIds.length } furnis seleccionados.`
+                );
+
+                return;
+            }
 
             if(current.includes(event.objectId))
             {
@@ -4679,6 +5512,169 @@ export const BuilderProView: FC<{}> = props =>
                                     onClick={ clearSelection }>
                                     Limpiar selección
                                 </button>
+
+                                <div className="builder-pro-subtitle">
+                                    Grupos
+                                </div>
+
+                                <select
+                                    className="builder-pro-group-select"
+                                    disabled={
+                                        pending ||
+                                        groupPending ||
+                                        !savedGroups.length
+                                    }
+                                    value={
+                                        selectedGroupId ??
+                                        ''
+                                    }
+                                    onChange={
+                                        event =>
+                                        {
+                                            const value =
+                                                Number(
+                                                    event.target.value
+                                                );
+
+                                            setSelectedGroupId(
+                                                Number.isSafeInteger(value) &&
+                                                value > 0
+                                                    ? value
+                                                    : null
+                                            );
+                                        }
+                                    }>
+                                    { !savedGroups.length &&
+                                        <option value="">
+                                            Sin grupos
+                                        </option> }
+
+                                    { savedGroups.map(
+                                        group =>
+                                            <option
+                                                key={ group.id }
+                                                value={ group.id }>
+                                                { `${ group.name } · ${ group.itemIds.length } furnis${ group.locked ? ' · Bloqueado' : '' }` }
+                                            </option>
+                                    ) }
+                                </select>
+
+                                <div className="builder-pro-grid-2 builder-pro-group-actions">
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            groupPending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            createSavedGroup
+                                        }>
+                                        Crear grupo
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            groupPending ||
+                                            !selectedSavedGroup
+                                        }
+                                        onClick={
+                                            () =>
+                                                selectedSavedGroup &&
+                                                selectSavedGroup(
+                                                    selectedSavedGroup
+                                                )
+                                        }>
+                                        Seleccionar
+                                    </button>
+                                </div>
+
+                                <div className="builder-pro-grid-2">
+                                    <button
+                                        type="button"
+                                        className={
+                                            selectedSavedGroup?.locked
+                                                ? 'is-selected'
+                                                : ''
+                                        }
+                                        disabled={
+                                            pending ||
+                                            groupPending ||
+                                            !selectedSavedGroup
+                                        }
+                                        onClick={
+                                            toggleSavedGroupLock
+                                        }>
+                                        { selectedSavedGroup?.locked
+                                            ? 'Desbloquear'
+                                            : 'Bloquear' }
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            groupPending ||
+                                            !selectedSavedGroup ||
+                                            selectedSavedGroup.locked ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            updateSavedGroupMembers
+                                        }>
+                                        Actualizar miembros
+                                    </button>
+                                </div>
+
+                                <div className="builder-pro-group-rename">
+                                    <input
+                                        type="text"
+                                        maxLength={ 40 }
+                                        placeholder="Nombre del grupo"
+                                        disabled={
+                                            pending ||
+                                            groupPending ||
+                                            !selectedSavedGroup
+                                        }
+                                        value={ groupName }
+                                        onChange={
+                                            event =>
+                                                setGroupName(
+                                                    event.target.value
+                                                )
+                                        } />
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            groupPending ||
+                                            !selectedSavedGroup ||
+                                            !groupName.trim()
+                                        }
+                                        onClick={
+                                            renameSavedGroup
+                                        }>
+                                        Renombrar
+                                    </button>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    className="builder-pro-full"
+                                    disabled={
+                                        pending ||
+                                        groupPending ||
+                                        !selectedSavedGroup
+                                    }
+                                    onClick={
+                                        deleteSavedGroup
+                                    }>
+                                    Desagrupar
+                                </button>
+
                             </div>
                         </details>
 

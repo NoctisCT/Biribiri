@@ -26,4 +26,7 @@ public final class BuilderProPackets
 
     public static final int LAYOUT_GROUP_REQUEST = 6312;
     public static final int LAYOUT_GROUP_RESULT = 6313;
+
+    public static final int GROUP_STATE_REQUEST = 6314;
+    public static final int GROUP_STATE_RESULT = 6315;
 }

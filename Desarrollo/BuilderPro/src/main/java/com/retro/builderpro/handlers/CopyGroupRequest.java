@@ -3,6 +3,7 @@ package com.retro.builderpro.handlers;
 import com.eu.habbo.messages.ServerMessage;
 import com.eu.habbo.messages.incoming.MessageHandler;
 import com.retro.builderpro.BuilderProPackets;
+import com.retro.builderpro.BuilderProGroupGuard;
 import com.retro.builderpro.CopyGroupService;
 
 import java.util.ArrayList;
@@ -58,6 +59,25 @@ public class CopyGroupRequest
                             .readInt()
                             .intValue()
             );
+        }
+
+        BuilderProGroupGuard.Result groupGuard =
+                BuilderProGroupGuard.validate(
+                        this.client.getHabbo(),
+                        itemIds
+                );
+
+        if(!groupGuard.success)
+        {
+            sendResult(
+                    requestId,
+                    CopyGroupService.Result.failure(
+                            31,
+                            groupGuard.message
+                    )
+            );
+
+            return;
         }
 
         CopyGroupService.Result result =

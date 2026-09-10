@@ -5,3 +5,4 @@ export * from './BuilderProPasteGroupResultParser';
 export * from './BuilderProHistoryResultParser';
 export * from './BuilderProOffsetGroupResultParser';
 export * from './BuilderProLayoutGroupResultParser';
+export * from './BuilderProGroupStateParser';

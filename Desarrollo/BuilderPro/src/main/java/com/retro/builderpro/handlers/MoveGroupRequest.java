@@ -3,6 +3,7 @@ package com.retro.builderpro.handlers;
 import com.eu.habbo.messages.ServerMessage;
 import com.eu.habbo.messages.incoming.MessageHandler;
 import com.retro.builderpro.BuilderProHistoryService;
+import com.retro.builderpro.BuilderProGroupGuard;
 import com.retro.builderpro.BuilderProPackets;
 import com.retro.builderpro.GroupMoveService;
 
@@ -80,6 +81,25 @@ public class MoveGroupRequest
                 this.packet
                         .readInt()
                         .intValue();
+
+        BuilderProGroupGuard.Result groupGuard =
+                BuilderProGroupGuard.validate(
+                        this.client.getHabbo(),
+                        itemIds
+                );
+
+        if(!groupGuard.success)
+        {
+            sendResult(
+                    requestId,
+                    GroupMoveService.Result.failure(
+                            34,
+                            groupGuard.message
+                    )
+            );
+
+            return;
+        }
 
         List<BuilderProHistoryService.ItemState> historyBefore =
                 BuilderProHistoryService.capture(
