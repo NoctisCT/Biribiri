@@ -41,7 +41,7 @@ public class ObtenerInventarioSubastas extends MessageHandler
                 "FROM items i " +
                 "INNER JOIN items_base ib ON ib.id = i.item_id " +
                 "WHERE i.user_id = ? AND i.room_id = 0 AND ib.allow_trade = 1 " +
-                "ORDER BY i.id DESC LIMIT 100";
+                "ORDER BY i.id DESC";
 
         try(Connection conexion = Emulator.getDatabase().getDataSource().getConnection();
             PreparedStatement consulta = conexion.prepareStatement(sql))

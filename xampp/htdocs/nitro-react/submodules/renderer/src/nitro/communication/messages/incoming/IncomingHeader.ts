@@ -527,4 +527,32 @@ export class IncomingHeader {
     public static BUILDER_PRO_HISTORY_RESULT = 6309;
     public static BUILDER_PRO_OFFSET_GROUP_RESULT = 6311;
     public static BUILDER_PRO_LAYOUT_GROUP_RESULT = 6313;
+
+public static AIR_HOCKEY_CLOSE = 6006;
+public static AIR_HOCKEY_ERROR = 6007;
+public static AIR_HOCKEY_OPEN = 6003;
+public static AIR_HOCKEY_ROUND = 6005;
+public static AIR_HOCKEY_STATE = 6004;
+public static BIRIBIRI_ARCADE_CLOSE = 6105;
+public static BIRIBIRI_ARCADE_LEADERBOARD = 6104;
+public static BIRIBIRI_ARCADE_STARTED = 6102;
+public static BIRIBIRI_ARKANOID_OPEN = 6160;
+public static BIRIBIRI_ASTEROIDS_OPEN = 6180;
+public static BIRIBIRI_BLOCK_DROP_OPEN = 6120;
+public static BIRIBIRI_DUCK_HUNT_OPEN = 6110;
+public static BIRIBIRI_LIFT_SHIFT_OPEN = 6141;
+public static BIRIBIRI_PAC_MAN_OPEN = 6130;
+public static BIRIBIRI_PINBALL_OPEN = 6170;
+public static BIRIBIRI_ROOFTOP_RESCUE_OPEN = 6150;
+public static BIRIBIRI_SNAKE_OPEN = 6140;
+public static BIRIBIRI_WARDROBE_NAMES = 6203;
+public static BIRIBIRI_WARDROBE_PURCHASE_RESULT = 6206;
+public static BIRIBIRI_WARDROBE_STATE = 6201;
+public static HOLO_GRID_WALKABILITY = 5041;
+public static HOLO_SLOT_CLOSE = 5046;
+public static HOLO_SLOT_OPEN = 5043;
+public static HOLO_SLOT_RESULT = 5044;
+public static HOLO_SLOT_STATE = 5045;
+public static HOLO_SPACE_INVADERS_OPEN = 6100;
+public static RPG_ENGINE_RESULT = 5051;
 }
