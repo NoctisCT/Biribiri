@@ -25,6 +25,7 @@ import com.retro.builderpro.handlers.HistoryRequest;
 import com.retro.builderpro.handlers.GroupStateRequest;
 import com.retro.builderpro.handlers.TraversalStateRequest;
 import com.retro.builderpro.handlers.BlueprintStateRequest;
+import com.retro.builderpro.handlers.PickupGroupRequest;
 
 public class BuilderProPlugin
         extends HabboPlugin
@@ -114,6 +115,13 @@ public class BuilderProPlugin
                 .registerHandler(
                         BuilderProPackets.BLUEPRINT_STATE_REQUEST,
                         BlueprintStateRequest.class
+                );
+
+        Emulator.getGameServer()
+                .getPacketManager()
+                .registerHandler(
+                        BuilderProPackets.PICKUP_GROUP_REQUEST,
+                        PickupGroupRequest.class
                 );
 
         System.out.println(

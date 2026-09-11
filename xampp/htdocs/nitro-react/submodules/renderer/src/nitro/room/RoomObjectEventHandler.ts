@@ -472,7 +472,10 @@ export class RoomObjectEventHandler extends Disposable implements IRoomCanvasMou
 
                             else if(event.ctrlKey && !event.altKey && !event.shiftKey)
                             {
-                                this.modifyRoomObject(roomId, event.objectId, category, RoomObjectOperationType.OBJECT_PICKUP);
+                                if(this._roomEngine.events)
+                                {
+                                    this._roomEngine.events.dispatchEvent(new RoomEngineObjectEvent(RoomEngineObjectEvent.REQUEST_PICKUP, roomId, event.objectId, category));
+                                }
                             }
 
                             if(!this._roomEngine.isPlayingGame())

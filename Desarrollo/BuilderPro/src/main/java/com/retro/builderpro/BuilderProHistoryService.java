@@ -4,6 +4,7 @@ import com.eu.habbo.habbohotel.items.FurnitureType;
 import com.eu.habbo.habbohotel.items.Item;
 import com.eu.habbo.habbohotel.items.interactions.InteractionJukeBox;
 import com.eu.habbo.habbohotel.items.interactions.InteractionMoodLight;
+import com.eu.habbo.habbohotel.items.interactions.InteractionMultiHeight;
 import com.eu.habbo.habbohotel.items.interactions.InteractionStackHelper;
 import com.eu.habbo.habbohotel.items.interactions.InteractionTileWalkMagic;
 import com.eu.habbo.habbohotel.rooms.FurnitureMovementError;
@@ -46,6 +47,9 @@ public final class BuilderProHistoryService
 
     private static final String PLACEMENT_PREFIX =
             "BUILDER_PRO_PLACEMENT:";
+
+    private static final String PICKUP_PREFIX =
+            "BUILDER_PRO_PICKUP:";
 
     private static final Map<String, History> HISTORIES =
             new ConcurrentHashMap<String, History>();
@@ -233,6 +237,266 @@ public final class BuilderProHistoryService
         }
     }
 
+    public static Result pickupSelection(
+            Habbo actor,
+            List<Integer> requestedIds)
+    {
+        if(actor == null)
+        {
+            return Result.failure(
+                    70,
+                    "Usuario no disponible.",
+                    false,
+                    false
+            );
+        }
+
+        Room room =
+                actor.getHabboInfo()
+                        .getCurrentRoom();
+
+        if(room == null)
+        {
+            return Result.failure(
+                    71,
+                    "No hay una sala activa.",
+                    false,
+                    false
+            );
+        }
+
+        if(!room.hasRights(actor))
+        {
+            return Result.failure(
+                    72,
+                    "No tienes permisos de construccion en esta sala.",
+                    false,
+                    false
+            );
+        }
+
+        BuilderProGroupGuard.Result groupGuard =
+                BuilderProGroupGuard.validate(
+                        actor,
+                        requestedIds
+                );
+
+        if(!groupGuard.success)
+        {
+            return Result.failure(
+                    73,
+                    groupGuard.message,
+                    false,
+                    false
+            );
+        }
+
+        List<ItemState> states =
+                capture(
+                        actor,
+                        requestedIds
+                );
+
+        if(states == null
+                || states.isEmpty())
+        {
+            return Result.failure(
+                    74,
+                    "La seleccion ya no es valida.",
+                    false,
+                    false
+            );
+        }
+
+        int actorId =
+                actor.getHabboInfo()
+                        .getId();
+
+        for(ItemState state : states)
+        {
+            HabboItem item =
+                    room.getHabboItem(
+                            state.itemId
+                    );
+
+            if(item == null
+                    || item.getUserId() != actorId)
+            {
+                return Result.failure(
+                        75,
+                        "La recogida con Undo solo admite furnis de tu propiedad.",
+                        false,
+                        false
+                );
+            }
+
+            if(item.getBaseItem() == null
+                    || item.getBaseItem().getType()
+                    != FurnitureType.FLOOR
+                    || item instanceof InteractionStackHelper
+                    || item instanceof InteractionTileWalkMagic)
+            {
+                return Result.failure(
+                        76,
+                        "La seleccion contiene un furni no admitido.",
+                        false,
+                        false
+                );
+            }
+        }
+
+        PickupMetadata metadata;
+
+        try
+        {
+            metadata =
+                    capturePickupMetadata(
+                            room,
+                            requestedIds
+                    );
+        }
+        catch(Exception exception)
+        {
+            exception.printStackTrace();
+
+            return Result.failure(
+                    77,
+                    "No se pudo capturar la metadata de la seleccion.",
+                    false,
+                    false
+            );
+        }
+
+        try
+        {
+            cleanupPickupMetadata(
+                    actor,
+                    room,
+                    metadata,
+                    requestedIds
+            );
+        }
+        catch(Exception exception)
+        {
+            exception.printStackTrace();
+
+            try
+            {
+                restorePickupMetadata(
+                        actor,
+                        room,
+                        metadata
+                );
+            }
+            catch(Exception ignored)
+            {
+            }
+
+            return Result.failure(
+                    78,
+                    "No se pudo preparar la recogida.",
+                    false,
+                    false
+            );
+        }
+
+        ApplyResult pickup =
+                undoPlacement(
+                        actor,
+                        room,
+                        states
+                );
+
+        if(!pickup.success)
+        {
+            try
+            {
+                restorePickupMetadata(
+                        actor,
+                        room,
+                        metadata
+                );
+            }
+            catch(Exception ignored)
+            {
+            }
+
+            return Result.failure(
+                    pickup.code,
+                    pickup.message,
+                    false,
+                    false
+            );
+        }
+
+        recordPickup(
+                actor,
+                states,
+                metadata,
+                "Recogida"
+        );
+
+        return Result.success(
+                states.size(),
+                "Recogidos: "
+                        + states.size()
+                        + " furnis.",
+                true,
+                false
+        );
+    }
+
+    private static void recordPickup(
+            Habbo actor,
+            List<ItemState> states,
+            PickupMetadata metadata,
+            String label)
+    {
+        Room room =
+                actor.getHabboInfo()
+                        .getCurrentRoom();
+
+        if(room == null)
+        {
+            return;
+        }
+
+        History history =
+                HISTORIES.computeIfAbsent(
+                        key(actor, room),
+                        ignored -> new History()
+                );
+
+        Entry entry =
+                new Entry(
+                        room.getId(),
+                        copyStates(states),
+                        copyStates(states),
+                        PICKUP_PREFIX
+                                + (
+                                    label == null
+                                        ? "Recogida"
+                                        : label
+                                ),
+                        metadata
+                );
+
+        synchronized(history)
+        {
+            history.undo.addLast(
+                    entry
+            );
+
+            while(history.undo.size()
+                    > MAX_HISTORY)
+            {
+                history.undo.removeFirst();
+            }
+
+            history.redo.clear();
+        }
+    }
+
     public static void invalidate(
             Habbo actor)
     {
@@ -360,6 +624,177 @@ public final class BuilderProHistoryService
 
             if(entry.label != null
                     && entry.label.startsWith(
+                            PICKUP_PREFIX
+                    ))
+            {
+                ApplyResult pickupApply;
+
+                if(action == ACTION_UNDO)
+                {
+                    pickupApply =
+                            redoPlacement(
+                                    actor,
+                                    room,
+                                    entry.after
+                            );
+
+                    if(pickupApply.success)
+                    {
+                        try
+                        {
+                            restorePickupMetadata(
+                                    actor,
+                                    room,
+                                    entry.pickupMetadata
+                            );
+                        }
+                        catch(Exception exception)
+                        {
+                            exception.printStackTrace();
+
+                            try
+                            {
+                                cleanupPickupMetadata(
+                                        actor,
+                                        room,
+                                        entry.pickupMetadata,
+                                        itemIdsOf(
+                                                entry.after
+                                        )
+                                );
+
+                                undoPlacement(
+                                        actor,
+                                        room,
+                                        entry.after
+                                );
+                            }
+                            catch(Exception ignored)
+                            {
+                            }
+
+                            history.undo.clear();
+                            history.redo.clear();
+
+                            return Result.failure(
+                                    79,
+                                    "No se pudo restaurar completamente la recogida.",
+                                    false,
+                                    false
+                            );
+                        }
+                    }
+                }
+                else
+                {
+                    try
+                    {
+                        cleanupPickupMetadata(
+                                actor,
+                                room,
+                                entry.pickupMetadata,
+                                itemIdsOf(
+                                        entry.after
+                                )
+                        );
+                    }
+                    catch(Exception exception)
+                    {
+                        exception.printStackTrace();
+
+                        try
+                        {
+                            restorePickupMetadata(
+                                    actor,
+                                    room,
+                                    entry.pickupMetadata
+                            );
+                        }
+                        catch(Exception ignored)
+                        {
+                        }
+
+                        return Result.failure(
+                                80,
+                                "No se pudo preparar el rehacer de la recogida.",
+                                !history.undo.isEmpty(),
+                                !history.redo.isEmpty()
+                        );
+                    }
+
+                    pickupApply =
+                            undoPlacement(
+                                    actor,
+                                    room,
+                                    entry.after
+                            );
+
+                    if(!pickupApply.success)
+                    {
+                        try
+                        {
+                            restorePickupMetadata(
+                                    actor,
+                                    room,
+                                    entry.pickupMetadata
+                            );
+                        }
+                        catch(Exception ignored)
+                        {
+                        }
+                    }
+                }
+
+                if(!pickupApply.success)
+                {
+                    if(pickupApply.invalidateHistory)
+                    {
+                        history.undo.clear();
+                        history.redo.clear();
+                    }
+
+                    return Result.failure(
+                            pickupApply.code,
+                            pickupApply.message,
+                            !history.undo.isEmpty(),
+                            !history.redo.isEmpty()
+                    );
+                }
+
+                source.removeLast();
+
+                if(action == ACTION_UNDO)
+                {
+                    history.redo.addLast(
+                            entry
+                    );
+                }
+                else
+                {
+                    history.undo.addLast(
+                            entry
+                    );
+                }
+
+                String pickupLabel =
+                        entry.label.substring(
+                                PICKUP_PREFIX.length()
+                        );
+
+                return Result.success(
+                        entry.after.size(),
+                        (
+                            action == ACTION_UNDO
+                                ? "Deshecho: "
+                                : "Rehecho: "
+                        ) + pickupLabel + ".",
+                        !history.undo.isEmpty(),
+                        !history.redo.isEmpty()
+                );
+            }
+
+            if(entry.label != null
+                    && entry.label.startsWith(
                             PLACEMENT_PREFIX
                     ))
             {
@@ -483,6 +918,242 @@ public final class BuilderProHistoryService
         HISTORIES.clear();
     }
 
+
+    private static PickupMetadata capturePickupMetadata(
+            Room room,
+            List<Integer> requestedIds)
+            throws Exception
+    {
+        Set<Integer> requested =
+                new HashSet<Integer>(
+                        requestedIds
+                );
+
+        List<GroupSnapshot> groups =
+                new ArrayList<GroupSnapshot>();
+
+        for(BuilderProGroupRepository.SavedGroup group :
+                BuilderProGroupRepository.list(
+                        room.getId()
+                ))
+        {
+            boolean touched = false;
+
+            for(Integer itemId :
+                    group.itemIds)
+            {
+                if(requested.contains(
+                        itemId
+                ))
+                {
+                    touched = true;
+                    break;
+                }
+            }
+
+            if(touched)
+            {
+                groups.add(
+                        new GroupSnapshot(
+                                group
+                        )
+                );
+            }
+        }
+
+        List<Integer> traversable =
+                new ArrayList<Integer>();
+
+        for(Integer itemId :
+                BuilderProTraversalRepository.list(
+                        room.getId()
+                ))
+        {
+            if(requested.contains(
+                    itemId
+            ))
+            {
+                traversable.add(
+                        itemId
+                );
+            }
+        }
+
+        return new PickupMetadata(
+                groups,
+                traversable
+        );
+    }
+
+    private static void cleanupPickupMetadata(
+            Habbo actor,
+            Room room,
+            PickupMetadata metadata,
+            List<Integer> requestedIds)
+            throws Exception
+    {
+        if(metadata == null)
+        {
+            return;
+        }
+
+        for(Integer itemId :
+                requestedIds)
+        {
+            if(itemId == null)
+            {
+                continue;
+            }
+
+            BuilderProGroupRepository.removeItem(
+                    itemId.intValue()
+            );
+        }
+
+        if(!metadata.traversableIds.isEmpty())
+        {
+            BuilderProTraversalService.Result traversal =
+                    BuilderProTraversalService.execute(
+                            actor,
+                            BuilderProTraversalService.OP_SET,
+                            false,
+                            metadata.traversableIds
+                    );
+
+            if(!traversal.success)
+            {
+                throw new IllegalStateException(
+                        traversal.message
+                );
+            }
+        }
+    }
+
+    private static void restorePickupMetadata(
+            Habbo actor,
+            Room room,
+            PickupMetadata metadata)
+            throws Exception
+    {
+        if(metadata == null)
+        {
+            return;
+        }
+
+        for(GroupSnapshot snapshot :
+                metadata.groups)
+        {
+            for(Integer itemId :
+                    snapshot.itemIds)
+            {
+                if(room.getHabboItem(
+                        itemId.intValue()
+                ) == null)
+                {
+                    throw new IllegalStateException(
+                            "Falta un miembro original del grupo."
+                    );
+                }
+            }
+
+            BuilderProGroupRepository.SavedGroup current =
+                    BuilderProGroupRepository.find(
+                            room.getId(),
+                            snapshot.groupId
+                    );
+
+            if(current == null)
+            {
+                for(BuilderProGroupRepository.SavedGroup candidate :
+                        BuilderProGroupRepository.list(
+                                room.getId()
+                        ))
+                {
+                    if(candidate.name.equals(
+                            snapshot.name
+                    ))
+                    {
+                        current =
+                                candidate;
+
+                        break;
+                    }
+                }
+            }
+
+            if(current == null)
+            {
+                snapshot.groupId =
+                        BuilderProGroupRepository.create(
+                                room.getId(),
+                                snapshot.createdBy,
+                                snapshot.name,
+                                snapshot.locked,
+                                snapshot.itemIds
+                        );
+            }
+            else
+            {
+                snapshot.groupId =
+                        current.id;
+
+                BuilderProGroupRepository.rename(
+                        room.getId(),
+                        current.id,
+                        snapshot.name
+                );
+
+                BuilderProGroupRepository.setLocked(
+                        room.getId(),
+                        current.id,
+                        snapshot.locked
+                );
+
+                BuilderProGroupRepository.replaceMembers(
+                        room.getId(),
+                        current.id,
+                        snapshot.itemIds
+                );
+            }
+        }
+
+        if(!metadata.traversableIds.isEmpty())
+        {
+            BuilderProTraversalService.Result traversal =
+                    BuilderProTraversalService.execute(
+                            actor,
+                            BuilderProTraversalService.OP_SET,
+                            true,
+                            metadata.traversableIds
+                    );
+
+            if(!traversal.success)
+            {
+                throw new IllegalStateException(
+                        traversal.message
+                );
+            }
+        }
+    }
+
+    private static List<Integer> itemIdsOf(
+            List<ItemState> states)
+    {
+        List<Integer> result =
+                new ArrayList<Integer>(
+                        states.size()
+                );
+
+        for(ItemState state :
+                states)
+        {
+            result.add(
+                    state.itemId
+            );
+        }
+
+        return result;
+    }
 
     private static ApplyResult undoPlacement(
             Habbo actor,
@@ -1427,6 +2098,17 @@ public final class BuilderProHistoryService
             );
         }
 
+        if(isStateOnlyTransition(
+                expected,
+                target))
+        {
+            return applyStateOnly(
+                    room,
+                    expected,
+                    target
+            );
+        }
+
         Map<Integer, ItemState> expectedById =
                 new HashMap<Integer, ItemState>();
 
@@ -1809,6 +2491,300 @@ public final class BuilderProHistoryService
         }
     }
 
+    private static boolean isStateOnlyTransition(
+            List<ItemState> expected,
+            List<ItemState> target)
+    {
+        if(expected == null
+                || target == null
+                || expected.size() != target.size()
+                || expected.isEmpty())
+        {
+            return false;
+        }
+
+        boolean stateChanged = false;
+
+        for(int index = 0;
+                index < expected.size();
+                index++)
+        {
+            ItemState current =
+                    expected.get(index);
+
+            ItemState destination =
+                    target.get(index);
+
+            if(current.itemId
+                    != destination.itemId)
+            {
+                return false;
+            }
+
+            if(current.x != destination.x
+                    || current.y != destination.y
+                    || Math.abs(
+                            current.z -
+                            destination.z
+                    ) > EPSILON
+                    || current.rotation
+                    != destination.rotation)
+            {
+                return false;
+            }
+
+            if(!sameExtraData(
+                    current.extraData,
+                    destination.extraData))
+            {
+                stateChanged = true;
+            }
+        }
+
+        return stateChanged;
+    }
+
+    private static ApplyResult applyStateOnly(
+            Room room,
+            List<ItemState> expected,
+            List<ItemState> target)
+    {
+        Map<Integer, ItemState> expectedById =
+                new HashMap<Integer, ItemState>();
+
+        for(ItemState state : expected)
+        {
+            expectedById.put(
+                    state.itemId,
+                    state
+            );
+        }
+
+        List<Target> targets =
+                new ArrayList<Target>();
+
+        for(ItemState state : target)
+        {
+            HabboItem item =
+                    room.getHabboItem(
+                            state.itemId
+                    );
+
+            ItemState expectedState =
+                    expectedById.get(
+                            state.itemId
+                    );
+
+            if(item == null
+                    || expectedState == null)
+            {
+                return ApplyResult.failure(
+                        80,
+                        "Uno de los furnis de estado ya no existe.",
+                        true
+                );
+            }
+
+            if(item.getBaseItem() == null
+                    || item.getBaseItem().getType()
+                    != FurnitureType.FLOOR)
+            {
+                return ApplyResult.failure(
+                        81,
+                        "El historial de estado contiene un furni no admitido.",
+                        true
+                );
+            }
+
+            if(item instanceof InteractionStackHelper
+                    || item instanceof InteractionTileWalkMagic)
+            {
+                return ApplyResult.failure(
+                        82,
+                        "El historial de estado contiene una baldosa de arquitecto.",
+                        true
+                );
+            }
+
+            if(!matches(
+                    item,
+                    expectedState))
+            {
+                return ApplyResult.failure(
+                        83,
+                        "El estado actual ya no coincide con el historial.",
+                        true
+                );
+            }
+
+            targets.add(
+                    new Target(
+                            item,
+                            state
+                    )
+            );
+        }
+
+        targets.sort(
+                Comparator.comparingInt(
+                        targetEntry ->
+                                targetEntry.item.getId()
+                )
+        );
+
+        try
+        {
+            for(Target targetEntry : targets)
+            {
+                HabboItem item =
+                        targetEntry.item;
+
+                ItemState state =
+                        targetEntry.state;
+
+                item.setExtradata(
+                        state.extraData
+                );
+
+                item.needsUpdate(
+                        true
+                );
+
+                item.run();
+
+                refreshState(
+                        room,
+                        item
+                );
+
+                if(!matches(
+                        item,
+                        state))
+                {
+                    rollbackStateOnly(
+                            room,
+                            expected
+                    );
+
+                    return ApplyResult.failure(
+                            84,
+                            "El servidor altero el estado exacto del historial.",
+                            false
+                    );
+                }
+            }
+
+            return ApplyResult.success();
+        }
+        catch(Exception exception)
+        {
+            rollbackStateOnly(
+                    room,
+                    expected
+            );
+
+            return ApplyResult.failure(
+                    85,
+                    "Undo/Redo de estado fue revertido por un error interno.",
+                    false
+            );
+        }
+    }
+
+    private static void rollbackStateOnly(
+            Room room,
+            List<ItemState> states)
+    {
+        for(ItemState state : states)
+        {
+            HabboItem item =
+                    room.getHabboItem(
+                            state.itemId
+                    );
+
+            if(item == null)
+            {
+                continue;
+            }
+
+            try
+            {
+                item.setExtradata(
+                        state.extraData
+                );
+
+                item.needsUpdate(
+                        true
+                );
+
+                item.run();
+
+                refreshState(
+                        room,
+                        item
+                );
+            }
+            catch(Exception ignored)
+            {
+            }
+        }
+    }
+
+    private static void refreshState(
+            Room room,
+            HabboItem item)
+    {
+        if(item instanceof InteractionMultiHeight)
+        {
+            InteractionMultiHeight multiHeight =
+                    (InteractionMultiHeight)item;
+
+            RoomTile anchor =
+                    room.getLayout()
+                            .getTile(
+                                    item.getX(),
+                                    item.getY()
+                            );
+
+            if(anchor != null)
+            {
+                room.updateTiles(
+                        room.getLayout()
+                                .getTilesAt(
+                                        anchor,
+                                        item.getBaseItem()
+                                                .getWidth(),
+                                        item.getBaseItem()
+                                                .getLength(),
+                                        item.getRotation()
+                                )
+                );
+
+                multiHeight.updateUnitsOnItem(
+                        room
+                );
+            }
+        }
+
+        room.updateItemState(
+                item
+        );
+    }
+
+    private static boolean sameExtraData(
+            String first,
+            String second)
+    {
+        if(first == null)
+        {
+            return second == null;
+        }
+
+        return first.equals(
+                second
+        );
+    }
+
     private static boolean matches(
             HabboItem item,
             ItemState state)
@@ -1821,7 +2797,11 @@ public final class BuilderProHistoryService
                 ) <= EPSILON
                 && normalizeRotation(
                         item.getRotation()
-                ) == state.rotation;
+                ) == state.rotation
+                && sameExtraData(
+                        item.getExtradata(),
+                        state.extraData
+                );
     }
 
     private static boolean sameIds(
@@ -2019,6 +2999,7 @@ public final class BuilderProHistoryService
         public final short y;
         public final double z;
         public final int rotation;
+        public final String extraData;
 
         private ItemState(
                 HabboItem item)
@@ -2027,6 +3008,8 @@ public final class BuilderProHistoryService
             this.x = item.getX();
             this.y = item.getY();
             this.z = item.getZ();
+            this.extraData =
+                    item.getExtradata();
             this.rotation =
                     normalizeRotation(
                             item.getRotation()
@@ -2041,6 +3024,7 @@ public final class BuilderProHistoryService
             this.y = other.y;
             this.z = other.z;
             this.rotation = other.rotation;
+            this.extraData = other.extraData;
         }
     }
 
@@ -2058,12 +3042,52 @@ public final class BuilderProHistoryService
         }
     }
 
+    private static final class PickupMetadata
+    {
+        private final List<GroupSnapshot> groups;
+        private final List<Integer> traversableIds;
+
+        private PickupMetadata(
+                List<GroupSnapshot> groups,
+                List<Integer> traversableIds)
+        {
+            this.groups = groups;
+            this.traversableIds =
+                    new ArrayList<Integer>(
+                            traversableIds
+                    );
+        }
+    }
+
+    private static final class GroupSnapshot
+    {
+        private int groupId;
+        private final String name;
+        private final boolean locked;
+        private final int createdBy;
+        private final List<Integer> itemIds;
+
+        private GroupSnapshot(
+                BuilderProGroupRepository.SavedGroup group)
+        {
+            this.groupId = group.id;
+            this.name = group.name;
+            this.locked = group.locked;
+            this.createdBy = group.createdBy;
+            this.itemIds =
+                    new ArrayList<Integer>(
+                            group.itemIds
+                    );
+        }
+    }
+
     private static final class Entry
     {
         private final int roomId;
         private final List<ItemState> before;
         private final List<ItemState> after;
         private final String label;
+        private final PickupMetadata pickupMetadata;
 
         private Entry(
                 int roomId,
@@ -2071,10 +3095,28 @@ public final class BuilderProHistoryService
                 List<ItemState> after,
                 String label)
         {
+            this(
+                    roomId,
+                    before,
+                    after,
+                    label,
+                    null
+            );
+        }
+
+        private Entry(
+                int roomId,
+                List<ItemState> before,
+                List<ItemState> after,
+                String label,
+                PickupMetadata pickupMetadata)
+        {
             this.roomId = roomId;
             this.before = before;
             this.after = after;
             this.label = label;
+            this.pickupMetadata =
+                    pickupMetadata;
         }
     }
 

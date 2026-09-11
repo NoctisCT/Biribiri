@@ -1,6 +1,6 @@
-import { RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, BuilderProTraversalStateComposer, BuilderProTraversalStateEvent, BuilderProBlueprintStateComposer, BuilderProBlueprintStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
+import { BuilderProPickupGroupComposer, BuilderProPickupGroupResultEvent, RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, BuilderProTraversalStateComposer, BuilderProTraversalStateEvent, BuilderProBlueprintStateComposer, BuilderProBlueprintStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
-import { FaClone, FaCopy, FaMinus, FaPaste, FaQuestion, FaRedo, FaUndo } from 'react-icons/fa';
+import { FaBoxOpen, FaClone, FaCopy, FaMinus, FaPaste, FaQuestion, FaRedo, FaUndo } from 'react-icons/fa';
 import { AddEventLinkTracker, BuilderProSelectionVisualizer, CanManipulateFurniture, CreateLinkEvent, GetRoomEngine, GetSessionDataManager, HasHabboClub, RemoveLinkEventTracker, SendMessageComposer, SetBuilderProSelectionModeActive } from '../../../../api';
 import { useMessageEvent, useRoom, useRoomEngineEvent } from '../../../../hooks';
 import { NitroCardContentView, NitroCardHeaderView, NitroCardView } from '../../../../common';
@@ -14,6 +14,8 @@ const TRANSFORM_HEIGHT = 1;
 const TRANSFORM_ROTATE_STRUCTURE = 2;
 const TRANSFORM_ORIENT = 3;
 const TRANSFORM_FLOOR = 4;
+const TRANSFORM_STATE_PREVIOUS = 5;
+const TRANSFORM_STATE_NEXT = 6;
 
 const FORMATION_ROW_LEFT = 1;
 const FORMATION_ROW_RIGHT = 2;
@@ -159,6 +161,8 @@ export const BuilderProView: FC<{}> = props =>
         requestId: number;
         snapshots: BuilderProTransformSnapshot[];
     } | null>(null);
+    const pendingTransformOperationRef =
+        useRef<number | null>(null);
     const pointerDownRef = useRef<{
         canvas: HTMLCanvasElement;
         clientX: number;
@@ -218,6 +222,8 @@ export const BuilderProView: FC<{}> = props =>
     const suppressAreaClickRef = useRef(false);
     const pivotIdRef = useRef<number | null>(null);
     const pivotPickModeRef = useRef(false);
+    const quickShiftRef = useRef(false);
+    const quickCtrlRef = useRef(false);
     const areaStartRef = useRef<{
         canvas: HTMLCanvasElement;
         startClientX: number;
@@ -518,6 +524,363 @@ export const BuilderProView: FC<{}> = props =>
                 }
             );
         }, []);
+
+    const selectByAdvancedCriterion =
+        useCallback((
+            mode:
+                'identical' |
+                'height' |
+                'state' |
+                'rotation' |
+                'all' |
+                'invert'
+        ) =>
+        {
+            if(!activeRef.current) return;
+            if(pendingRef.current) return;
+
+            const currentRoomSession =
+                roomSessionRef.current;
+
+            const roomEngine =
+                GetRoomEngine();
+
+            if(
+                !currentRoomSession ||
+                !roomEngine
+            )
+            {
+                return;
+            }
+
+            const requiresReference =
+                mode !== 'all' &&
+                mode !== 'invert';
+
+            let referenceObject:
+                ReturnType<typeof roomEngine.getRoomObject> =
+                null;
+
+            let referenceTypeId = 0;
+            let referenceZ = 0;
+            let referenceState = 0;
+            let referenceRotation = 0;
+
+            if(requiresReference)
+            {
+                const referenceId =
+                    (
+                        pivotIdRef.current !== null &&
+                        selectedIdsRef.current.includes(
+                            pivotIdRef.current
+                        )
+                    )
+                        ? pivotIdRef.current
+                        : (
+                            selectedIdsRef.current.length
+                                ? selectedIdsRef.current[0]
+                                : null
+                        );
+
+                if(referenceId === null)
+                {
+                    setStatus(
+                        'Selecciona primero un furni de referencia.'
+                    );
+
+                    return;
+                }
+
+                referenceObject =
+                    roomEngine.getRoomObject(
+                        currentRoomSession.roomId,
+                        referenceId,
+                        RoomObjectCategory.FLOOR
+                    );
+
+                if(!referenceObject)
+                {
+                    setStatus(
+                        'No se pudo leer el furni de referencia.'
+                    );
+
+                    return;
+                }
+
+                const referenceLocation =
+                    referenceObject.getLocation();
+
+                const referenceDirection =
+                    referenceObject.getDirection();
+
+                if(
+                    !referenceLocation ||
+                    !referenceDirection
+                )
+                {
+                    setStatus(
+                        'No se pudo leer la geometría del furni de referencia.'
+                    );
+
+                    return;
+                }
+
+                referenceTypeId =
+                    referenceObject.model.getValue<number>(
+                        RoomObjectVariable.FURNITURE_TYPE_ID
+                    );
+
+                referenceZ =
+                    referenceLocation.z;
+
+                referenceState =
+                    referenceObject.getState(0);
+
+                referenceRotation =
+                    (
+                        (
+                            Math.round(
+                                referenceDirection.x /
+                                45
+                            ) %
+                            8
+                        ) +
+                        8
+                    ) %
+                    8;
+            }
+
+            const currentSet =
+                new Set(
+                    selectedIdsRef.current
+                );
+
+            const next: number[] = [];
+            const nextSet =
+                new Set<number>();
+
+            const handledLockedGroups =
+                new Set<number>();
+
+            let limitReached = false;
+
+            const appendCandidate =
+                (itemId: number) =>
+                {
+                    if(nextSet.has(itemId))
+                    {
+                        return;
+                    }
+
+                    const lockedGroup =
+                        savedGroupsRef.current.find(
+                            group =>
+                                group.locked &&
+                                group.itemIds.includes(
+                                    itemId
+                                )
+                        );
+
+                    if(lockedGroup)
+                    {
+                        if(
+                            handledLockedGroups.has(
+                                lockedGroup.id
+                            )
+                        )
+                        {
+                            return;
+                        }
+
+                        handledLockedGroups.add(
+                            lockedGroup.id
+                        );
+
+                        const available =
+                            getAvailableGroupItemIds(
+                                lockedGroup
+                            );
+
+                        const missing =
+                            available.filter(
+                                id =>
+                                    !nextSet.has(id)
+                            );
+
+                        if(
+                            next.length +
+                            missing.length >
+                            MAX_SELECTION
+                        )
+                        {
+                            limitReached = true;
+                            return;
+                        }
+
+                        for(const id of missing)
+                        {
+                            next.push(id);
+                            nextSet.add(id);
+                        }
+
+                        return;
+                    }
+
+                    if(next.length >= MAX_SELECTION)
+                    {
+                        limitReached = true;
+                        return;
+                    }
+
+                    next.push(itemId);
+                    nextSet.add(itemId);
+                };
+
+            const count =
+                roomEngine.getRoomObjectCount(
+                    currentRoomSession.roomId,
+                    RoomObjectCategory.FLOOR
+                );
+
+            for(
+                let index = 0;
+                index < count;
+                index++
+            )
+            {
+                const roomObject =
+                    roomEngine.getRoomObjectByIndex(
+                        currentRoomSession.roomId,
+                        index,
+                        RoomObjectCategory.FLOOR
+                    );
+
+                if(!roomObject)
+                {
+                    continue;
+                }
+
+                if(!CanManipulateFurniture(
+                    currentRoomSession,
+                    roomObject.id,
+                    RoomObjectCategory.FLOOR
+                ))
+                {
+                    continue;
+                }
+
+                let matches = false;
+
+                if(mode === 'all')
+                {
+                    matches = true;
+                }
+                else if(mode === 'invert')
+                {
+                    matches =
+                        !currentSet.has(
+                            roomObject.id
+                        );
+                }
+                else if(mode === 'identical')
+                {
+                    const typeId =
+                        roomObject.model.getValue<number>(
+                            RoomObjectVariable.FURNITURE_TYPE_ID
+                        );
+
+                    matches =
+                        typeId ===
+                        referenceTypeId;
+                }
+                else if(mode === 'height')
+                {
+                    const location =
+                        roomObject.getLocation();
+
+                    matches =
+                        !!location &&
+                        Math.abs(
+                            location.z -
+                            referenceZ
+                        ) < 0.001;
+                }
+                else if(mode === 'state')
+                {
+                    const typeId =
+                        roomObject.model.getValue<number>(
+                            RoomObjectVariable.FURNITURE_TYPE_ID
+                        );
+
+                    matches =
+                        typeId ===
+                        referenceTypeId &&
+                        roomObject.getState(0) ===
+                        referenceState;
+                }
+                else if(mode === 'rotation')
+                {
+                    const typeId =
+                        roomObject.model.getValue<number>(
+                            RoomObjectVariable.FURNITURE_TYPE_ID
+                        );
+
+                    const direction =
+                        roomObject.getDirection();
+
+                    if(direction)
+                    {
+                        const rotation =
+                            (
+                                (
+                                    Math.round(
+                                        direction.x /
+                                        45
+                                    ) %
+                                    8
+                                ) +
+                                8
+                            ) %
+                            8;
+
+                        matches =
+                            typeId ===
+                            referenceTypeId &&
+                            rotation ===
+                            referenceRotation;
+                    }
+                }
+
+                if(!matches)
+                {
+                    continue;
+                }
+
+                appendCandidate(
+                    roomObject.id
+                );
+            }
+
+            applySelection(
+                next
+            );
+
+            const labels = {
+                identical: 'Idénticos',
+                height: 'Misma altura',
+                state: 'Mismo estado',
+                rotation: 'Misma rotación',
+                all: 'Todos',
+                invert: 'Selección invertida'
+            };
+
+            setStatus(
+                `${ labels[mode] }: ${ next.length } furnis seleccionados.${ limitReached ? ` Límite de ${ MAX_SELECTION } alcanzado.` : '' }`
+            );
+        }, [
+            applySelection,
+            getAvailableGroupItemIds
+        ]);
 
     const requestGroupState =
         useCallback((
@@ -2874,6 +3237,84 @@ export const BuilderProView: FC<{}> = props =>
         };
     }, []);
 
+    useEffect(() =>
+    {
+        if(!active)
+        {
+            quickShiftRef.current = false;
+            quickCtrlRef.current = false;
+            return;
+        }
+
+        const onKeyDown = (
+            event: globalThis.KeyboardEvent
+        ) =>
+        {
+            quickShiftRef.current =
+                event.shiftKey;
+
+            quickCtrlRef.current =
+                event.ctrlKey;
+        };
+
+        const onKeyUp = (
+            event: globalThis.KeyboardEvent
+        ) =>
+        {
+            quickShiftRef.current =
+                event.shiftKey;
+
+            quickCtrlRef.current =
+                event.ctrlKey;
+        };
+
+        const onBlur = () =>
+        {
+            quickShiftRef.current = false;
+            quickCtrlRef.current = false;
+        };
+
+        window.addEventListener(
+            'keydown',
+            onKeyDown,
+            true
+        );
+
+        window.addEventListener(
+            'keyup',
+            onKeyUp,
+            true
+        );
+
+        window.addEventListener(
+            'blur',
+            onBlur
+        );
+
+        return () =>
+        {
+            window.removeEventListener(
+                'keydown',
+                onKeyDown,
+                true
+            );
+
+            window.removeEventListener(
+                'keyup',
+                onKeyUp,
+                true
+            );
+
+            window.removeEventListener(
+                'blur',
+                onBlur
+            );
+
+            quickShiftRef.current = false;
+            quickCtrlRef.current = false;
+        };
+    }, [ active ]);
+
     useRoomEngineEvent<RoomEngineObjectEvent>(
         [
             RoomEngineObjectEvent.SELECTED,
@@ -3338,6 +3779,102 @@ export const BuilderProView: FC<{}> = props =>
                 return;
             }
 
+            if(
+                quickCtrlRef.current &&
+                quickShiftRef.current
+            )
+            {
+                setStatus(
+                    'Usa Ctrl o Shift por separado.'
+                );
+
+                return;
+            }
+
+            if(quickCtrlRef.current)
+            {
+                if(pendingRef.current)
+                {
+                    return;
+                }
+
+                const lockedQuickGroup =
+                    savedGroupsRef.current.find(
+                        group =>
+                            group.locked &&
+                            group.itemIds.includes(
+                                event.objectId
+                            )
+                    );
+
+                const quickIds =
+                    lockedQuickGroup
+                        ? getAvailableGroupItemIds(
+                            lockedQuickGroup
+                        )
+                        : [
+                            event.objectId
+                        ];
+
+                if(!quickIds.length)
+                {
+                    setStatus(
+                        'No hay furnis disponibles para recoger.'
+                    );
+
+                    return;
+                }
+
+                pickupSelection(
+                    quickIds
+                );
+
+                return;
+            }
+
+            if(quickShiftRef.current)
+            {
+                if(pendingRef.current)
+                {
+                    return;
+                }
+
+                const lockedQuickGroup =
+                    savedGroupsRef.current.find(
+                        group =>
+                            group.locked &&
+                            group.itemIds.includes(
+                                event.objectId
+                            )
+                    );
+
+                const quickIds =
+                    lockedQuickGroup
+                        ? getAvailableGroupItemIds(
+                            lockedQuickGroup
+                        )
+                        : [
+                            event.objectId
+                        ];
+
+                if(!quickIds.length)
+                {
+                    setStatus(
+                        'No hay furnis disponibles para girar.'
+                    );
+
+                    return;
+                }
+
+                transformGroup(
+                    TRANSFORM_ORIENT,
+                    1,
+                    quickIds
+                );
+
+                return;
+            }
+
             const current = selectedIdsRef.current;
 
             const lockedGroup =
@@ -3648,6 +4185,82 @@ export const BuilderProView: FC<{}> = props =>
         }
     );
 
+    useMessageEvent<BuilderProPickupGroupResultEvent>(
+        BuilderProPickupGroupResultEvent,
+        event =>
+        {
+            const parser =
+                event.getParser();
+
+            if(!parser) return;
+
+            if(
+                parser.requestId !==
+                pendingRequestIdRef.current
+            )
+            {
+                return;
+            }
+
+            if(!pendingRef.current)
+            {
+                return;
+            }
+
+            if(pendingTimeoutRef.current !== null)
+            {
+                window.clearTimeout(
+                    pendingTimeoutRef.current
+                );
+
+                pendingTimeoutRef.current =
+                    null;
+            }
+
+            pendingRef.current = false;
+            pendingRequestIdRef.current =
+                null;
+
+            pendingStartedAtRef.current =
+                0;
+
+            setPending(
+                false
+            );
+
+            setCanUndo(
+                parser.canUndo
+            );
+
+            setCanRedo(
+                parser.canRedo
+            );
+
+            if(parser.success)
+            {
+                clearSelection();
+
+                setStatus(
+                    parser.message
+                );
+
+                requestGroupState(
+                    GROUP_OP_LIST
+                );
+
+                requestTraversalState(
+                    TRAVERSAL_OP_QUERY
+                );
+
+                return;
+            }
+
+            setStatus(
+                `Error ${ parser.code }: ${ parser.message }`
+            );
+        }
+    );
+
     useMessageEvent<BuilderProHistoryResultEvent>(
         BuilderProHistoryResultEvent,
         event =>
@@ -3700,6 +4313,14 @@ export const BuilderProView: FC<{}> = props =>
             {
                 setStatus(
                     parser.message
+                );
+
+                requestGroupState(
+                    GROUP_OP_LIST
+                );
+
+                requestTraversalState(
+                    TRAVERSAL_OP_QUERY
                 );
 
                 window.requestAnimationFrame(
@@ -3902,16 +4523,58 @@ export const BuilderProView: FC<{}> = props =>
             const preview =
                 pendingTransformPreviewRef.current;
 
+            const completedOperation =
+                pendingTransformOperationRef.current;
+
             pendingRef.current = false;
             pendingRequestIdRef.current = null;
             pendingStartedAtRef.current = 0;
             pendingTransformPreviewRef.current =
+                null;
+            pendingTransformOperationRef.current =
                 null;
 
             setPending(false);
 
             if(parser.success)
             {
+                const stateOperation =
+                    completedOperation ===
+                        TRANSFORM_STATE_PREVIOUS ||
+                    completedOperation ===
+                        TRANSFORM_STATE_NEXT;
+
+                if(stateOperation)
+                {
+                    if(parser.affectedCount > 0)
+                    {
+                        setCanUndo(true);
+                        setCanRedo(false);
+                    }
+
+                    const omitted =
+                        Math.max(
+                            0,
+                            selectedIdsRef.current.length -
+                            parser.affectedCount
+                        );
+
+                    setStatus(
+                        `${ completedOperation === TRANSFORM_STATE_PREVIOUS ? 'Estado anterior' : 'Estado siguiente' }: ${ parser.affectedCount } actualizados · ${ omitted } omitidos.`
+                    );
+
+                    window.requestAnimationFrame(
+                        () =>
+                        {
+                            BuilderProSelectionVisualizer.refresh(
+                                selectedIdsRef.current
+                            );
+                        }
+                    );
+
+                    return;
+                }
+
                 setCanUndo(true);
                 setCanRedo(false);
 
@@ -5291,6 +5954,118 @@ export const BuilderProView: FC<{}> = props =>
         }
     }, [ clearPastePreview ]);
 
+    const pickupSelection = useCallback((requestedIds?: number[]) =>
+    {
+        if(!activeRef.current) return;
+        if(pendingRef.current) return;
+
+        const ids = requestedIds
+            ? [
+                ...requestedIds
+            ]
+            : [
+                ...selectedIdsRef.current
+            ];
+
+        if(!ids.length)
+        {
+            setStatus(
+                'Selecciona al menos un furni.'
+            );
+
+            return;
+        }
+
+        requestIdRef.current++;
+
+        if(requestIdRef.current > 2000000000)
+        {
+            requestIdRef.current = 1;
+        }
+
+        const requestId =
+            requestIdRef.current;
+
+        pendingRef.current = true;
+        pendingRequestIdRef.current =
+            requestId;
+
+        pendingStartedAtRef.current =
+            performance.now();
+
+        setPending(
+            true
+        );
+
+        setStatus(
+            `Recogiendo ${ ids.length } furnis...`
+        );
+
+        try
+        {
+            SendMessageComposer(
+                new BuilderProPickupGroupComposer(
+                    ids,
+                    requestId
+                )
+            );
+
+            if(pendingTimeoutRef.current !== null)
+            {
+                window.clearTimeout(
+                    pendingTimeoutRef.current
+                );
+            }
+
+            pendingTimeoutRef.current =
+                window.setTimeout(
+                    () =>
+                    {
+                        pendingTimeoutRef.current =
+                            null;
+
+                        if(!pendingRef.current)
+                        {
+                            return;
+                        }
+
+                        pendingRef.current = false;
+                        pendingRequestIdRef.current =
+                            null;
+
+                        pendingStartedAtRef.current =
+                            0;
+
+                        setPending(
+                            false
+                        );
+
+                        setStatus(
+                            'Recogida sin confirmacion del servidor.'
+                        );
+                    },
+                    MOVE_CONFIRM_TIMEOUT_MS
+                );
+        }
+        catch(error)
+        {
+            pendingRef.current = false;
+            pendingRequestIdRef.current =
+                null;
+
+            pendingStartedAtRef.current =
+                0;
+
+            setPending(
+                false
+            );
+
+            setStatus(
+                'No se pudo enviar la recogida.'
+            );
+        }
+    }, []);
+
     const copyGroup = useCallback(() =>
     {
         if(!activeRef.current) return;
@@ -5412,15 +6187,32 @@ export const BuilderProView: FC<{}> = props =>
 
     const transformGroup = useCallback((
         operation: number,
-        argument: number
+        argument: number,
+        explicitIds?: number[]
     ) =>
     {
         if(!activeRef.current) return;
         if(pendingRef.current) return;
 
-        let ids = [
-            ...selectedIdsRef.current
-        ];
+        let ids =
+            explicitIds
+                ? Array.from(
+                    new Set(
+                        explicitIds
+                            .map(
+                                id =>
+                                    Math.trunc(id)
+                            )
+                            .filter(
+                                id =>
+                                    Number.isSafeInteger(id) &&
+                                    id > 0
+                            )
+                    )
+                )
+                : [
+                    ...selectedIdsRef.current
+                ];
 
         if(
             operation === TRANSFORM_ROTATE_STRUCTURE &&
@@ -5449,34 +6241,47 @@ export const BuilderProView: FC<{}> = props =>
             return;
         }
 
-        const snapshots =
-            captureTransformSnapshots(
-                ids
-            );
+        const stateOperation =
+            operation === TRANSFORM_STATE_PREVIOUS ||
+            operation === TRANSFORM_STATE_NEXT;
 
-        if(!snapshots)
+        let snapshots:
+            BuilderProTransformSnapshot[] = [];
+
+        if(!stateOperation)
         {
-            setStatus(
-                'No se pudo capturar la geometría completa.'
-            );
+            const capturedSnapshots =
+                captureTransformSnapshots(
+                    ids
+                );
 
-            return;
-        }
+            if(!capturedSnapshots)
+            {
+                setStatus(
+                    'No se pudo capturar la geometría completa.'
+                );
 
-        if(
-            operation !== TRANSFORM_FLOOR &&
-            !applyTransformPreview(
-                snapshots,
-                operation,
-                argument
+                return;
+            }
+
+            snapshots =
+                capturedSnapshots;
+
+            if(
+                operation !== TRANSFORM_FLOOR &&
+                !applyTransformPreview(
+                    snapshots,
+                    operation,
+                    argument
+                )
             )
-        )
-        {
-            setStatus(
-                'No se pudo mostrar el preview de la transformación.'
-            );
+            {
+                setStatus(
+                    'No se pudo mostrar el preview de la transformación.'
+                );
 
-            return;
+                return;
+            }
         }
 
         let targetRotations: number[] = [];
@@ -5522,8 +6327,14 @@ export const BuilderProView: FC<{}> = props =>
         pendingStartedAtRef.current =
             performance.now();
 
+        pendingTransformOperationRef.current =
+            operation;
+
         pendingTransformPreviewRef.current =
-            operation === TRANSFORM_FLOOR
+            (
+                operation === TRANSFORM_FLOOR ||
+                stateOperation
+            )
                 ? null
                 : {
                     requestId,
@@ -5562,6 +6373,18 @@ export const BuilderProView: FC<{}> = props =>
 
             setStatus(
                 `Altura Z ${ delta > 0 ? '+' : '' }${ delta } en ${ ids.length } furnis...`
+            );
+        }
+        else if(operation === TRANSFORM_STATE_PREVIOUS)
+        {
+            setStatus(
+                `Aplicando estado anterior a ${ ids.length } furnis...`
+            );
+        }
+        else if(operation === TRANSFORM_STATE_NEXT)
+        {
+            setStatus(
+                `Aplicando estado siguiente a ${ ids.length } furnis...`
             );
         }
         else if(operation === TRANSFORM_ORIENT)
@@ -5640,6 +6463,9 @@ export const BuilderProView: FC<{}> = props =>
                         pendingTransformPreviewRef.current =
                             null;
 
+                        pendingTransformOperationRef.current =
+                            null;
+
                         setPending(false);
 
                         setStatus(
@@ -5668,6 +6494,9 @@ export const BuilderProView: FC<{}> = props =>
                 0;
 
             pendingTransformPreviewRef.current =
+                null;
+
+            pendingTransformOperationRef.current =
                 null;
 
             setPending(false);
@@ -6444,6 +7273,142 @@ export const BuilderProView: FC<{}> = props =>
                                             ? 'Ocultar resaltado'
                                             : 'Mostrar resaltado' }
                                     </button>
+                                </div>
+
+                                <div className="builder-pro-subtitle">
+                                    Selección avanzada
+                                </div>
+
+                                <div className="builder-pro-grid-2">
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () =>
+                                                selectByAdvancedCriterion(
+                                                    'identical'
+                                                )
+                                        }>
+                                        Idénticos
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () =>
+                                                selectByAdvancedCriterion(
+                                                    'height'
+                                                )
+                                        }>
+                                        Misma altura
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () =>
+                                                selectByAdvancedCriterion(
+                                                    'state'
+                                                )
+                                        }>
+                                        Mismo estado
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () =>
+                                                selectByAdvancedCriterion(
+                                                    'rotation'
+                                                )
+                                        }>
+                                        Misma rotación
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        disabled={ pending }
+                                        onClick={
+                                            () =>
+                                                selectByAdvancedCriterion(
+                                                    'all'
+                                                )
+                                        }>
+                                        Todos
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        disabled={ pending }
+                                        onClick={
+                                            () =>
+                                                selectByAdvancedCriterion(
+                                                    'invert'
+                                                )
+                                        }>
+                                        Invertir
+                                    </button>
+                                </div>
+
+                                <div className="builder-pro-hint">
+                                    Idénticos, altura, estado y rotación usan el pivote o el primer furni seleccionado como referencia.
+                                </div>
+
+                                <div className="builder-pro-subtitle">
+                                    Estado
+                                </div>
+
+                                <div className="builder-pro-grid-2">
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () =>
+                                                transformGroup(
+                                                    TRANSFORM_STATE_PREVIOUS,
+                                                    0
+                                                )
+                                        }>
+                                        Estado anterior
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () =>
+                                                transformGroup(
+                                                    TRANSFORM_STATE_NEXT,
+                                                    0
+                                                )
+                                        }>
+                                        Estado siguiente
+                                    </button>
+                                </div>
+
+                                <div className="builder-pro-hint">
+                                    Los furnis sin estados compatibles se omiten.
                                 </div>
 
                                 <div className="builder-pro-subtitle">
@@ -7428,6 +8393,19 @@ export const BuilderProView: FC<{}> = props =>
                                                                 } }>
                                                                 <FaClone />
                                                             </button>
+
+                        <button
+                            type="button"
+                            className="btn btn-sm btn-secondary builder-pro-icon-button"
+                            title="Recoger selección"
+                            aria-label="Recoger selección"
+                            disabled={
+                                pending ||
+                                !selectedIds.length
+                            }
+                            onClick={ () => pickupSelection() }>
+                            <FaBoxOpen />
+                        </button>
 
                         <button
                                                     type="button"

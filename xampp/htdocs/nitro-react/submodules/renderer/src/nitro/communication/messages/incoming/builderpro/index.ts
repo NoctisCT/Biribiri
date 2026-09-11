@@ -7,4 +7,5 @@ export * from './BuilderProOffsetGroupResultEvent';
 export * from './BuilderProLayoutGroupResultEvent';
 export * from './BuilderProGroupStateEvent';
 export * from './BuilderProTraversalStateEvent';
+export * from './BuilderProPickupGroupResultEvent';
 export * from './BuilderProBlueprintStateEvent';

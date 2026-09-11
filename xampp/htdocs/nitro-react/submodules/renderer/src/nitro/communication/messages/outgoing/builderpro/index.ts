@@ -7,4 +7,5 @@ export * from './BuilderProOffsetGroupComposer';
 export * from './BuilderProLayoutGroupComposer';
 export * from './BuilderProGroupStateComposer';
 export * from './BuilderProTraversalStateComposer';
+export * from './BuilderProPickupGroupComposer';
 export * from './BuilderProBlueprintStateComposer';

@@ -2,6 +2,7 @@ package com.retro.builderpro;
 
 import com.eu.habbo.habbohotel.items.FurnitureType;
 import com.eu.habbo.habbohotel.items.Item;
+import com.eu.habbo.habbohotel.items.interactions.InteractionMultiHeight;
 import com.eu.habbo.habbohotel.items.interactions.InteractionStackHelper;
 import com.eu.habbo.habbohotel.items.interactions.InteractionTileWalkMagic;
 import com.eu.habbo.habbohotel.rooms.FurnitureMovementError;
@@ -32,6 +33,8 @@ public final class GroupTransformService
     public static final int OP_ROTATE_STRUCTURE = 2;
     public static final int OP_ORIENT = 3;
     public static final int OP_FLOOR = 4;
+    public static final int OP_STATE_PREVIOUS = 5;
+    public static final int OP_STATE_NEXT = 6;
 
     private static final double EPSILON = 0.000001D;
 
@@ -134,6 +137,17 @@ public final class GroupTransformService
                 return Result.failure(
                         6,
                         "La direccion de giro debe ser -1 o 1."
+                );
+            }
+        }
+        else if(operation == OP_STATE_PREVIOUS
+                || operation == OP_STATE_NEXT)
+        {
+            if(argument != 0)
+            {
+                return Result.failure(
+                        6,
+                        "El cambio de estado no admite argumento."
                 );
             }
         }
@@ -258,6 +272,17 @@ public final class GroupTransformService
 
             snapshots.add(snapshot);
             selectedIds.add(item.getId());
+        }
+
+        if(operation == OP_STATE_PREVIOUS
+                || operation == OP_STATE_NEXT)
+        {
+            return transformStates(
+                    room,
+                    snapshots,
+                    operation,
+                    requestId
+            );
         }
 
         Snapshot pivot =
@@ -555,6 +580,252 @@ public final class GroupTransformService
         finally
         {
             BuilderProContext.clear();
+        }
+    }
+
+    private static Result transformStates(
+            Room room,
+            List<Snapshot> snapshots,
+            int operation,
+            int requestId)
+    {
+        snapshots.sort(
+                Comparator.comparingInt(
+                        snapshot ->
+                                snapshot.item.getId()
+                )
+        );
+
+        List<Snapshot> changed =
+                new ArrayList<Snapshot>();
+
+        int transformedCount = 0;
+        int skippedCount = 0;
+
+        try
+        {
+            System.out.println(
+                    "[BuilderProTrace] SERVER STATE_BEGIN #"
+                            + requestId
+                            + " op="
+                            + operation
+                            + " items="
+                            + snapshots.size()
+            );
+
+            for(Snapshot snapshot : snapshots)
+            {
+                HabboItem item =
+                        snapshot.item;
+
+                if(!item.allowWiredResetState())
+                {
+                    skippedCount++;
+                    continue;
+                }
+
+                int stateCount;
+
+                if(item instanceof InteractionMultiHeight)
+                {
+                    stateCount =
+                            item.getBaseItem()
+                                    .getMultiHeights()
+                                    .length;
+                }
+                else
+                {
+                    stateCount =
+                            item.getBaseItem()
+                                    .getStateCount();
+                }
+
+                if(stateCount <= 1)
+                {
+                    skippedCount++;
+                    continue;
+                }
+
+                int currentState;
+
+                try
+                {
+                    currentState =
+                            Integer.parseInt(
+                                    item.getExtradata()
+                            );
+                }
+                catch(Exception exception)
+                {
+                    skippedCount++;
+                    continue;
+                }
+
+                currentState =
+                        (
+                            (
+                                currentState %
+                                stateCount
+                            ) +
+                            stateCount
+                        ) %
+                        stateCount;
+
+                int targetState;
+
+                if(operation == OP_STATE_NEXT)
+                {
+                    targetState =
+                            (
+                                currentState + 1
+                            ) %
+                            stateCount;
+                }
+                else
+                {
+                    targetState =
+                            (
+                                currentState -
+                                1 +
+                                stateCount
+                            ) %
+                            stateCount;
+                }
+
+                changed.add(
+                        snapshot
+                );
+
+                item.setExtradata(
+                        Integer.toString(
+                                targetState
+                        )
+                );
+
+                item.needsUpdate(
+                        true
+                );
+
+                item.run();
+
+                if(item instanceof InteractionMultiHeight)
+                {
+                    InteractionMultiHeight multiHeight =
+                            (InteractionMultiHeight)item;
+
+                    room.updateTiles(
+                            room.getLayout()
+                                    .getTilesAt(
+                                            room.getLayout()
+                                                    .getTile(
+                                                            item.getX(),
+                                                            item.getY()
+                                                    ),
+                                            item.getBaseItem()
+                                                    .getWidth(),
+                                            item.getBaseItem()
+                                                    .getLength(),
+                                            item.getRotation()
+                                    )
+                    );
+
+                    multiHeight.updateUnitsOnItem(
+                            room
+                    );
+                }
+
+                room.updateItemState(
+                        item
+                );
+
+                transformedCount++;
+            }
+
+            System.out.println(
+                    "[BuilderProTrace] SERVER STATE_END #"
+                            + requestId
+                            + " transformed="
+                            + transformedCount
+                            + " skipped="
+                            + skippedCount
+            );
+
+            return Result.success(
+                    transformedCount
+            );
+        }
+        catch(Exception exception)
+        {
+            rollbackStates(
+                    room,
+                    changed
+            );
+
+            System.out.println(
+                    "[BuilderProTrace] SERVER STATE_EXCEPTION #"
+                            + requestId
+                            + " "
+                            + exception.getClass()
+                                    .getName()
+                            + ": "
+                            + exception.getMessage()
+            );
+
+            return Result.failure(
+                    23,
+                    "El cambio de estado fue revertido por un error interno."
+            );
+        }
+    }
+
+    private static void rollbackStates(
+            Room room,
+            List<Snapshot> snapshots)
+    {
+        for(Snapshot snapshot : snapshots)
+        {
+            HabboItem item =
+                    snapshot.item;
+
+            item.setExtradata(
+                    snapshot.extraData
+            );
+
+            item.needsUpdate(
+                    true
+            );
+
+            item.run();
+
+            if(item instanceof InteractionMultiHeight)
+            {
+                InteractionMultiHeight multiHeight =
+                        (InteractionMultiHeight)item;
+
+                room.updateTiles(
+                        room.getLayout()
+                                .getTilesAt(
+                                        room.getLayout()
+                                                .getTile(
+                                                        item.getX(),
+                                                        item.getY()
+                                                ),
+                                        item.getBaseItem()
+                                                .getWidth(),
+                                        item.getBaseItem()
+                                                .getLength(),
+                                        item.getRotation()
+                                )
+                );
+
+                multiHeight.updateUnitsOnItem(
+                        room
+                );
+            }
+
+            room.updateItemState(
+                    item
+            );
         }
     }
 
@@ -999,6 +1270,7 @@ public final class GroupTransformService
         private final short y;
         private final double z;
         private final int rotation;
+        private final String extraData;
 
         private Snapshot(
                 HabboItem item)
@@ -1007,6 +1279,8 @@ public final class GroupTransformService
             this.x = item.getX();
             this.y = item.getY();
             this.z = item.getZ();
+            this.extraData =
+                    item.getExtradata();
             this.rotation =
                     normalizeRotation(
                             item.getRotation()

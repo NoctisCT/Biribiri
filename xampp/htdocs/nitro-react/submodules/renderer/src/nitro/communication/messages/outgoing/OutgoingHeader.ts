@@ -526,4 +526,5 @@ export class OutgoingHeader
     public static BUILDER_PRO_GROUP_STATE = 6314;
     public static BUILDER_PRO_TRAVERSAL_STATE = 6316;
     public static BUILDER_PRO_BLUEPRINT_STATE = 6318;
+    public static BUILDER_PRO_PICKUP_GROUP = 6320;
 }

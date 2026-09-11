@@ -35,4 +35,7 @@ public final class BuilderProPackets
 
     public static final int BLUEPRINT_STATE_REQUEST = 6318;
     public static final int BLUEPRINT_STATE_RESULT = 6319;
+
+    public static final int PICKUP_GROUP_REQUEST = 6320;
+    public static final int PICKUP_GROUP_RESULT = 6321;
 }

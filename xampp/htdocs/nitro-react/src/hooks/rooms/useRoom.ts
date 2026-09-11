@@ -122,6 +122,7 @@ const useRoomState = () =>
         RoomEngineObjectEvent.PLACED,
         RoomEngineObjectEvent.REQUEST_MOVE,
         RoomEngineObjectEvent.REQUEST_ROTATE,
+        RoomEngineObjectEvent.REQUEST_PICKUP,
         RoomEngineObjectEvent.MOUSE_ENTER,
         RoomEngineObjectEvent.MOUSE_LEAVE,
         RoomEngineObjectEvent.DOUBLE_CLICK
@@ -178,6 +179,9 @@ const useRoomState = () =>
                 break;
             case RoomEngineObjectEvent.REQUEST_ROTATE:
                 if(!IsBuilderProSelectionModeActive() && CanManipulateFurniture(roomSession, event.objectId, event.category)) ProcessRoomObjectOperation(event.objectId, event.category, RoomObjectOperationType.OBJECT_ROTATE_POSITIVE);
+                break;
+            case RoomEngineObjectEvent.REQUEST_PICKUP:
+                if((!IsBuilderProSelectionModeActive() || event.category !== RoomObjectCategory.FLOOR) && CanManipulateFurniture(roomSession, event.objectId, event.category)) ProcessRoomObjectOperation(event.objectId, event.category, RoomObjectOperationType.OBJECT_PICKUP);
                 break;
             case RoomEngineObjectEvent.MOUSE_ENTER:
                 updateEvent = new RoomWidgetUpdateRoomObjectEvent(RoomWidgetUpdateRoomObjectEvent.OBJECT_ROLL_OVER, event.objectId, event.category, event.roomId);

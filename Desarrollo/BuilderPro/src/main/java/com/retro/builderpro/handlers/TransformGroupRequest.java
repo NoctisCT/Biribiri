@@ -165,6 +165,10 @@ public class TransformGroupRequest
             return;
         }
 
+        boolean stateOperation =
+                operation == GroupTransformService.OP_STATE_PREVIOUS
+                || operation == GroupTransformService.OP_STATE_NEXT;
+
         List<BuilderProHistoryService.ItemState> historyBefore =
                 BuilderProHistoryService.capture(
                         this.client.getHabbo(),
@@ -182,7 +186,11 @@ public class TransformGroupRequest
                 );
 
         if(result.success
-                && historyBefore != null)
+                && historyBefore != null
+                && (
+                    !stateOperation
+                    || result.transformedCount > 0
+                ))
         {
             List<BuilderProHistoryService.ItemState> historyAfter =
                     BuilderProHistoryService.capture(
@@ -196,7 +204,9 @@ public class TransformGroupRequest
                         this.client.getHabbo(),
                         historyBefore,
                         historyAfter,
-                        "Transformacion"
+                        stateOperation
+                                ? "Estado"
+                                : "Transformacion"
                 );
             }
         }
