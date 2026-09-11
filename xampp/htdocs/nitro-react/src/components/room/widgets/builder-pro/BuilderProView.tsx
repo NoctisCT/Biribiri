@@ -1,7 +1,7 @@
-import { RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, BuilderProTraversalStateComposer, BuilderProTraversalStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
+import { RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, BuilderProTraversalStateComposer, BuilderProTraversalStateEvent, BuilderProBlueprintStateComposer, BuilderProBlueprintStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { FaClone, FaCopy, FaMinus, FaPaste, FaQuestion, FaRedo, FaUndo } from 'react-icons/fa';
-import { AddEventLinkTracker, BuilderProSelectionVisualizer, CanManipulateFurniture, GetRoomEngine, GetSessionDataManager, RemoveLinkEventTracker, SendMessageComposer, SetBuilderProSelectionModeActive } from '../../../../api';
+import { AddEventLinkTracker, BuilderProSelectionVisualizer, CanManipulateFurniture, CreateLinkEvent, GetRoomEngine, GetSessionDataManager, HasHabboClub, RemoveLinkEventTracker, SendMessageComposer, SetBuilderProSelectionModeActive } from '../../../../api';
 import { useMessageEvent, useRoom, useRoomEngineEvent } from '../../../../hooks';
 import { NitroCardContentView, NitroCardHeaderView, NitroCardView } from '../../../../common';
 import './BuilderProView.scss';
@@ -31,11 +31,24 @@ const GROUP_OP_REPLACE_MEMBERS = 5;
 const TRAVERSAL_OP_QUERY = 0;
 const TRAVERSAL_OP_SET = 1;
 
+const BLUEPRINT_OP_LIST = 0;
+const BLUEPRINT_OP_CREATE = 1;
+const BLUEPRINT_OP_RENAME = 2;
+const BLUEPRINT_OP_DELETE = 3;
+const BLUEPRINT_OP_PLACE = 4;
+const BLUEPRINT_OP_PREVIEW = 5;
+
 type BuilderProSavedGroupState = {
     id: number;
     name: string;
     locked: boolean;
     itemIds: number[];
+};
+
+type BuilderProSavedBlueprintState = {
+    id: number;
+    name: string;
+    itemCount: number;
 };
 
 type BuilderProDragLocation = {
@@ -93,6 +106,16 @@ export const BuilderProView: FC<{}> = props =>
     const [ traversableIds, setTraversableIds ] =
         useState<number[]>([]);
     const [ traversalPending, setTraversalPending ] =
+        useState(false);
+    const [ savedBlueprints, setSavedBlueprints ] =
+        useState<BuilderProSavedBlueprintState[]>([]);
+    const [ selectedBlueprintId, setSelectedBlueprintId ] =
+        useState<number | null>(null);
+    const [ blueprintName, setBlueprintName ] =
+        useState('');
+    const [ blueprintPending, setBlueprintPending ] =
+        useState(false);
+    const [ blueprintPlaceMode, setBlueprintPlaceMode ] =
         useState(false);
     const [ moveStep, setMoveStep ] = useState(1);
     const [ heightStep, setHeightStep ] = useState(1);
@@ -178,6 +201,20 @@ export const BuilderProView: FC<{}> = props =>
         useRef(TRAVERSAL_OP_QUERY);
     const traversalTimeoutRef =
         useRef<number | null>(null);
+    const blueprintPendingRef =
+        useRef(false);
+    const blueprintRequestIdRef =
+        useRef(0);
+    const blueprintOperationRef =
+        useRef(BLUEPRINT_OP_LIST);
+    const blueprintTimeoutRef =
+        useRef<number | null>(null);
+    const blueprintPlaceModeRef =
+        useRef(false);
+    const selectedBlueprintIdRef =
+        useRef<number | null>(null);
+    const blueprintPreviewRef =
+        useRef<BuilderProClipboardPreview | null>(null);
     const suppressAreaClickRef = useRef(false);
     const pivotIdRef = useRef<number | null>(null);
     const pivotPickModeRef = useRef(false);
@@ -193,9 +230,14 @@ export const BuilderProView: FC<{}> = props =>
 
     roomSessionRef.current = roomSession;
     savedGroupsRef.current = savedGroups;
+    selectedBlueprintIdRef.current =
+        selectedBlueprintId;
     moveStepRef.current = moveStep;
 
     const sessionDataManager = GetSessionDataManager();
+
+    const hasBiriClub =
+        HasHabboClub();
 
     const canBuild = !!roomSession &&
         (
@@ -211,6 +253,16 @@ export const BuilderProView: FC<{}> = props =>
                 savedGroups.find(
                     group =>
                         group.id === selectedGroupId
+                ) || null
+            );
+
+    const selectedSavedBlueprint =
+        selectedBlueprintId === null
+            ? null
+            : (
+                savedBlueprints.find(
+                    blueprint =>
+                        blueprint.id === selectedBlueprintId
                 ) || null
             );
 
@@ -936,6 +988,493 @@ export const BuilderProView: FC<{}> = props =>
             requestGroupState,
             selectedSavedGroup
         ]);
+
+    const requestBlueprintState =
+        useCallback((
+            operation: number,
+            blueprintId = 0,
+            name = '',
+            anchorX = 0,
+            anchorY = 0,
+            itemIds: number[] = []
+        ) =>
+        {
+            if(!activeRef.current) return;
+            if(!roomSessionRef.current) return;
+            if(blueprintPendingRef.current) return;
+
+            blueprintRequestIdRef.current++;
+
+            if(
+                blueprintRequestIdRef.current >
+                2000000000
+            )
+            {
+                blueprintRequestIdRef.current = 1;
+            }
+
+            const requestId =
+                blueprintRequestIdRef.current;
+
+            blueprintOperationRef.current =
+                operation;
+
+            blueprintPendingRef.current =
+                true;
+
+            setBlueprintPending(
+                true
+            );
+
+            SendMessageComposer(
+                new BuilderProBlueprintStateComposer(
+                    requestId,
+                    operation,
+                    blueprintId,
+                    name,
+                    anchorX,
+                    anchorY,
+                    itemIds
+                )
+            );
+
+            if(
+                blueprintTimeoutRef.current !==
+                null
+            )
+            {
+                window.clearTimeout(
+                    blueprintTimeoutRef.current
+                );
+            }
+
+            blueprintTimeoutRef.current =
+                window.setTimeout(
+                    () =>
+                    {
+                        blueprintTimeoutRef.current =
+                            null;
+
+                        if(
+                            !blueprintPendingRef.current ||
+                            blueprintRequestIdRef.current !==
+                            requestId
+                        )
+                        {
+                            return;
+                        }
+
+                        blueprintPendingRef.current =
+                            false;
+
+                        setBlueprintPending(
+                            false
+                        );
+
+                        setStatus(
+                            'Sin respuesta al gestionar blueprints.'
+                        );
+                    },
+                    3000
+                );
+        }, []);
+
+    useMessageEvent<BuilderProBlueprintStateEvent>(
+        BuilderProBlueprintStateEvent,
+        event =>
+        {
+            const parser =
+                event.getParser();
+
+            if(!parser) return;
+
+            if(
+                parser.requestId !==
+                blueprintRequestIdRef.current
+            )
+            {
+                return;
+            }
+
+            if(
+                blueprintTimeoutRef.current !==
+                null
+            )
+            {
+                window.clearTimeout(
+                    blueprintTimeoutRef.current
+                );
+
+                blueprintTimeoutRef.current =
+                    null;
+            }
+
+            blueprintPendingRef.current =
+                false;
+
+            setBlueprintPending(
+                false
+            );
+
+            const nextBlueprints:
+                BuilderProSavedBlueprintState[] =
+                parser.blueprints.map(
+                    blueprint => ({
+                        id: blueprint.id,
+                        name: blueprint.name,
+                        itemCount: blueprint.itemCount
+                    })
+                );
+
+            setSavedBlueprints(
+                nextBlueprints
+            );
+
+            const operation =
+                blueprintOperationRef.current;
+
+            if(
+                parser.success &&
+                operation === BLUEPRINT_OP_PREVIEW
+            )
+            {
+                const entries = [
+                    ...parser.previewEntries
+                ];
+
+                if(
+                    parser.previewBlueprintId !==
+                    selectedBlueprintIdRef.current ||
+                    !entries.length
+                )
+                {
+                    blueprintPreviewRef.current =
+                        null;
+
+                    blueprintPlaceModeRef.current =
+                        false;
+
+                    setBlueprintPlaceMode(
+                        false
+                    );
+
+                    setStatus(
+                        'No se pudo preparar la vista previa del blueprint.'
+                    );
+                }
+                else
+                {
+                    blueprintPreviewRef.current = {
+                        sourceAnchorZ: 0,
+                        entries:
+                            entries.map(
+                                entry => ({
+                                    ...entry
+                                })
+                            )
+                    };
+
+                    blueprintPlaceModeRef.current =
+                        true;
+
+                    setBlueprintPlaceMode(
+                        true
+                    );
+
+                    setStatus(
+                        'Blueprint: mueve el cursor y haz clic en el destino.'
+                    );
+                }
+            }
+
+            if(
+                parser.success &&
+                operation === BLUEPRINT_OP_PLACE
+            )
+            {
+                const placedIds = [
+                    ...parser.placedItemIds
+                ];
+
+                if(placedIds.length)
+                {
+                    applySelection(
+                        placedIds
+                    );
+
+                    setCanUndo(true);
+                    setCanRedo(false);
+
+                    window.requestAnimationFrame(
+                        () =>
+                        {
+                            BuilderProSelectionVisualizer.refresh(
+                                placedIds
+                            );
+                        }
+                    );
+                }
+            }
+
+            setSelectedBlueprintId(
+                current =>
+                {
+                    if(
+                        parser.success &&
+                        operation ===
+                        BLUEPRINT_OP_CREATE &&
+                        nextBlueprints.length
+                    )
+                    {
+                        return nextBlueprints[0].id;
+                    }
+
+                    if(
+                        current !== null &&
+                        nextBlueprints.some(
+                            blueprint =>
+                                blueprint.id === current
+                        )
+                    )
+                    {
+                        return current;
+                    }
+
+                    return nextBlueprints.length
+                        ? nextBlueprints[0].id
+                        : null;
+                }
+            );
+
+            if(
+                (
+                    operation !==
+                    BLUEPRINT_OP_LIST &&
+                    operation !==
+                    BLUEPRINT_OP_PREVIEW
+                ) ||
+                !parser.success
+            )
+            {
+                setStatus(
+                    parser.success
+                        ? parser.message
+                        : `Error ${ parser.code }: ${ parser.message }`
+                );
+            }
+        }
+    );
+
+    useEffect(() =>
+    {
+        if(!active) return;
+        if(!roomSession) return;
+
+        if(
+            blueprintTimeoutRef.current !==
+            null
+        )
+        {
+            window.clearTimeout(
+                blueprintTimeoutRef.current
+            );
+
+            blueprintTimeoutRef.current =
+                null;
+        }
+
+        blueprintPendingRef.current =
+            false;
+
+        setBlueprintPending(
+            false
+        );
+
+        requestBlueprintState(
+            BLUEPRINT_OP_LIST
+        );
+    }, [
+        active,
+        roomSession?.roomId,
+        requestBlueprintState
+    ]);
+
+    useEffect(() =>
+    {
+        if(selectedBlueprintId === null)
+        {
+            setBlueprintName('');
+            return;
+        }
+
+        const blueprint =
+            savedBlueprints.find(
+                entry =>
+                    entry.id ===
+                    selectedBlueprintId
+            );
+
+        setBlueprintName(
+            blueprint?.name || ''
+        );
+    }, [
+        savedBlueprints,
+        selectedBlueprintId
+    ]);
+
+    const createBlueprint =
+        useCallback(() =>
+        {
+            if(!selectedIdsRef.current.length)
+            {
+                setStatus(
+                    'Selecciona furnis antes de guardar un blueprint.'
+                );
+
+                return;
+            }
+
+            requestBlueprintState(
+                BLUEPRINT_OP_CREATE,
+                0,
+                '',
+                0,
+                0,
+                selectedIdsRef.current
+            );
+        }, [
+            requestBlueprintState
+        ]);
+
+    const renameBlueprint =
+        useCallback(() =>
+        {
+            if(!selectedSavedBlueprint)
+            {
+                return;
+            }
+
+            const name =
+                blueprintName.trim();
+
+            if(!name)
+            {
+                setStatus(
+                    'Escribe un nombre para el blueprint.'
+                );
+
+                return;
+            }
+
+            requestBlueprintState(
+                BLUEPRINT_OP_RENAME,
+                selectedSavedBlueprint.id,
+                name
+            );
+        }, [
+            blueprintName,
+            requestBlueprintState,
+            selectedSavedBlueprint
+        ]);
+
+    const deleteBlueprint =
+        useCallback(() =>
+        {
+            if(!selectedSavedBlueprint)
+            {
+                return;
+            }
+
+            if(
+                !window.confirm(
+                    `¿Eliminar "${ selectedSavedBlueprint.name }"?`
+                )
+            )
+            {
+                return;
+            }
+
+            requestBlueprintState(
+                BLUEPRINT_OP_DELETE,
+                selectedSavedBlueprint.id
+            );
+        }, [
+            requestBlueprintState,
+            selectedSavedBlueprint
+        ]);
+
+    const toggleBlueprintPlaceMode =
+        useCallback(() =>
+        {
+            if(pendingRef.current) return;
+            if(blueprintPendingRef.current) return;
+
+            if(blueprintPlaceModeRef.current)
+            {
+                blueprintPlaceModeRef.current =
+                    false;
+
+                blueprintPreviewRef.current =
+                    null;
+
+                setBlueprintPlaceMode(
+                    false
+                );
+
+                setStatus(
+                    'Colocación de blueprint cancelada.'
+                );
+
+                return;
+            }
+
+            const blueprintId =
+                selectedBlueprintIdRef.current;
+
+            if(!blueprintId)
+            {
+                setStatus(
+                    'Selecciona un blueprint para colocarlo.'
+                );
+
+                return;
+            }
+
+            if(pasteModeRef.current)
+            {
+                setStatus(
+                    'Cancela primero el modo Pegar o Duplicar.'
+                );
+
+                return;
+            }
+
+            blueprintPreviewRef.current =
+                null;
+
+            setStatus(
+                'Preparando vista previa del blueprint...'
+            );
+
+            requestBlueprintState(
+                BLUEPRINT_OP_PREVIEW,
+                blueprintId
+            );
+        }, [
+            requestBlueprintState
+        ]);
+
+    useEffect(() =>
+    {
+        if(active) return;
+
+        blueprintPlaceModeRef.current =
+            false;
+
+        setBlueprintPlaceMode(
+            false
+        );
+    }, [ active ]);
 
     const requestTraversalState =
         useCallback((
@@ -3434,16 +3973,89 @@ export const BuilderProView: FC<{}> = props =>
 
     const syncPastePreview = useCallback(() =>
     {
-        if(!pasteModeRef.current) return;
+        const isBlueprintPreview =
+            blueprintPlaceModeRef.current;
 
-        const preview = clipboardPreviewRef.current;
-        const anchor = pastePreviewAnchorRef.current;
-        const currentRoomSession = roomSessionRef.current;
-        const roomEngine = GetRoomEngine();
+        if(
+            !pasteModeRef.current &&
+            !isBlueprintPreview
+        )
+        {
+            return;
+        }
 
-        if(!preview || !anchor || !currentRoomSession || !roomEngine) return;
+        const preview =
+            isBlueprintPreview
+                ? blueprintPreviewRef.current
+                : clipboardPreviewRef.current;
 
-        const roomId = currentRoomSession.roomId;
+        const anchor =
+            pastePreviewAnchorRef.current;
+
+        const currentRoomSession =
+            roomSessionRef.current;
+
+        const roomEngine =
+            GetRoomEngine();
+
+        if(
+            !preview ||
+            !anchor ||
+            !currentRoomSession ||
+            !roomEngine
+        )
+        {
+            return;
+        }
+
+        const roomId =
+            currentRoomSession.roomId;
+
+        let originZ =
+            preview.sourceAnchorZ;
+
+        if(isBlueprintPreview)
+        {
+            const heightMap =
+                (roomEngine as any)
+                    .getFurnitureStackingHeightMap?.(
+                        roomId
+                    );
+
+            const surfaceZ =
+                Number(
+                    heightMap?.getTileHeight(
+                        anchor.x,
+                        anchor.y
+                    )
+                );
+
+            if(!Number.isFinite(surfaceZ))
+            {
+                return;
+            }
+
+            let minimumOffsetZ =
+                Number.POSITIVE_INFINITY;
+
+            for(const entry of preview.entries)
+            {
+                minimumOffsetZ =
+                    Math.min(
+                        minimumOffsetZ,
+                        entry.offsetZ
+                    );
+            }
+
+            if(!Number.isFinite(minimumOffsetZ))
+            {
+                return;
+            }
+
+            originZ =
+                surfaceZ -
+                minimumOffsetZ;
+        }
 
         for(let index = 0; index < preview.entries.length; index++)
         {
@@ -3451,7 +4063,7 @@ export const BuilderProView: FC<{}> = props =>
             const ghostId = BUILDER_PRO_PASTE_GHOST_ID_BASE - index;
             const x = anchor.x + entry.offsetX;
             const y = anchor.y + entry.offsetY;
-            const z = preview.sourceAnchorZ + entry.offsetZ;
+            const z = originZ + entry.offsetZ;
 
             if(!pasteGhostIdsRef.current.includes(ghostId))
             {
@@ -3571,8 +4183,21 @@ export const BuilderProView: FC<{}> = props =>
         RoomEngineTileHoverEvent.TILE_HOVER,
         event =>
         {
-            if(!activeRef.current || !pasteModeRef.current || pendingRef.current) return;
-            renderPastePreview(event.tileX, event.tileY);
+            if(!activeRef.current) return;
+            if(pendingRef.current) return;
+
+            if(
+                !pasteModeRef.current &&
+                !blueprintPlaceModeRef.current
+            )
+            {
+                return;
+            }
+
+            renderPastePreview(
+                event.tileX,
+                event.tileY
+            );
         }
     );
 
@@ -3580,6 +4205,16 @@ export const BuilderProView: FC<{}> = props =>
     {
         if(!activeRef.current) return;
         if(pendingRef.current) return;
+
+        if(blueprintPlaceModeRef.current)
+        {
+            blueprintPlaceModeRef.current =
+                false;
+
+            setBlueprintPlaceMode(
+                false
+            );
+        }
 
         duplicateRequestedRef.current = false;
         duplicateModeRef.current = false;
@@ -3625,6 +4260,24 @@ export const BuilderProView: FC<{}> = props =>
 
     useEffect(() =>
     {
+        if(blueprintPlaceMode)
+        {
+            return;
+        }
+
+        if(pasteModeRef.current)
+        {
+            return;
+        }
+
+        clearPastePreview();
+    }, [
+        blueprintPlaceMode,
+        clearPastePreview
+    ]);
+
+    useEffect(() =>
+    {
         if(active) return;
 
         clearPastePreview();
@@ -3650,6 +4303,65 @@ export const BuilderProView: FC<{}> = props =>
         event =>
         {
             if(!activeRef.current) return;
+
+            if(blueprintPlaceModeRef.current)
+            {
+                event.consume();
+
+                if(
+                    pendingRef.current ||
+                    blueprintPendingRef.current
+                )
+                {
+                    return;
+                }
+
+                const blueprintId =
+                    selectedBlueprintIdRef.current;
+
+                if(!blueprintId)
+                {
+                    blueprintPlaceModeRef.current =
+                        false;
+
+                    setBlueprintPlaceMode(
+                        false
+                    );
+
+                    setStatus(
+                        'Selecciona un blueprint para colocarlo.'
+                    );
+
+                    return;
+                }
+
+                clearPastePreview();
+
+                blueprintPreviewRef.current =
+                    null;
+
+                blueprintPlaceModeRef.current =
+                    false;
+
+                setBlueprintPlaceMode(
+                    false
+                );
+
+                setStatus(
+                    `Colocando blueprint en ${ event.tileX }, ${ event.tileY }...`
+                );
+
+                requestBlueprintState(
+                    BLUEPRINT_OP_PLACE,
+                    blueprintId,
+                    '',
+                    event.tileX,
+                    event.tileY
+                );
+
+                return;
+            }
+
             if(!pasteModeRef.current) return;
 
             event.consume();
@@ -5950,6 +6662,216 @@ export const BuilderProView: FC<{}> = props =>
                                     Desagrupar
                                 </button>
 
+                            </div>
+                        </details>
+
+                        <details className="builder-pro-section">
+                            <summary>Blueprints</summary>
+
+                            <div className="builder-pro-section-body">
+                                <select
+                                    className="builder-pro-group-select"
+                                    disabled={
+                                        pending ||
+                                        blueprintPending ||
+                                        !savedBlueprints.length
+                                    }
+                                    value={
+                                        selectedBlueprintId ??
+                                        ''
+                                    }
+                                    onChange={
+                                        event =>
+                                        {
+                                            const value =
+                                                Number(
+                                                    event.target.value
+                                                );
+
+                                            if(
+                                                blueprintPlaceModeRef.current
+                                            )
+                                            {
+                                                blueprintPlaceModeRef.current =
+                                                    false;
+
+                                                blueprintPreviewRef.current =
+                                                    null;
+
+                                                setBlueprintPlaceMode(
+                                                    false
+                                                );
+                                            }
+
+                                            setSelectedBlueprintId(
+                                                Number.isSafeInteger(value) &&
+                                                value > 0
+                                                    ? value
+                                                    : null
+                                            );
+                                        }
+                                    }>
+                                    { !savedBlueprints.length &&
+                                        <option value="">
+                                            Sin blueprints
+                                        </option> }
+
+                                    { savedBlueprints.map(
+                                        blueprint =>
+                                            <option
+                                                key={ blueprint.id }
+                                                value={ blueprint.id }>
+                                                { `${ blueprint.name } · ${ blueprint.itemCount } furnis` }
+                                            </option>
+                                    ) }
+                                </select>
+
+                                <div className="builder-pro-grid-2">
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            blueprintPending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () =>
+                                            {
+                                                if(!hasBiriClub)
+                                                {
+                                                    setStatus(
+                                                        'Guardar blueprints requiere Biri Club.'
+                                                    );
+
+                                                    CreateLinkEvent(
+                                                        'habboUI/open/hccenter'
+                                                    );
+
+                                                    return;
+                                                }
+
+                                                createBlueprint();
+                                            }
+                                        }>
+                                        { hasBiriClub
+                                            ? 'Guardar selección'
+                                            : 'Guardar · Biri Club' }
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className={
+                                            blueprintPlaceMode
+                                                ? 'is-selected'
+                                                : ''
+                                        }
+                                        disabled={
+                                            pending ||
+                                            blueprintPending ||
+                                            !selectedSavedBlueprint
+                                        }
+                                        onClick={
+                                            () =>
+                                            {
+                                                if(!hasBiriClub)
+                                                {
+                                                    setStatus(
+                                                        'Colocar blueprints requiere Biri Club.'
+                                                    );
+
+                                                    CreateLinkEvent(
+                                                        'habboUI/open/hccenter'
+                                                    );
+
+                                                    return;
+                                                }
+
+                                                toggleBlueprintPlaceMode();
+                                            }
+                                        }>
+                                        { blueprintPlaceMode
+                                            ? 'Cancelar'
+                                            : (
+                                                hasBiriClub
+                                                    ? 'Colocar'
+                                                    : 'Colocar · Biri Club'
+                                            ) }
+                                    </button>
+                                </div>
+
+                                <div className="builder-pro-group-rename">
+                                    <input
+                                        type="text"
+                                        maxLength={ 50 }
+                                        placeholder="Nombre del blueprint"
+                                        disabled={
+                                            pending ||
+                                            blueprintPending ||
+                                            !selectedSavedBlueprint
+                                        }
+                                        value={ blueprintName }
+                                        onChange={
+                                            event =>
+                                                setBlueprintName(
+                                                    event.target.value
+                                                )
+                                        } />
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            blueprintPending ||
+                                            !selectedSavedBlueprint ||
+                                            !blueprintName.trim()
+                                        }
+                                        onClick={
+                                            renameBlueprint
+                                        }>
+                                        Renombrar
+                                    </button>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    className="builder-pro-full"
+                                    disabled={
+                                        pending ||
+                                        blueprintPending ||
+                                        !selectedSavedBlueprint
+                                    }
+                                    onClick={
+                                        deleteBlueprint
+                                    }>
+                                    Eliminar
+                                </button>
+
+                                { !hasBiriClub &&
+                                    <button
+                                        type="button"
+                                        className="builder-pro-full"
+                                        disabled={
+                                            pending ||
+                                            blueprintPending
+                                        }
+                                        onClick={
+                                            () =>
+                                                CreateLinkEvent(
+                                                    'habboUI/open/hccenter'
+                                                )
+                                        }>
+                                        Ver Biri Club
+                                    </button> }
+
+                                <div className="builder-pro-hint">
+                                    { !hasBiriClub
+                                        ? 'Blueprints requiere Biri Club para guardar y colocar. Puedes conservar, renombrar y eliminar los que ya tengas.'
+                                        : (
+                                            selectedSavedBlueprint
+                                                ? `${ selectedSavedBlueprint.itemCount } furnis guardados · reutilizable entre salas`
+                                                : 'Guarda una selección para reutilizarla después.'
+                                        ) }
+                                </div>
                             </div>
                         </details>
 

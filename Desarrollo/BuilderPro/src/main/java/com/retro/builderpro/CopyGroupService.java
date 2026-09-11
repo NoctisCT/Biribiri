@@ -203,6 +203,74 @@ public final class CopyGroupService
         );
     }
 
+    public static Clipboard createBlueprintClipboard(
+            double sourceOriginZ,
+            List<BuilderProBlueprintRepository.BlueprintItem> blueprintItems)
+    {
+        if(blueprintItems == null
+                || blueprintItems.isEmpty())
+        {
+            return null;
+        }
+
+        List<Entry> entries =
+                new ArrayList<Entry>(
+                        blueprintItems.size()
+                );
+
+        for(BuilderProBlueprintRepository.BlueprintItem item :
+                blueprintItems)
+        {
+            if(item == null)
+            {
+                continue;
+            }
+
+            entries.add(
+                    new Entry(
+                            item.baseItemId,
+                            item.baseItemName,
+                            item.offsetX,
+                            item.offsetY,
+                            roundZ(
+                                    item.offsetZ
+                            ),
+                            item.rotation,
+                            item.extraData
+                    )
+            );
+        }
+
+        if(entries.isEmpty())
+        {
+            return null;
+        }
+
+        return new Clipboard(
+                sourceOriginZ,
+                entries
+        );
+    }
+
+    static void setClipboard(
+            int actorId,
+            Clipboard clipboard)
+    {
+        if(clipboard == null)
+        {
+            CLIPBOARDS.remove(
+                    actorId
+            );
+
+            return;
+        }
+
+        CLIPBOARDS.put(
+                actorId,
+                clipboard
+        );
+    }
+
     public static void clear(
             int actorId)
     {

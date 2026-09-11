@@ -529,6 +529,7 @@ export class IncomingHeader {
     public static BUILDER_PRO_LAYOUT_GROUP_RESULT = 6313;
     public static BUILDER_PRO_GROUP_STATE_RESULT = 6315;
     public static BUILDER_PRO_TRAVERSAL_STATE_RESULT = 6317;
+    public static BUILDER_PRO_BLUEPRINT_STATE_RESULT = 6319;
 
 public static AIR_HOCKEY_CLOSE = 6006;
 public static AIR_HOCKEY_ERROR = 6007;

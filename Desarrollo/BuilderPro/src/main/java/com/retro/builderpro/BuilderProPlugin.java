@@ -24,6 +24,7 @@ import com.retro.builderpro.handlers.TransformGroupRequest;
 import com.retro.builderpro.handlers.HistoryRequest;
 import com.retro.builderpro.handlers.GroupStateRequest;
 import com.retro.builderpro.handlers.TraversalStateRequest;
+import com.retro.builderpro.handlers.BlueprintStateRequest;
 
 public class BuilderProPlugin
         extends HabboPlugin
@@ -43,6 +44,7 @@ public class BuilderProPlugin
     {
         BuilderProGroupRepository.initialize();
         BuilderProTraversalService.initialize();
+        BuilderProBlueprintRepository.initialize();
 
         Emulator.getGameServer()
                 .getPacketManager()
@@ -105,6 +107,13 @@ public class BuilderProPlugin
                 .registerHandler(
                         BuilderProPackets.TRAVERSAL_STATE_REQUEST,
                         TraversalStateRequest.class
+                );
+
+        Emulator.getGameServer()
+                .getPacketManager()
+                .registerHandler(
+                        BuilderProPackets.BLUEPRINT_STATE_REQUEST,
+                        BlueprintStateRequest.class
                 );
 
         System.out.println(

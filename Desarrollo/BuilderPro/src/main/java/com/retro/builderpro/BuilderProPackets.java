@@ -32,4 +32,7 @@ public final class BuilderProPackets
 
     public static final int TRAVERSAL_STATE_REQUEST = 6316;
     public static final int TRAVERSAL_STATE_RESULT = 6317;
+
+    public static final int BLUEPRINT_STATE_REQUEST = 6318;
+    public static final int BLUEPRINT_STATE_RESULT = 6319;
 }
