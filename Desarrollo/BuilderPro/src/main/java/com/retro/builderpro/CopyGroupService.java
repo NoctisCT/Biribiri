@@ -9,8 +9,11 @@ import com.eu.habbo.habbohotel.users.HabboItem;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -139,6 +142,35 @@ public final class CopyGroupService
 
         }
 
+        Map<Integer, Integer> layerMemberships;
+        Set<Integer> traversableIds;
+
+        try
+        {
+            layerMemberships =
+                    BuilderProLayerRepository.memberships(
+                            new ArrayList<Integer>(
+                                    uniqueIds
+                            )
+                    );
+
+            traversableIds =
+                    new HashSet<Integer>(
+                            BuilderProTraversalRepository.list(
+                                    room.getId()
+                            )
+                    );
+        }
+        catch(Exception exception)
+        {
+            exception.printStackTrace();
+
+            return Result.failure(
+                    11,
+                    "No se pudo leer la metadata de la seleccion."
+            );
+        }
+
         SourceSnapshot anchor =
                 snapshots.get(0);
 
@@ -163,7 +195,17 @@ public final class CopyGroupService
                                     snapshot.z - originZ
                             ),
                             snapshot.rotation,
-                            snapshot.extraData
+                            snapshot.extraData,
+                            layerMemberships.containsKey(
+                                    snapshot.itemId
+                            )
+                                    ? layerMemberships.get(
+                                            snapshot.itemId
+                                    ).intValue()
+                                    : 0,
+                            traversableIds.contains(
+                                    snapshot.itemId
+                            )
                     )
             );
         }
@@ -236,7 +278,9 @@ public final class CopyGroupService
                                     item.offsetZ
                             ),
                             item.rotation,
-                            item.extraData
+                            item.extraData,
+                            0,
+                            false
                     )
             );
         }
@@ -248,6 +292,68 @@ public final class CopyGroupService
 
         return new Clipboard(
                 sourceOriginZ,
+                entries
+        );
+    }
+
+    public static Clipboard createMirroredClipboard(
+            Clipboard source,
+            int axis,
+            List<Integer> targetRotations)
+    {
+        if(source == null
+                || source.getEntries() == null
+                || source.getEntries().isEmpty()
+                || targetRotations == null
+                || targetRotations.size()
+                != source.getEntries().size()
+                || (axis != 1 && axis != 2))
+        {
+            return null;
+        }
+
+        List<Entry> entries =
+                new ArrayList<Entry>(
+                        source.getEntries().size()
+                );
+
+        for(int index = 0;
+                index < source.getEntries().size();
+                index++)
+        {
+            Entry entry =
+                    source.getEntries().get(index);
+
+            Integer rotation =
+                    targetRotations.get(index);
+
+            if(entry == null
+                    || rotation == null)
+            {
+                return null;
+            }
+
+            entries.add(
+                    new Entry(
+                            entry.getBaseItemId(),
+                            entry.getBaseItemName(),
+                            axis == 1
+                                    ? -entry.getOffsetX()
+                                    : entry.getOffsetX(),
+                            axis == 2
+                                    ? -entry.getOffsetY()
+                                    : entry.getOffsetY(),
+                            entry.getOffsetZ(),
+                            rotation.intValue(),
+                            entry.getExtraData(),
+                            entry.getLayerId(),
+                            entry.isTraversable()
+                    )
+            );
+        }
+
+        return new Clipboard(
+                source.getSourceOriginZ(),
                 entries
         );
     }
@@ -308,6 +414,7 @@ public final class CopyGroupService
 
     private static final class SourceSnapshot
     {
+        private final int itemId;
         private final int baseItemId;
         private final String baseItemName;
         private final short x;
@@ -319,6 +426,9 @@ public final class CopyGroupService
         private SourceSnapshot(
                 HabboItem item)
         {
+            this.itemId =
+                    item.getId();
+
             this.baseItemId =
                     item.getBaseItem()
                             .getId();
@@ -388,6 +498,8 @@ public final class CopyGroupService
         private final double offsetZ;
         private final int rotation;
         private final String extraData;
+        private final int layerId;
+        private final boolean traversable;
 
         private Entry(
                 int baseItemId,
@@ -396,7 +508,9 @@ public final class CopyGroupService
                 int offsetY,
                 double offsetZ,
                 int rotation,
-                String extraData)
+                String extraData,
+                int layerId,
+                boolean traversable)
         {
             this.baseItemId = baseItemId;
             this.baseItemName =
@@ -410,7 +524,12 @@ public final class CopyGroupService
                     normalizeRotation(
                             rotation
                     );
-            this.extraData = extraData;
+            this.extraData =
+                    extraData == null
+                            ? ""
+                            : extraData;
+            this.layerId = layerId;
+            this.traversable = traversable;
         }
 
         public int getBaseItemId()
@@ -446,6 +565,16 @@ public final class CopyGroupService
         public String getExtraData()
         {
             return this.extraData;
+        }
+
+        public int getLayerId()
+        {
+            return this.layerId;
+        }
+
+        public boolean isTraversable()
+        {
+            return this.traversable;
         }
     }
 

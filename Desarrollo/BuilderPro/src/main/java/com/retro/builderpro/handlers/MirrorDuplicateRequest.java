@@ -2,14 +2,15 @@ package com.retro.builderpro.handlers;
 
 import com.eu.habbo.messages.ServerMessage;
 import com.eu.habbo.messages.incoming.MessageHandler;
-import com.retro.builderpro.BuilderProPackets;
 import com.retro.builderpro.BuilderProGroupGuard;
+import com.retro.builderpro.BuilderProPackets;
 import com.retro.builderpro.CopyGroupService;
+import com.retro.builderpro.MirrorDuplicateService;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class CopyGroupRequest
+public class MirrorDuplicateRequest
         extends MessageHandler
 {
     @Override
@@ -22,13 +23,19 @@ public class CopyGroupRequest
         }
 
         int requestId =
-                this.packet
-                        .readInt()
+                this.packet.readInt()
+                        .intValue();
+
+        int axis =
+                this.packet.readInt()
+                        .intValue();
+
+        int pivotId =
+                this.packet.readInt()
                         .intValue();
 
         int count =
-                this.packet
-                        .readInt()
+                this.packet.readInt()
                         .intValue();
 
         if(count < 1
@@ -36,7 +43,7 @@ public class CopyGroupRequest
         {
             sendResult(
                     requestId,
-                    CopyGroupService.Result.failure(
+                    MirrorDuplicateService.Result.failure(
                             30,
                             "Cantidad de furnis invalida."
                     )
@@ -55,8 +62,39 @@ public class CopyGroupRequest
                 index++)
         {
             itemIds.add(
-                    this.packet
-                            .readInt()
+                    this.packet.readInt()
+                            .intValue()
+            );
+        }
+
+        int rotationCount =
+                this.packet.readInt()
+                        .intValue();
+
+        if(rotationCount != count)
+        {
+            sendResult(
+                    requestId,
+                    MirrorDuplicateService.Result.failure(
+                            31,
+                            "Faltan orientaciones reflejadas."
+                    )
+            );
+
+            return;
+        }
+
+        List<Integer> targetRotations =
+                new ArrayList<Integer>(
+                        rotationCount
+                );
+
+        for(int index = 0;
+                index < rotationCount;
+                index++)
+        {
+            targetRotations.add(
+                    this.packet.readInt()
                             .intValue()
             );
         }
@@ -71,8 +109,8 @@ public class CopyGroupRequest
         {
             sendResult(
                     requestId,
-                    CopyGroupService.Result.failure(
-                            31,
+                    MirrorDuplicateService.Result.failure(
+                            32,
                             groupGuard.message
                     )
             );
@@ -80,10 +118,13 @@ public class CopyGroupRequest
             return;
         }
 
-        CopyGroupService.Result result =
-                CopyGroupService.copy(
+        MirrorDuplicateService.Result result =
+                MirrorDuplicateService.prepare(
                         this.client.getHabbo(),
-                        itemIds
+                        itemIds,
+                        axis,
+                        pivotId,
+                        targetRotations
                 );
 
         sendResult(
@@ -94,39 +135,21 @@ public class CopyGroupRequest
 
     private void sendResult(
             int requestId,
-            CopyGroupService.Result result)
+            MirrorDuplicateService.Result result)
     {
         ServerMessage response =
                 new ServerMessage(
-                        BuilderProPackets.COPY_GROUP_RESULT
+                        BuilderProPackets.MIRROR_DUPLICATE_RESULT
                 );
 
-        response.appendInt(
-                requestId
-        );
-
-        response.appendBoolean(
-                result.success
-        );
-
-        response.appendInt(
-                result.code
-        );
-
-        response.appendString(
-                result.message
-        );
-
-        response.appendInt(
-                result.copiedCount
-        );
+        response.appendInt(requestId);
+        response.appendBoolean(result.success);
+        response.appendInt(result.code);
+        response.appendString(result.message);
+        response.appendInt(result.preparedCount());
 
         CopyGroupService.Clipboard clipboard =
-                result.success
-                        ? CopyGroupService.getClipboard(
-                                this.client.getHabbo().getHabboInfo().getId()
-                        )
-                        : null;
+                result.clipboard;
 
         if(clipboard == null)
         {
@@ -135,15 +158,27 @@ public class CopyGroupRequest
         }
         else
         {
-            response.appendString(Double.toString(clipboard.getSourceOriginZ()));
-            response.appendInt(clipboard.size());
+            response.appendString(
+                    Double.toString(
+                            clipboard.getSourceOriginZ()
+                    )
+            );
 
-            for(CopyGroupService.Entry entry : clipboard.getEntries())
+            response.appendInt(
+                    clipboard.size()
+            );
+
+            for(CopyGroupService.Entry entry :
+                    clipboard.getEntries())
             {
                 response.appendInt(entry.getBaseItemId());
                 response.appendInt(entry.getOffsetX());
                 response.appendInt(entry.getOffsetY());
-                response.appendString(Double.toString(entry.getOffsetZ()));
+                response.appendString(
+                        Double.toString(
+                                entry.getOffsetZ()
+                        )
+                );
                 response.appendInt(entry.getRotation());
                 response.appendString(entry.getExtraData());
             }

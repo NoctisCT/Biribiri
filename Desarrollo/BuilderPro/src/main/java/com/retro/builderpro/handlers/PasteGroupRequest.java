@@ -53,11 +53,15 @@ public class PasteGroupRequest
                     && placedStates.size()
                     == result.itemIds.size())
             {
-                BuilderProHistoryService.recordPlacement(
+                if(!BuilderProHistoryService.recordPlacementWithMetadata(
                         this.client.getHabbo(),
                         placedStates,
-                        "Pegado"
-                );
+                        "Pegado"))
+                {
+                    BuilderProHistoryService.invalidate(
+                            this.client.getHabbo()
+                    );
+                }
             }
             else
             {

@@ -43,4 +43,7 @@ public final class BuilderProPackets
     public static final int LAYER_STATE_RESULT = 6323;
 
     public static final int REFERENCE_PLACEMENT_REQUEST = 6324;
+
+    public static final int MIRROR_DUPLICATE_REQUEST = 6325;
+    public static final int MIRROR_DUPLICATE_RESULT = 6326;
 }

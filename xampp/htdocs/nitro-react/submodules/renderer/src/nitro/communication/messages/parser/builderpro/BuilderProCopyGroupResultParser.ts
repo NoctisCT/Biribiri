@@ -6,6 +6,7 @@ export type BuilderProCopyPreviewEntry = {
     offsetY: number;
     offsetZ: number;
     rotation: number;
+    state: number;
 };
 
 export class BuilderProCopyGroupResultParser implements IMessageParser
@@ -50,12 +51,16 @@ export class BuilderProCopyGroupResultParser implements IMessageParser
             const offsetY = wrapper.readInt();
             const offsetZValue = Number.parseFloat(wrapper.readString());
             const rotation = wrapper.readInt();
+            const extraData = wrapper.readString();
+            const parsedState = Number.parseInt(extraData, 10);
+
             this._previewEntries.push({
                 baseItemId,
                 offsetX,
                 offsetY,
                 offsetZ: Number.isFinite(offsetZValue) ? offsetZValue : 0,
-                rotation: ((rotation % 8) + 8) % 8
+                rotation: ((rotation % 8) + 8) % 8,
+                state: Number.isFinite(parsedState) ? parsedState : 0
             });
         }
         return true;

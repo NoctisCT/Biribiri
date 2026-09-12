@@ -261,7 +261,10 @@ public final class PasteGroupService
                             targetZ,
                             normalizeRotation(
                                     entry.getRotation()
-                            )
+                            ),
+                            entry.getExtraData(),
+                            entry.getLayerId(),
+                            entry.isTraversable()
                     )
             );
         }
@@ -293,12 +296,23 @@ public final class PasteGroupService
 
         for(Target target : targets)
         {
+            String currentExtraData =
+                    target.item.getExtradata();
+
+            target.item.setExtradata(
+                    target.extraData
+            );
+
             Result validation =
                     validateTarget(
                             room,
                             target,
                             affectedTiles
                     );
+
+            target.item.setExtradata(
+                    currentExtraData
+            );
 
             if(!validation.success)
             {
@@ -319,6 +333,15 @@ public final class PasteGroupService
 
         List<Target> placed =
                 new ArrayList<Target>();
+
+        for(Target target : targets)
+        {
+            target.item.setExtradata(
+                    target.extraData
+            );
+        }
+
+        boolean metadataApplied = false;
 
         BuilderProContext.begin(
                 actorId,
@@ -363,6 +386,10 @@ public final class PasteGroupService
                             affectedTiles
                     );
 
+                    restoreTargetExtraData(
+                            targets
+                    );
+
                     return Result.failure(
                             20,
                             "Pegado cancelado por el servidor: "
@@ -391,6 +418,10 @@ public final class PasteGroupService
                             affectedTiles
                     );
 
+                    restoreTargetExtraData(
+                            targets
+                    );
+
                     return Result.failure(
                             21,
                             "El servidor altero la geometria exacta del pegado."
@@ -415,6 +446,84 @@ public final class PasteGroupService
                                 room,
                                 placed,
                                 affectedTiles
+                        );
+
+                        restoreTargetExtraData(
+                                targets
+                        );
+
+                        return Result.failure(
+                                22,
+                                "El inventario cambio durante el pegado."
+                        );
+                    }
+                }
+            }
+
+            try
+            {
+                applyPlacementMetadata(
+                        actor,
+                        room,
+                        targets
+                );
+
+                metadataApplied = true;
+            }
+            catch(Exception metadataError)
+            {
+                cleanupPlacementMetadata(
+                        actor,
+                        room,
+                        targets
+                );
+
+                rollbackPlaced(
+                        room,
+                        placed,
+                        affectedTiles
+                );
+
+                restoreTargetExtraData(
+                        targets
+                );
+
+                return Result.failure(
+                        24,
+                        "No se pudo conservar la metadata del duplicado."
+                );
+            }
+
+            persistTargetExtraData(
+                    room,
+                    targets
+            );
+
+            synchronized(inventoryMap)
+            {
+                for(Target target : targets)
+                {
+                    if(inventoryMap.get(
+                            target.item.getId()
+                    ) != target.item)
+                    {
+                        if(metadataApplied)
+                        {
+                            cleanupPlacementMetadata(
+                                    actor,
+                                    room,
+                                    targets
+                            );
+                        }
+
+                        rollbackPlaced(
+                                room,
+                                placed,
+                                affectedTiles
+                        );
+
+                        restoreTargetExtraData(
+                                targets
                         );
 
                         return Result.failure(
@@ -483,6 +592,19 @@ public final class PasteGroupService
         }
         catch(Exception exception)
         {
+            if(metadataApplied)
+            {
+                cleanupPlacementMetadata(
+                        actor,
+                        room,
+                        targets
+                );
+            }
+
+            restoreTargetExtraData(
+                    targets
+            );
+
             System.out.println(
                     "[BuilderProTrace] SERVER PASTE_EXCEPTION #"
                             + requestId
@@ -507,6 +629,200 @@ public final class PasteGroupService
         finally
         {
             BuilderProContext.clear();
+        }
+    }
+
+    private static void applyPlacementMetadata(
+            Habbo actor,
+            Room room,
+            List<Target> targets)
+            throws Exception
+    {
+        Map<Integer, List<Integer>> byLayer =
+                new HashMap<Integer, List<Integer>>();
+
+        List<Integer> traversable =
+                new ArrayList<Integer>();
+
+        for(Target target : targets)
+        {
+            if(target.layerId > 0
+                    && BuilderProLayerRepository.find(
+                            room.getId(),
+                            target.layerId
+                    ) != null)
+            {
+                List<Integer> ids =
+                        byLayer.get(
+                                target.layerId
+                        );
+
+                if(ids == null)
+                {
+                    ids =
+                            new ArrayList<Integer>();
+
+                    byLayer.put(
+                            target.layerId,
+                            ids
+                    );
+                }
+
+                ids.add(
+                        target.item.getId()
+                );
+            }
+
+            if(target.traversable)
+            {
+                traversable.add(
+                        target.item.getId()
+                );
+            }
+        }
+
+        for(Map.Entry<Integer, List<Integer>> entry :
+                byLayer.entrySet())
+        {
+            BuilderProLayerRepository.assignItems(
+                    room.getId(),
+                    entry.getKey().intValue(),
+                    entry.getValue()
+            );
+        }
+
+        if(!traversable.isEmpty())
+        {
+            BuilderProTraversalService.Result result =
+                    BuilderProTraversalService.execute(
+                            actor,
+                            BuilderProTraversalService.OP_SET,
+                            true,
+                            traversable
+                    );
+
+            if(!result.success)
+            {
+                throw new IllegalStateException(
+                        result.message
+                );
+            }
+        }
+    }
+
+    private static void cleanupPlacementMetadata(
+            Habbo actor,
+            Room room,
+            List<Target> targets)
+    {
+        List<Integer> ids =
+                new ArrayList<Integer>();
+
+        List<Integer> traversable =
+                new ArrayList<Integer>();
+
+        for(Target target : targets)
+        {
+            if(target == null
+                    || target.item == null)
+            {
+                continue;
+            }
+
+            ids.add(
+                    target.item.getId()
+            );
+
+            if(target.traversable)
+            {
+                traversable.add(
+                        target.item.getId()
+                );
+            }
+        }
+
+        try
+        {
+            BuilderProLayerRepository.unassignItems(
+                    ids
+            );
+        }
+        catch(Exception exception)
+        {
+            exception.printStackTrace();
+        }
+
+        if(!traversable.isEmpty())
+        {
+            try
+            {
+                BuilderProTraversalService.execute(
+                        actor,
+                        BuilderProTraversalService.OP_SET,
+                        false,
+                        traversable
+                );
+            }
+            catch(Exception exception)
+            {
+                exception.printStackTrace();
+            }
+        }
+    }
+
+    private static void persistTargetExtraData(
+            Room room,
+            List<Target> targets)
+    {
+        for(Target target : targets)
+        {
+            try
+            {
+                target.item.setExtradata(
+                        target.extraData
+                );
+
+                target.item.needsUpdate(
+                        true
+                );
+
+                target.item.run();
+
+                room.updateItemState(
+                        target.item
+                );
+            }
+            catch(Exception exception)
+            {
+                throw new IllegalStateException(
+                        "No se pudo conservar el estado de un furni.",
+                        exception
+                );
+            }
+        }
+    }
+
+    private static void restoreTargetExtraData(
+            List<Target> targets)
+    {
+        for(Target target : targets)
+        {
+            try
+            {
+                target.item.setExtradata(
+                        target.originalExtraData
+                );
+
+                target.item.needsUpdate(
+                        true
+                );
+
+                target.item.run();
+            }
+            catch(Exception exception)
+            {
+                exception.printStackTrace();
+            }
         }
     }
 
@@ -956,13 +1272,20 @@ public final class PasteGroupService
         private final short y;
         private final double z;
         private final int rotation;
+        private final String extraData;
+        private final String originalExtraData;
+        private final int layerId;
+        private final boolean traversable;
 
         private Target(
                 HabboItem item,
                 short x,
                 short y,
                 double z,
-                int rotation)
+                int rotation,
+                String extraData,
+                int layerId,
+                boolean traversable)
         {
             this.item = item;
             this.x = x;
@@ -972,6 +1295,16 @@ public final class PasteGroupService
                     normalizeRotation(
                             rotation
                     );
+            this.extraData =
+                    extraData == null
+                            ? ""
+                            : extraData;
+            this.originalExtraData =
+                    item.getExtradata() == null
+                            ? ""
+                            : item.getExtradata();
+            this.layerId = layerId;
+            this.traversable = traversable;
         }
     }
 

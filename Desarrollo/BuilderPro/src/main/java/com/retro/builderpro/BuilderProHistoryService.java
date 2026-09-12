@@ -237,6 +237,79 @@ public final class BuilderProHistoryService
         }
     }
 
+    public static boolean recordPlacementWithMetadata(
+            Habbo actor,
+            List<ItemState> placed,
+            String label)
+    {
+        if(actor == null
+                || placed == null
+                || placed.isEmpty()
+                || placed.size() > GroupMoveService.MAX_GROUP_SIZE)
+        {
+            return false;
+        }
+
+        Room room =
+                actor.getHabboInfo()
+                        .getCurrentRoom();
+
+        if(room == null)
+        {
+            return false;
+        }
+
+        PickupMetadata metadata;
+
+        try
+        {
+            metadata =
+                    capturePickupMetadata(
+                            room,
+                            itemIdsOf(placed)
+                    );
+        }
+        catch(Exception exception)
+        {
+            exception.printStackTrace();
+            return false;
+        }
+
+        History history =
+                HISTORIES.computeIfAbsent(
+                        key(actor, room),
+                        ignored -> new History()
+                );
+
+        Entry entry =
+                new Entry(
+                        room.getId(),
+                        copyStates(placed),
+                        copyStates(placed),
+                        PLACEMENT_PREFIX
+                                + (
+                                    label == null
+                                        ? "Pegado"
+                                        : label
+                                ),
+                        metadata
+                );
+
+        synchronized(history)
+        {
+            history.undo.addLast(entry);
+
+            while(history.undo.size() > MAX_HISTORY)
+            {
+                history.undo.removeFirst();
+            }
+
+            history.redo.clear();
+        }
+
+        return true;
+    }
+
     public static Result pickupSelection(
             Habbo actor,
             List<Integer> requestedIds)
@@ -798,18 +871,150 @@ public final class BuilderProHistoryService
                             PLACEMENT_PREFIX
                     ))
             {
-                ApplyResult placementApply =
-                        action == ACTION_UNDO
-                                ? undoPlacement(
+                ApplyResult placementApply;
+
+                if(action == ACTION_UNDO)
+                {
+                    boolean metadataCleared =
+                            false;
+
+                    if(entry.pickupMetadata != null)
+                    {
+                        try
+                        {
+                            cleanupPickupMetadata(
+                                    actor,
+                                    room,
+                                    entry.pickupMetadata,
+                                    itemIdsOf(
+                                            entry.after
+                                    )
+                            );
+
+                            metadataCleared =
+                                    true;
+                        }
+                        catch(Exception exception)
+                        {
+                            try
+                            {
+                                restorePickupMetadata(
                                         actor,
                                         room,
-                                        entry.after
-                                )
-                                : redoPlacement(
-                                        actor,
-                                        room,
-                                        entry.after
+                                        entry.pickupMetadata
                                 );
+                            }
+                            catch(Exception ignored)
+                            {
+                            }
+
+                            return Result.failure(
+                                    49,
+                                    "No se pudo preparar la metadata para Undo.",
+                                    !history.undo.isEmpty(),
+                                    !history.redo.isEmpty()
+                            );
+                        }
+                    }
+
+                    placementApply =
+                            undoPlacement(
+                                    actor,
+                                    room,
+                                    entry.after
+                            );
+
+                    if(!placementApply.success
+                            && metadataCleared)
+                    {
+                        try
+                        {
+                            restorePickupMetadata(
+                                    actor,
+                                    room,
+                                    entry.pickupMetadata
+                            );
+                        }
+                        catch(Exception exception)
+                        {
+                            history.undo.clear();
+                            history.redo.clear();
+
+                            return Result.failure(
+                                    58,
+                                    "Undo fallo y no se pudo restaurar su metadata.",
+                                    false,
+                                    false
+                            );
+                        }
+                    }
+                }
+                else
+                {
+                    placementApply =
+                            redoPlacement(
+                                    actor,
+                                    room,
+                                    entry.after
+                            );
+
+                    if(placementApply.success
+                            && entry.pickupMetadata != null)
+                    {
+                        try
+                        {
+                            restorePickupMetadata(
+                                    actor,
+                                    room,
+                                    entry.pickupMetadata
+                            );
+                        }
+                        catch(Exception exception)
+                        {
+                            try
+                            {
+                                cleanupPickupMetadata(
+                                        actor,
+                                        room,
+                                        entry.pickupMetadata,
+                                        itemIdsOf(
+                                                entry.after
+                                        )
+                                );
+                            }
+                            catch(Exception ignored)
+                            {
+                            }
+
+                            ApplyResult rollback =
+                                    undoPlacement(
+                                            actor,
+                                            room,
+                                            entry.after
+                                    );
+
+                            if(!rollback.success)
+                            {
+                                history.undo.clear();
+                                history.redo.clear();
+
+                                return Result.failure(
+                                        68,
+                                        "Redo fallo al restaurar metadata y no pudo revertirse.",
+                                        false,
+                                        false
+                                );
+                            }
+
+                            return Result.failure(
+                                    67,
+                                    "Redo cancelado: no se pudo restaurar la metadata.",
+                                    !history.undo.isEmpty(),
+                                    !history.redo.isEmpty()
+                            );
+                        }
+                    }
+                }
 
                 if(!placementApply.success)
                 {

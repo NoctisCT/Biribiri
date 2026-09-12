@@ -1,4 +1,4 @@
-import { BuilderProLayerStateComposer, BuilderProLayerStateEvent, BuilderProPickupGroupComposer, BuilderProPickupGroupResultEvent, RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProReferencePlacementComposer, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, BuilderProTraversalStateComposer, BuilderProTraversalStateEvent, BuilderProBlueprintStateComposer, BuilderProBlueprintStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomEngineObjectPlacedEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
+import { BuilderProLayerStateComposer, BuilderProLayerStateEvent, BuilderProPickupGroupComposer, BuilderProPickupGroupResultEvent, RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProReferencePlacementComposer, BuilderProMirrorDuplicateComposer, BuilderProMirrorDuplicateResultEvent, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, BuilderProTraversalStateComposer, BuilderProTraversalStateEvent, BuilderProBlueprintStateComposer, BuilderProBlueprintStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomEngineObjectPlacedEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { FaBoxOpen, FaClone, FaCopy, FaEllipsisH, FaEye, FaEyeSlash, FaLock, FaMinus, FaPaste, FaPlus, FaQuestion, FaRedo, FaSearch, FaUndo, FaWalking } from 'react-icons/fa';
 import { AddEventLinkTracker, BuilderProSelectionVisualizer, CanManipulateFurniture, CreateLinkEvent, GetRoomEngine, GetSessionDataManager, HasHabboClub, RemoveLinkEventTracker, SendMessageComposer, SetBuilderProSelectionModeActive } from '../../../../api';
@@ -16,6 +16,11 @@ const TRANSFORM_ORIENT = 3;
 const TRANSFORM_FLOOR = 4;
 const TRANSFORM_STATE_PREVIOUS = 5;
 const TRANSFORM_STATE_NEXT = 6;
+const TRANSFORM_MIRROR_HORIZONTAL = 7;
+const TRANSFORM_MIRROR_VERTICAL = 8;
+
+const MIRROR_AXIS_HORIZONTAL = 1;
+const MIRROR_AXIS_VERTICAL = 2;
 
 const FORMATION_ROW_LEFT = 1;
 const FORMATION_ROW_RIGHT = 2;
@@ -96,6 +101,7 @@ type BuilderProClipboardPreviewEntry = {
     offsetY: number;
     offsetZ: number;
     rotation: number;
+    state: number;
 };
 
 type BuilderProClipboardPreview = {
@@ -104,6 +110,78 @@ type BuilderProClipboardPreview = {
 };
 
 const BUILDER_PRO_PASTE_GHOST_ID_BASE = -1900000000;
+
+const normalizeBuilderProRotation = (
+    value: number
+): number =>
+    (
+        (
+            Math.round(value) %
+            8
+        ) +
+        8
+    ) %
+    8;
+
+const resolveMirroredServerRotation = (
+    directionDegrees: number,
+    allowedDirections: number[] | null | undefined,
+    axis: number
+): number =>
+{
+    const current =
+        normalizeBuilderProRotation(
+            directionDegrees / 45
+        );
+
+    const desired =
+        axis === MIRROR_AXIS_HORIZONTAL
+            ? normalizeBuilderProRotation(
+                -current
+            )
+            : normalizeBuilderProRotation(
+                4 - current
+            );
+
+    if(
+        !allowedDirections ||
+        !allowedDirections.length
+    )
+    {
+        return desired;
+    }
+
+    let best = desired;
+    let bestDistance = 9;
+
+    for(const allowed of allowedDirections)
+    {
+        const candidate =
+            normalizeBuilderProRotation(
+                allowed / 45
+            );
+
+        const rawDistance =
+            Math.abs(
+                candidate - desired
+            );
+
+        const distance =
+            Math.min(
+                rawDistance,
+                8 - rawDistance
+            );
+
+        if(distance < bestDistance)
+        {
+            best = candidate;
+            bestDistance = distance;
+        }
+    }
+
+    return best;
+};
+
 
 export const BuilderProView: FC<{}> = props =>
 {
@@ -200,6 +278,8 @@ export const BuilderProView: FC<{}> = props =>
     const pasteModeRef = useRef(false);
     const duplicateModeRef = useRef(false);
     const duplicateRequestedRef = useRef(false);
+    const mirrorDuplicateModeRef = useRef(false);
+    const suppressPasteLayerAutoAssignRef = useRef(false);
     const clipboardPreviewRef = useRef<BuilderProClipboardPreview | null>(null);
     const pastePreviewAnchorRef = useRef<{ x: number; y: number } | null>(null);
     const pasteGhostIdsRef = useRef<number[]>([]);
@@ -2815,6 +2895,11 @@ export const BuilderProView: FC<{}> = props =>
                 event.objectId
             );
 
+            if(suppressPasteLayerAutoAssignRef.current)
+            {
+                return;
+            }
+
             const targetLayerId =
                 layerScopeIdRef.current;
 
@@ -4509,6 +4594,68 @@ export const BuilderProView: FC<{}> = props =>
             return rotations;
         }, []);
 
+    const captureMirrorTargetRotations =
+        useCallback((
+            ids: number[],
+            axis: number
+        ): number[] | null =>
+        {
+            const currentRoomSession =
+                roomSessionRef.current;
+
+            const roomEngine =
+                GetRoomEngine();
+
+            if(
+                !currentRoomSession ||
+                !roomEngine ||
+                (
+                    axis !== MIRROR_AXIS_HORIZONTAL &&
+                    axis !== MIRROR_AXIS_VERTICAL
+                )
+            )
+            {
+                return null;
+            }
+
+            const rotations: number[] = [];
+
+            for(const id of ids)
+            {
+                const roomObject =
+                    roomEngine.getRoomObject(
+                        currentRoomSession.roomId,
+                        id,
+                        RoomObjectCategory.FLOOR
+                    );
+
+                const direction =
+                    roomObject?.getDirection();
+
+                if(!roomObject || !direction)
+                {
+                    return null;
+                }
+
+                const allowedDirections =
+                    roomObject.model
+                        ?.getValue<number[]>(
+                            RoomObjectVariable
+                                .FURNITURE_ALLOWED_DIRECTIONS
+                        );
+
+                rotations.push(
+                    resolveMirroredServerRotation(
+                        direction.x,
+                        allowedDirections,
+                        axis
+                    )
+                );
+            }
+
+            return rotations;
+        }, []);
+
     const restoreTransformSnapshots =
         useCallback((
             snapshots: BuilderProTransformSnapshot[]
@@ -4727,6 +4874,56 @@ export const BuilderProView: FC<{}> = props =>
                         getNextAllowedDirection();
                 }
 
+                else if(
+                    operation === TRANSFORM_MIRROR_HORIZONTAL ||
+                    operation === TRANSFORM_MIRROR_VERTICAL
+                )
+                {
+                    const dx =
+                        snapshot.x -
+                        pivot.x;
+
+                    const dy =
+                        snapshot.y -
+                        pivot.y;
+
+                    if(
+                        operation ===
+                        TRANSFORM_MIRROR_HORIZONTAL
+                    )
+                    {
+                        x =
+                            pivot.x -
+                            dx;
+                    }
+                    else
+                    {
+                        y =
+                            pivot.y -
+                            dy;
+                    }
+
+                    const allowedDirections =
+                        roomObject.model
+                            ?.getValue<number[]>(
+                                RoomObjectVariable
+                                    .FURNITURE_ALLOWED_DIRECTIONS
+                            );
+
+                    const axis =
+                        operation ===
+                        TRANSFORM_MIRROR_HORIZONTAL
+                            ? MIRROR_AXIS_HORIZONTAL
+                            : MIRROR_AXIS_VERTICAL;
+
+                    directionX =
+                        resolveMirroredServerRotation(
+                            snapshot.directionX,
+                            allowedDirections,
+                            axis
+                        ) * 45;
+                }
+
                 else if(operation === TRANSFORM_ROTATE_STRUCTURE)
                 {
                     const dx =
@@ -4816,6 +5013,8 @@ export const BuilderProView: FC<{}> = props =>
         pointerDownRef.current = null;
         dragRef.current = null;
         suppressDragClickRef.current = false;
+        mirrorDuplicateModeRef.current = false;
+        suppressPasteLayerAutoAssignRef.current = false;
         referencePickOperationRef.current =
             REFERENCE_OP_NONE;
         pendingReferenceOperationRef.current =
@@ -7530,6 +7729,114 @@ export const BuilderProView: FC<{}> = props =>
         }
     );
 
+    useMessageEvent<BuilderProMirrorDuplicateResultEvent>(
+        BuilderProMirrorDuplicateResultEvent,
+        event =>
+        {
+            const parser =
+                event.getParser();
+
+            if(!parser) return;
+
+            if(
+                pendingRequestIdRef.current !==
+                parser.requestId ||
+                !pendingRef.current
+            )
+            {
+                return;
+            }
+
+            if(pendingTimeoutRef.current !== null)
+            {
+                window.clearTimeout(
+                    pendingTimeoutRef.current
+                );
+
+                pendingTimeoutRef.current =
+                    null;
+            }
+
+            pendingRef.current = false;
+            pendingRequestIdRef.current =
+                null;
+            pendingStartedAtRef.current =
+                0;
+
+            setPending(false);
+
+            if(!parser.success)
+            {
+                mirrorDuplicateModeRef.current =
+                    false;
+
+                setStatus(
+                    `Error ${ parser.code }: ${ parser.message }`
+                );
+
+                return;
+            }
+
+            const entries =
+                parser.previewEntries;
+
+            if(
+                entries.length !==
+                parser.preparedCount
+            )
+            {
+                mirrorDuplicateModeRef.current =
+                    false;
+
+                clipboardPreviewRef.current =
+                    null;
+
+                setStatus(
+                    'La preview del espejo no coincide con la copia.'
+                );
+
+                return;
+            }
+
+            clearPastePreview();
+
+            clipboardPreviewRef.current = {
+                sourceAnchorZ:
+                    parser.sourceAnchorZ,
+                entries:
+                    entries.map(
+                        entry => ({
+                            ...entry
+                        })
+                    )
+            };
+
+            duplicateRequestedRef.current =
+                false;
+
+            mirrorDuplicateModeRef.current =
+                true;
+
+            duplicateModeRef.current =
+                true;
+
+            setDuplicateMode(
+                true
+            );
+
+            pasteModeRef.current =
+                true;
+
+            setPasteMode(
+                true
+            );
+
+            setStatus(
+                'Duplicar espejo: mueve el cursor y haz clic para colocar la copia.'
+            );
+        }
+    );
+
     useMessageEvent<BuilderProTransformGroupResultEvent>(
         BuilderProTransformGroupResultEvent,
         event =>
@@ -7631,8 +7938,16 @@ export const BuilderProView: FC<{}> = props =>
                 setCanUndo(true);
                 setCanRedo(false);
 
+                const mirrorOperation =
+                    completedOperation ===
+                        TRANSFORM_MIRROR_HORIZONTAL ||
+                    completedOperation ===
+                        TRANSFORM_MIRROR_VERTICAL;
+
                 setStatus(
-                    `Transformacion completada: ${ parser.affectedCount } furnis.`
+                    mirrorOperation
+                        ? `Espejo ${ completedOperation === TRANSFORM_MIRROR_HORIZONTAL ? 'horizontal' : 'vertical' }: ${ parser.affectedCount } furnis.`
+                        : `Transformacion completada: ${ parser.affectedCount } furnis.`
                 );
 
                 window.requestAnimationFrame(
@@ -7789,7 +8104,7 @@ export const BuilderProView: FC<{}> = props =>
                     entry.baseItemId,
                     new Vector3d(x, y, z),
                     new Vector3d(entry.rotation * 45),
-                    0,
+                    entry.state,
                     null,
                     Number.NaN,
                     -1,
@@ -7874,6 +8189,7 @@ export const BuilderProView: FC<{}> = props =>
             if(duplicateRequestedRef.current)
             {
                 duplicateRequestedRef.current = false;
+                mirrorDuplicateModeRef.current = false;
                 duplicateModeRef.current = true;
                 setDuplicateMode(true);
 
@@ -8112,6 +8428,9 @@ export const BuilderProView: FC<{}> = props =>
             pendingStartedAtRef.current =
                 performance.now();
 
+            suppressPasteLayerAutoAssignRef.current =
+                true;
+
             setPending(true);
 
             setStatus(
@@ -8162,6 +8481,9 @@ export const BuilderProView: FC<{}> = props =>
                             pendingStartedAtRef.current =
                                 0;
 
+                            suppressPasteLayerAutoAssignRef.current =
+                                false;
+
                             setPending(false);
 
                             setStatus(
@@ -8184,6 +8506,9 @@ export const BuilderProView: FC<{}> = props =>
 
                 pendingStartedAtRef.current =
                     0;
+
+                suppressPasteLayerAutoAssignRef.current =
+                    false;
 
                 setPending(false);
 
@@ -8236,6 +8561,9 @@ export const BuilderProView: FC<{}> = props =>
             pendingStartedAtRef.current =
                 0;
 
+            suppressPasteLayerAutoAssignRef.current =
+                false;
+
             setPending(false);
 
             if(parser.success)
@@ -8252,7 +8580,11 @@ export const BuilderProView: FC<{}> = props =>
 
                 setStatus(
                     duplicateModeRef.current
-                        ? `Duplicados ${ parser.placedCount } furnis. Mueve el cursor para seguir duplicando.`
+                        ? (
+                            mirrorDuplicateModeRef.current
+                                ? `Duplicados en espejo ${ parser.placedCount } furnis. Mueve el cursor para seguir duplicando.`
+                                : `Duplicados ${ parser.placedCount } furnis. Mueve el cursor para seguir duplicando.`
+                        )
                         : `Pegados ${ parser.placedCount } furnis.`
                 );
 
@@ -9238,6 +9570,201 @@ export const BuilderProView: FC<{}> = props =>
         }
     }, []);
 
+    const duplicateMirror =
+        useCallback((
+            axis: number
+        ) =>
+        {
+            if(!activeRef.current) return;
+            if(pendingRef.current) return;
+            if(dragRef.current) return;
+
+            let ids = [
+                ...selectedIdsRef.current
+            ];
+
+            if(!ids.length)
+            {
+                setStatus(
+                    'Selecciona al menos un furni.'
+                );
+
+                return;
+            }
+
+            const pivotId =
+                (
+                    pivotIdRef.current !== null &&
+                    ids.includes(
+                        pivotIdRef.current
+                    )
+                )
+                    ? pivotIdRef.current
+                    : ids[0];
+
+            ids = [
+                pivotId,
+                ...ids.filter(
+                    id =>
+                        id !== pivotId
+                )
+            ];
+
+            const targetRotations =
+                captureMirrorTargetRotations(
+                    ids,
+                    axis
+                );
+
+            if(
+                !targetRotations ||
+                targetRotations.length !==
+                ids.length
+            )
+            {
+                setStatus(
+                    'No se pudieron calcular las orientaciones del espejo.'
+                );
+
+                return;
+            }
+
+            clearPastePreview();
+
+            duplicateRequestedRef.current =
+                false;
+
+            duplicateModeRef.current =
+                false;
+
+            mirrorDuplicateModeRef.current =
+                false;
+
+            setDuplicateMode(
+                false
+            );
+
+            pasteModeRef.current =
+                false;
+
+            setPasteMode(
+                false
+            );
+
+            requestIdRef.current++;
+
+            if(requestIdRef.current > 2000000000)
+            {
+                requestIdRef.current = 1;
+            }
+
+            const requestId =
+                requestIdRef.current;
+
+            pendingRef.current = true;
+            pendingRequestIdRef.current =
+                requestId;
+            pendingStartedAtRef.current =
+                performance.now();
+
+            setPending(
+                true
+            );
+
+            setStatus(
+                `Preparando duplicado en espejo ${ axis === MIRROR_AXIS_HORIZONTAL ? 'horizontal' : 'vertical' }...`
+            );
+
+            try
+            {
+                SendMessageComposer(
+                    new BuilderProMirrorDuplicateComposer(
+                        ids,
+                        axis,
+                        pivotId,
+                        targetRotations,
+                        requestId
+                    )
+                );
+
+                if(pendingTimeoutRef.current !== null)
+                {
+                    window.clearTimeout(
+                        pendingTimeoutRef.current
+                    );
+                }
+
+                pendingTimeoutRef.current =
+                    window.setTimeout(
+                        () =>
+                        {
+                            pendingTimeoutRef.current =
+                                null;
+
+                            if(
+                                !pendingRef.current ||
+                                pendingRequestIdRef.current !==
+                                requestId
+                            )
+                            {
+                                return;
+                            }
+
+                            pendingRef.current =
+                                false;
+
+                            pendingRequestIdRef.current =
+                                null;
+
+                            pendingStartedAtRef.current =
+                                0;
+
+                            mirrorDuplicateModeRef.current =
+                                false;
+
+                            setPending(
+                                false
+                            );
+
+                            setStatus(
+                                'Preparación del espejo sin confirmación del servidor.'
+                            );
+                        },
+                        MOVE_CONFIRM_TIMEOUT_MS
+                    );
+            }
+            catch(error)
+            {
+                console.error(
+                    `[BuilderProTrace] CLIENT MIRROR_PREPARE_SEND_ERROR #${ requestId }`,
+                    error
+                );
+
+                pendingRef.current =
+                    false;
+
+                pendingRequestIdRef.current =
+                    null;
+
+                pendingStartedAtRef.current =
+                    0;
+
+                mirrorDuplicateModeRef.current =
+                    false;
+
+                setPending(
+                    false
+                );
+
+                setStatus(
+                    'No se pudo preparar el duplicado en espejo.'
+                );
+            }
+        }, [
+            captureMirrorTargetRotations,
+            clearPastePreview
+        ]);
+
     const transformGroup = useCallback((
         operation: number,
         argument: number,
@@ -9268,7 +9795,11 @@ export const BuilderProView: FC<{}> = props =>
                 ];
 
         if(
-            operation === TRANSFORM_ROTATE_STRUCTURE &&
+            (
+                operation === TRANSFORM_ROTATE_STRUCTURE ||
+                operation === TRANSFORM_MIRROR_HORIZONTAL ||
+                operation === TRANSFORM_MIRROR_VERTICAL
+            ) &&
             pivotIdRef.current !== null &&
             ids.includes(
                 pivotIdRef.current
@@ -9339,7 +9870,11 @@ export const BuilderProView: FC<{}> = props =>
 
         let targetRotations: number[] = [];
 
-        if(operation === TRANSFORM_ORIENT)
+        if(
+            operation === TRANSFORM_ORIENT ||
+            operation === TRANSFORM_MIRROR_HORIZONTAL ||
+            operation === TRANSFORM_MIRROR_VERTICAL
+        )
         {
             const exactRotations =
                 capturePreviewServerRotations(
@@ -9444,6 +9979,20 @@ export const BuilderProView: FC<{}> = props =>
         {
             setStatus(
                 `Girando orientación de ${ ids.length } furnis como Holo...`
+            );
+        }
+        else if(
+            operation === TRANSFORM_MIRROR_HORIZONTAL ||
+            operation === TRANSFORM_MIRROR_VERTICAL
+        )
+        {
+            const pivotText =
+                pivotIdRef.current !== null
+                    ? `furni #${ pivotIdRef.current }`
+                    : 'primer seleccionado';
+
+            setStatus(
+                `Aplicando espejo ${ operation === TRANSFORM_MIRROR_HORIZONTAL ? 'horizontal' : 'vertical' }. Pivote: ${ pivotText }.`
             );
         }
         else
@@ -12286,6 +12835,76 @@ export const BuilderProView: FC<{}> = props =>
                                         Estructura +90°
                                     </button>
                                 </div>
+
+                                <div className="builder-pro-subtitle">
+                                    Espejo
+                                </div>
+
+                                <div className="builder-pro-grid-2">
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () => transformGroup(
+                                                TRANSFORM_MIRROR_HORIZONTAL,
+                                                0
+                                            )
+                                        }>
+                                        Espejo horizontal
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () => transformGroup(
+                                                TRANSFORM_MIRROR_VERTICAL,
+                                                0
+                                            )
+                                        }>
+                                        Espejo vertical
+                                    </button>
+                                </div>
+
+                                <div className="builder-pro-grid-2">
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () => duplicateMirror(
+                                                MIRROR_AXIS_HORIZONTAL
+                                            )
+                                        }>
+                                        Duplicar espejo H
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () => duplicateMirror(
+                                                MIRROR_AXIS_VERTICAL
+                                            )
+                                        }>
+                                        Duplicar espejo V
+                                    </button>
+                                </div>
+
+                                <div className="builder-pro-hint">
+                                    Duplicar espejo crea una copia completa reflejada y la deja en el cursor para colocarla donde quieras.
+                                </div>
                             </div>
                         </details>
 
@@ -12377,6 +12996,7 @@ export const BuilderProView: FC<{}> = props =>
                                                                     if(duplicateModeRef.current)
                                                                     {
                                                                         duplicateRequestedRef.current = false;
+                                                                        mirrorDuplicateModeRef.current = false;
                                                                         duplicateModeRef.current = false;
                                                                         setDuplicateMode(false);
 
@@ -12402,6 +13022,7 @@ export const BuilderProView: FC<{}> = props =>
                                                                     pasteModeRef.current = false;
                                                                     setPasteMode(false);
 
+                                                                    mirrorDuplicateModeRef.current = false;
                                                                     duplicateRequestedRef.current = true;
 
                                                                     copyGroup();

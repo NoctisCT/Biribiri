@@ -28,6 +28,7 @@ import com.retro.builderpro.handlers.BlueprintStateRequest;
 import com.retro.builderpro.handlers.PickupGroupRequest;
 import com.retro.builderpro.handlers.LayerStateRequest;
 import com.retro.builderpro.handlers.ReferencePlacementRequest;
+import com.retro.builderpro.handlers.MirrorDuplicateRequest;
 
 public class BuilderProPlugin
         extends HabboPlugin
@@ -139,6 +140,13 @@ public class BuilderProPlugin
                 .registerHandler(
                         BuilderProPackets.REFERENCE_PLACEMENT_REQUEST,
                         ReferencePlacementRequest.class
+                );
+
+        Emulator.getGameServer()
+                .getPacketManager()
+                .registerHandler(
+                        BuilderProPackets.MIRROR_DUPLICATE_REQUEST,
+                        MirrorDuplicateRequest.class
                 );
 
         System.out.println(

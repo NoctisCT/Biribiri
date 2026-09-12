@@ -35,6 +35,8 @@ public final class GroupTransformService
     public static final int OP_FLOOR = 4;
     public static final int OP_STATE_PREVIOUS = 5;
     public static final int OP_STATE_NEXT = 6;
+    public static final int OP_MIRROR_HORIZONTAL = 7;
+    public static final int OP_MIRROR_VERTICAL = 8;
 
     private static final double EPSILON = 0.000001D;
 
@@ -140,6 +142,17 @@ public final class GroupTransformService
                 );
             }
         }
+        else if(operation == OP_MIRROR_HORIZONTAL
+                || operation == OP_MIRROR_VERTICAL)
+        {
+            if(argument != 0)
+            {
+                return Result.failure(
+                        6,
+                        "El espejo no admite argumento."
+                );
+            }
+        }
         else if(operation == OP_STATE_PREVIOUS
                 || operation == OP_STATE_NEXT)
         {
@@ -162,7 +175,12 @@ public final class GroupTransformService
         Map<Integer, Integer> exactOrientationTargets =
                 new HashMap<Integer, Integer>();
 
-        if(operation == OP_ORIENT)
+        boolean exactOrientationOperation =
+                operation == OP_ORIENT
+                || operation == OP_MIRROR_HORIZONTAL
+                || operation == OP_MIRROR_VERTICAL;
+
+        if(exactOrientationOperation)
         {
             if(requestedRotations == null
                     || requestedRotations.size()
@@ -874,6 +892,46 @@ public final class GroupTransformService
                     snapshot,
                     snapshot.x,
                     snapshot.y,
+                    snapshot.z,
+                    requestedRotation.intValue()
+            );
+        }
+
+        if(operation == OP_MIRROR_HORIZONTAL
+                || operation == OP_MIRROR_VERTICAL)
+        {
+            Integer requestedRotation =
+                    exactOrientationTargets.get(
+                            snapshot.item.getId()
+                    );
+
+            if(requestedRotation == null)
+            {
+                throw new IllegalArgumentException(
+                        "Falta orientacion reflejada para un furni."
+                );
+            }
+
+            int mirrorDx =
+                    snapshot.x - pivot.x;
+
+            int mirrorDy =
+                    snapshot.y - pivot.y;
+
+            int mirrorX =
+                    operation == OP_MIRROR_HORIZONTAL
+                            ? pivot.x - mirrorDx
+                            : snapshot.x;
+
+            int mirrorY =
+                    operation == OP_MIRROR_VERTICAL
+                            ? pivot.y - mirrorDy
+                            : snapshot.y;
+
+            return new Target(
+                    snapshot,
+                    checkedShort(mirrorX),
+                    checkedShort(mirrorY),
                     snapshot.z,
                     requestedRotation.intValue()
             );

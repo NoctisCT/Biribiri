@@ -118,7 +118,12 @@ public class TransformGroupRequest
             );
         }
 
-        if(operation == GroupTransformService.OP_ORIENT
+        boolean exactOrientationOperation =
+                operation == GroupTransformService.OP_ORIENT
+                || operation == GroupTransformService.OP_MIRROR_HORIZONTAL
+                || operation == GroupTransformService.OP_MIRROR_VERTICAL;
+
+        if(exactOrientationOperation
                 && rotationCount != count)
         {
             sendResult(
@@ -132,7 +137,7 @@ public class TransformGroupRequest
             return;
         }
 
-        if(operation != GroupTransformService.OP_ORIENT
+        if(!exactOrientationOperation
                 && rotationCount != 0)
         {
             sendResult(
@@ -206,7 +211,12 @@ public class TransformGroupRequest
                         historyAfter,
                         stateOperation
                                 ? "Estado"
-                                : "Transformacion"
+                                : (
+                                    operation == GroupTransformService.OP_MIRROR_HORIZONTAL
+                                    || operation == GroupTransformService.OP_MIRROR_VERTICAL
+                                        ? "Espejo"
+                                        : "Transformacion"
+                                )
                 );
             }
         }

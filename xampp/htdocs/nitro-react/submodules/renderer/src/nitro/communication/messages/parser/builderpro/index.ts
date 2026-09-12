@@ -9,4 +9,5 @@ export * from './BuilderProGroupStateParser';
 export * from './BuilderProTraversalStateParser';
 export * from './BuilderProPickupGroupResultParser';
 export * from './BuilderProLayerStateParser';
+export * from './BuilderProMirrorDuplicateResultParser';
 export * from './BuilderProBlueprintStateParser';
