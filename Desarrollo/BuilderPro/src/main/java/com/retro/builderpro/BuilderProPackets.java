@@ -46,4 +46,7 @@ public final class BuilderProPackets
 
     public static final int MIRROR_DUPLICATE_REQUEST = 6325;
     public static final int MIRROR_DUPLICATE_RESULT = 6326;
+
+    public static final int REPLACE_GROUP_REQUEST = 6327;
+    public static final int REPLACE_GROUP_RESULT = 6328;
 }

@@ -51,6 +51,9 @@ public final class BuilderProHistoryService
     private static final String PICKUP_PREFIX =
             "BUILDER_PRO_PICKUP:";
 
+    private static final String REPLACEMENT_PREFIX =
+            "BUILDER_PRO_REPLACEMENT:";
+
     private static final Map<String, History> HISTORIES =
             new ConcurrentHashMap<String, History>();
 
@@ -180,6 +183,63 @@ public final class BuilderProHistoryService
 
             history.redo.clear();
         }
+    }
+
+
+    public static boolean recordReplacement(
+            Habbo actor,
+            ReplaceGroupService.ReplacementRecord record)
+    {
+        if(actor == null
+                || record == null
+                || record.size() < 1
+                || record.size()
+                > GroupMoveService.MAX_GROUP_SIZE)
+        {
+            return false;
+        }
+
+        Room room =
+                actor.getHabboInfo()
+                        .getCurrentRoom();
+
+        if(room == null
+                || room.getId()
+                != record.roomId)
+        {
+            return false;
+        }
+
+        History history =
+                HISTORIES.computeIfAbsent(
+                        key(actor, room),
+                        ignored -> new History()
+                );
+
+        Entry entry =
+                new Entry(
+                        room.getId(),
+                        null,
+                        null,
+                        REPLACEMENT_PREFIX
+                                + "Reemplazo",
+                        null,
+                        record
+                );
+
+        synchronized(history)
+        {
+            history.undo.addLast(entry);
+
+            while(history.undo.size() > MAX_HISTORY)
+            {
+                history.undo.removeFirst();
+            }
+
+            history.redo.clear();
+        }
+
+        return true;
     }
 
 
@@ -694,6 +754,57 @@ public final class BuilderProHistoryService
                 );
             }
 
+
+            if(entry.label != null
+                    && entry.label.startsWith(
+                            REPLACEMENT_PREFIX
+                    ))
+            {
+                ReplaceGroupService.HistoryApplyResult replacement =
+                        ReplaceGroupService.applyHistory(
+                                actor,
+                                entry.replacementRecord,
+                                action == ACTION_UNDO
+                        );
+
+                if(!replacement.success)
+                {
+                    if(replacement.invalidateHistory)
+                    {
+                        history.undo.clear();
+                        history.redo.clear();
+                    }
+
+                    return Result.failure(
+                            replacement.code,
+                            replacement.message,
+                            !history.undo.isEmpty(),
+                            !history.redo.isEmpty()
+                    );
+                }
+
+                source.removeLast();
+
+                if(action == ACTION_UNDO)
+                {
+                    history.redo.addLast(
+                            entry
+                    );
+                }
+                else
+                {
+                    history.undo.addLast(
+                            entry
+                    );
+                }
+
+                return Result.success(
+                        replacement.affectedCount,
+                        replacement.message,
+                        !history.undo.isEmpty(),
+                        !history.redo.isEmpty()
+                );
+            }
 
             if(entry.label != null
                     && entry.label.startsWith(
@@ -3351,6 +3462,7 @@ public final class BuilderProHistoryService
         private final List<ItemState> after;
         private final String label;
         private final PickupMetadata pickupMetadata;
+        private final ReplaceGroupService.ReplacementRecord replacementRecord;
 
         private Entry(
                 int roomId,
@@ -3363,6 +3475,7 @@ public final class BuilderProHistoryService
                     before,
                     after,
                     label,
+                    null,
                     null
             );
         }
@@ -3374,12 +3487,32 @@ public final class BuilderProHistoryService
                 String label,
                 PickupMetadata pickupMetadata)
         {
+            this(
+                    roomId,
+                    before,
+                    after,
+                    label,
+                    pickupMetadata,
+                    null
+            );
+        }
+
+        private Entry(
+                int roomId,
+                List<ItemState> before,
+                List<ItemState> after,
+                String label,
+                PickupMetadata pickupMetadata,
+                ReplaceGroupService.ReplacementRecord replacementRecord)
+        {
             this.roomId = roomId;
             this.before = before;
             this.after = after;
             this.label = label;
             this.pickupMetadata =
                     pickupMetadata;
+            this.replacementRecord =
+                    replacementRecord;
         }
     }
 

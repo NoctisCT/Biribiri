@@ -530,4 +530,5 @@ export class OutgoingHeader
     public static BUILDER_PRO_LAYER_STATE = 6322;
     public static BUILDER_PRO_REFERENCE_PLACEMENT = 6324;
     public static BUILDER_PRO_MIRROR_DUPLICATE = 6325;
+    public static BUILDER_PRO_REPLACE_GROUP = 6327;
 }

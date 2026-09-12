@@ -10,4 +10,5 @@ export * from './BuilderProTraversalStateEvent';
 export * from './BuilderProPickupGroupResultEvent';
 export * from './BuilderProLayerStateEvent';
 export * from './BuilderProMirrorDuplicateResultEvent';
+export * from './BuilderProReplaceGroupResultEvent';
 export * from './BuilderProBlueprintStateEvent';

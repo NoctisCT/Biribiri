@@ -11,4 +11,5 @@ export * from './BuilderProPickupGroupComposer';
 export * from './BuilderProLayerStateComposer';
 export * from './BuilderProReferencePlacementComposer';
 export * from './BuilderProMirrorDuplicateComposer';
+export * from './BuilderProReplaceGroupComposer';
 export * from './BuilderProBlueprintStateComposer';

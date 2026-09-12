@@ -1,4 +1,4 @@
-import { BuilderProLayerStateComposer, BuilderProLayerStateEvent, BuilderProPickupGroupComposer, BuilderProPickupGroupResultEvent, RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProReferencePlacementComposer, BuilderProMirrorDuplicateComposer, BuilderProMirrorDuplicateResultEvent, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, BuilderProTraversalStateComposer, BuilderProTraversalStateEvent, BuilderProBlueprintStateComposer, BuilderProBlueprintStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomEngineObjectPlacedEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
+import { BuilderProLayerStateComposer, BuilderProLayerStateEvent, BuilderProPickupGroupComposer, BuilderProPickupGroupResultEvent, RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProReferencePlacementComposer, BuilderProMirrorDuplicateComposer, BuilderProMirrorDuplicateResultEvent, BuilderProReplaceGroupComposer, BuilderProReplaceGroupResultEvent, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, BuilderProTraversalStateComposer, BuilderProTraversalStateEvent, BuilderProBlueprintStateComposer, BuilderProBlueprintStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomEngineObjectPlacedEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { FaBoxOpen, FaClone, FaCopy, FaEllipsisH, FaEye, FaEyeSlash, FaLock, FaMinus, FaPaste, FaPlus, FaQuestion, FaRedo, FaSearch, FaUndo, FaWalking } from 'react-icons/fa';
 import { AddEventLinkTracker, BuilderProSelectionVisualizer, CanManipulateFurniture, CreateLinkEvent, GetRoomEngine, GetSessionDataManager, HasHabboClub, RemoveLinkEventTracker, SendMessageComposer, SetBuilderProSelectionModeActive } from '../../../../api';
@@ -57,6 +57,16 @@ const BLUEPRINT_OP_PREVIEW = 5;
 const REFERENCE_OP_NONE = 0;
 const REFERENCE_OP_EQUAL_Z = 1;
 const REFERENCE_OP_PLACE_ABOVE = 2;
+
+const REPLACE_OP_PREVIEW = 0;
+const REPLACE_OP_EXECUTE = 1;
+
+type BuilderProReplacementContext = {
+    itemIds: number[];
+    referenceId: number;
+    targetRotations: number[];
+    sourceSnapshots: BuilderProTransformSnapshot[];
+};
 
 type BuilderProSavedGroupState = {
     id: number;
@@ -122,6 +132,55 @@ const normalizeBuilderProRotation = (
         8
     ) %
     8;
+
+const resolveNearestAllowedServerRotation = (
+    directionDegrees: number,
+    allowedDirections: number[] | null | undefined
+): number =>
+{
+    const desired =
+        normalizeBuilderProRotation(
+            directionDegrees / 45
+        );
+
+    if(
+        !allowedDirections ||
+        !allowedDirections.length
+    )
+    {
+        return desired;
+    }
+
+    let best = desired;
+    let bestDistance = 9;
+
+    for(const allowed of allowedDirections)
+    {
+        const candidate =
+            normalizeBuilderProRotation(
+                allowed / 45
+            );
+
+        const rawDistance =
+            Math.abs(
+                candidate - desired
+            );
+
+        const distance =
+            Math.min(
+                rawDistance,
+                8 - rawDistance
+            );
+
+        if(distance < bestDistance)
+        {
+            best = candidate;
+            bestDistance = distance;
+        }
+    }
+
+    return best;
+};
 
 const resolveMirroredServerRotation = (
     directionDegrees: number,
@@ -265,6 +324,8 @@ export const BuilderProView: FC<{}> = props =>
         useState(false);
     const [ referencePickOperation, setReferencePickOperation ] =
         useState(REFERENCE_OP_NONE);
+    const [ replacePickMode, setReplacePickMode ] =
+        useState(false);
     const [ areaMode, setAreaMode ] = useState(false);
     const [ selectionBox, setSelectionBox ] = useState<{
         left: number;
@@ -388,6 +449,18 @@ export const BuilderProView: FC<{}> = props =>
     const pivotPickModeRef = useRef(false);
     const referencePickOperationRef =
         useRef(REFERENCE_OP_NONE);
+    const replacePickModeRef =
+        useRef(false);
+    const replacementContextRef =
+        useRef<BuilderProReplacementContext | null>(
+            null
+        );
+    const replacementSourceIdsRef =
+        useRef<Set<number>>(
+            new Set<number>()
+        );
+    const pendingReplaceOperationRef =
+        useRef(REPLACE_OP_PREVIEW);
     const pendingReferenceOperationRef =
         useRef(REFERENCE_OP_NONE);
     const quickShiftRef = useRef(false);
@@ -420,6 +493,8 @@ export const BuilderProView: FC<{}> = props =>
         selectedBlueprintId;
     referencePickOperationRef.current =
         referencePickOperation;
+    replacePickModeRef.current =
+        replacePickMode;
     moveStepRef.current = moveStep;
 
     const sessionDataManager = GetSessionDataManager();
@@ -5015,6 +5090,12 @@ export const BuilderProView: FC<{}> = props =>
         suppressDragClickRef.current = false;
         mirrorDuplicateModeRef.current = false;
         suppressPasteLayerAutoAssignRef.current = false;
+        replacePickModeRef.current = false;
+        replacementContextRef.current = null;
+        replacementSourceIdsRef.current =
+            new Set<number>();
+        pendingReplaceOperationRef.current =
+            REPLACE_OP_PREVIEW;
         referencePickOperationRef.current =
             REFERENCE_OP_NONE;
         pendingReferenceOperationRef.current =
@@ -5071,6 +5152,7 @@ export const BuilderProView: FC<{}> = props =>
         setReferencePickOperation(
             REFERENCE_OP_NONE
         );
+        setReplacePickMode(false);
         setMinimized(false);
         setHelpOpen(false);
         setGroupPending(false);
@@ -5130,6 +5212,12 @@ export const BuilderProView: FC<{}> = props =>
         pendingRef.current = false;
         areaModeRef.current = false;
         areaStartRef.current = null;
+        replacePickModeRef.current = false;
+        replacementContextRef.current = null;
+        replacementSourceIdsRef.current =
+            new Set<number>();
+        pendingReplaceOperationRef.current =
+            REPLACE_OP_PREVIEW;
         referencePickOperationRef.current =
             REFERENCE_OP_NONE;
         pendingReferenceOperationRef.current =
@@ -5144,6 +5232,7 @@ export const BuilderProView: FC<{}> = props =>
         setReferencePickOperation(
             REFERENCE_OP_NONE
         );
+        setReplacePickMode(false);
         setMinimized(false);
         setHelpOpen(false);
         setGroupPending(false);
@@ -5225,6 +5314,710 @@ export const BuilderProView: FC<{}> = props =>
         deactivate,
         toggleMode
     ]);
+
+
+    const clearReplacePick =
+        useCallback((
+            silent = false
+        ) =>
+        {
+            replacePickModeRef.current =
+                false;
+
+            replacementContextRef.current =
+                null;
+
+            replacementSourceIdsRef.current =
+                new Set<number>();
+
+            pendingReplaceOperationRef.current =
+                REPLACE_OP_PREVIEW;
+
+            setReplacePickMode(
+                false
+            );
+
+            if(!silent)
+            {
+                setStatus(
+                    'Reemplazo cancelado.'
+                );
+            }
+        }, []);
+
+    const captureReplacementRotations =
+        useCallback((
+            ids: number[],
+            referenceId: number
+        ): number[] | null =>
+        {
+            const currentRoomSession =
+                roomSessionRef.current;
+
+            const roomEngine =
+                GetRoomEngine();
+
+            if(
+                !currentRoomSession ||
+                !roomEngine
+            )
+            {
+                return null;
+            }
+
+            const reference =
+                roomEngine.getRoomObject(
+                    currentRoomSession.roomId,
+                    referenceId,
+                    RoomObjectCategory.FLOOR
+                );
+
+            if(!reference)
+            {
+                return null;
+            }
+
+            const allowedDirections =
+                reference.model
+                    ?.getValue<number[]>(
+                        RoomObjectVariable
+                            .FURNITURE_ALLOWED_DIRECTIONS
+                    );
+
+            const rotations: number[] = [];
+
+            for(const id of ids)
+            {
+                const roomObject =
+                    roomEngine.getRoomObject(
+                        currentRoomSession.roomId,
+                        id,
+                        RoomObjectCategory.FLOOR
+                    );
+
+                const direction =
+                    roomObject?.getDirection();
+
+                if(!roomObject || !direction)
+                {
+                    return null;
+                }
+
+                rotations.push(
+                    resolveNearestAllowedServerRotation(
+                        direction.x,
+                        allowedDirections
+                    )
+                );
+            }
+
+            return rotations;
+        }, []);
+
+    const validateReplacementVisualFootprints =
+        useCallback((
+            ids: number[],
+            referenceId: number,
+            targetRotations: number[]
+        ): string | null =>
+        {
+            const currentRoomSession =
+                roomSessionRef.current;
+
+            const roomEngine =
+                GetRoomEngine();
+
+            if(
+                !currentRoomSession ||
+                !roomEngine ||
+                ids.length !== targetRotations.length
+            )
+            {
+                return 'No se pudo comprobar la huella visual del reemplazo.';
+            }
+
+            const reference =
+                roomEngine.getRoomObject(
+                    currentRoomSession.roomId,
+                    referenceId,
+                    RoomObjectCategory.FLOOR
+                );
+
+            if(!reference || !reference.model)
+            {
+                return 'No se pudo leer la huella visual del furni de referencia.';
+            }
+
+            let referenceSizeX =
+                reference.model.getValue<number>(
+                    RoomObjectVariable.FURNITURE_SIZE_X
+                );
+
+            let referenceSizeY =
+                reference.model.getValue<number>(
+                    RoomObjectVariable.FURNITURE_SIZE_Y
+                );
+
+            if(!Number.isFinite(referenceSizeX) || referenceSizeX < 1)
+            {
+                referenceSizeX = 1;
+            }
+
+            if(!Number.isFinite(referenceSizeY) || referenceSizeY < 1)
+            {
+                referenceSizeY = 1;
+            }
+
+            const effectiveSize =
+                (
+                    sizeX: number,
+                    sizeY: number,
+                    rotation: number
+                ): [number, number] =>
+                {
+                    const normalized =
+                        normalizeBuilderProRotation(
+                            rotation
+                        );
+
+                    if(normalized === 2 || normalized === 6)
+                    {
+                        return [ sizeY, sizeX ];
+                    }
+
+                    return [ sizeX, sizeY ];
+                };
+
+            const approximatelyEqual =
+                (first: number, second: number): boolean =>
+                    Math.abs(first - second) < 0.001;
+
+            for(let index = 0; index < ids.length; index++)
+            {
+                const source =
+                    roomEngine.getRoomObject(
+                        currentRoomSession.roomId,
+                        ids[index],
+                        RoomObjectCategory.FLOOR
+                    );
+
+                const direction =
+                    source?.getDirection();
+
+                if(!source || !source.model || !direction)
+                {
+                    return 'No se pudo leer la huella visual completa de la selección.';
+                }
+
+                let sourceSizeX =
+                    source.model.getValue<number>(
+                        RoomObjectVariable.FURNITURE_SIZE_X
+                    );
+
+                let sourceSizeY =
+                    source.model.getValue<number>(
+                        RoomObjectVariable.FURNITURE_SIZE_Y
+                    );
+
+                if(!Number.isFinite(sourceSizeX) || sourceSizeX < 1)
+                {
+                    sourceSizeX = 1;
+                }
+
+                if(!Number.isFinite(sourceSizeY) || sourceSizeY < 1)
+                {
+                    sourceSizeY = 1;
+                }
+
+                const sourceRotation =
+                    normalizeBuilderProRotation(
+                        direction.x / 45
+                    );
+
+                const [ sourceEffectiveX, sourceEffectiveY ] =
+                    effectiveSize(
+                        sourceSizeX,
+                        sourceSizeY,
+                        sourceRotation
+                    );
+
+                const [ targetEffectiveX, targetEffectiveY ] =
+                    effectiveSize(
+                        referenceSizeX,
+                        referenceSizeY,
+                        targetRotations[index]
+                    );
+
+                if(
+                    !approximatelyEqual(sourceEffectiveX, targetEffectiveX) ||
+                    !approximatelyEqual(sourceEffectiveY, targetEffectiveY)
+                )
+                {
+                    return (
+                        'Huella visual incompatible: '
+                        + `${ sourceEffectiveX }×${ sourceEffectiveY } → `
+                        + `${ targetEffectiveX }×${ targetEffectiveY }. `
+                        + 'Reemplazar solo admite furnis que ocupen visualmente las mismas casillas.'
+                    );
+                }
+            }
+
+            return null;
+        }, []);
+
+    const finalizeReplacementVisuals =
+        useCallback((
+            replacementIds: number[],
+            context: BuilderProReplacementContext,
+            successMessage: string
+        ) =>
+        {
+            const currentRoomSession =
+                roomSessionRef.current;
+
+            const roomEngine =
+                GetRoomEngine();
+
+            const finishMetadataRefresh =
+                () =>
+                {
+                    requestGroupState(
+                        GROUP_OP_LIST
+                    );
+
+                    requestLayerState(
+                        LAYER_OP_LIST
+                    );
+
+                    requestTraversalState(
+                        TRAVERSAL_OP_QUERY
+                    );
+                };
+
+            if(
+                !currentRoomSession ||
+                !roomEngine ||
+                replacementIds.length !==
+                    context.sourceSnapshots.length ||
+                replacementIds.length !==
+                    context.targetRotations.length
+            )
+            {
+                replacementSourceIdsRef.current =
+                    new Set<number>();
+
+                replacementContextRef.current =
+                    null;
+
+                applySelection(
+                    replacementIds
+                );
+
+                finishMetadataRefresh();
+
+                setStatus(
+                    `${ successMessage } Aviso: no se pudo verificar la sincronización visual.`
+                );
+
+                return;
+            }
+
+            let attempts = 0;
+            const maxAttempts = 45;
+
+            const settle =
+                () =>
+                {
+                    if(!activeRef.current)
+                    {
+                        replacementSourceIdsRef.current =
+                            new Set<number>();
+
+                        replacementContextRef.current =
+                            null;
+
+                        return;
+                    }
+
+                    let allPresent = true;
+                    const presentIds: number[] = [];
+
+                    for(
+                        let index = 0;
+                        index < replacementIds.length;
+                        index++
+                    )
+                    {
+                        const itemId =
+                            replacementIds[index];
+
+                        const snapshot =
+                            context.sourceSnapshots[index];
+
+                        const roomObject =
+                            roomEngine.getRoomObject(
+                                currentRoomSession.roomId,
+                                itemId,
+                                RoomObjectCategory.FLOOR
+                            );
+
+                        if(!roomObject)
+                        {
+                            allPresent = false;
+                            continue;
+                        }
+
+                        presentIds.push(
+                            itemId
+                        );
+
+                        roomObject.setLocation(
+                            new Vector3d(
+                                snapshot.x,
+                                snapshot.y,
+                                snapshot.z
+                            )
+                        );
+
+                        roomObject.setDirection(
+                            new Vector3d(
+                                context.targetRotations[index] *
+                                    45
+                            )
+                        );
+                    }
+
+                    attempts++;
+
+                    if(allPresent)
+                    {
+                        replacementSourceIdsRef.current =
+                            new Set<number>();
+
+                        replacementContextRef.current =
+                            null;
+
+                        applySelection(
+                            replacementIds
+                        );
+
+                        finishMetadataRefresh();
+
+                        setStatus(
+                            successMessage
+                        );
+
+                        window.requestAnimationFrame(
+                            () =>
+                            {
+                                BuilderProSelectionVisualizer.refresh(
+                                    replacementIds
+                                );
+                            }
+                        );
+
+                        return;
+                    }
+
+                    if(attempts < maxAttempts)
+                    {
+                        window.requestAnimationFrame(
+                            settle
+                        );
+
+                        return;
+                    }
+
+                    replacementSourceIdsRef.current =
+                        new Set<number>();
+
+                    replacementContextRef.current =
+                        null;
+
+                    applySelection(
+                        presentIds
+                    );
+
+                    finishMetadataRefresh();
+
+                    setStatus(
+                        `${ successMessage } Aviso: Nitro solo sincronizó ${ presentIds.length }/${ replacementIds.length } furnis; vuelve a entrar en la sala si no aparecen todos.`
+                    );
+                };
+
+            window.requestAnimationFrame(
+                settle
+            );
+        }, [
+            applySelection,
+            requestGroupState,
+            requestLayerState,
+            requestTraversalState
+        ]);
+
+    const sendReplaceRequest =
+        useCallback((
+            operation: number,
+            context: BuilderProReplacementContext
+        ) =>
+        {
+            if(!activeRef.current) return;
+            if(pendingRef.current) return;
+
+            requestIdRef.current++;
+
+            if(requestIdRef.current > 2000000000)
+            {
+                requestIdRef.current = 1;
+            }
+
+            const requestId =
+                requestIdRef.current;
+
+            pendingRef.current = true;
+            pendingRequestIdRef.current =
+                requestId;
+            pendingStartedAtRef.current =
+                performance.now();
+            pendingReplaceOperationRef.current =
+                operation;
+
+            setPending(true);
+
+            setStatus(
+                operation === REPLACE_OP_PREVIEW
+                    ? `Comprobando reemplazo con furni #${ context.referenceId }...`
+                    : 'Reemplazando selección...'
+            );
+
+            try
+            {
+                SendMessageComposer(
+                    new BuilderProReplaceGroupComposer(
+                        context.itemIds,
+                        operation,
+                        context.referenceId,
+                        context.targetRotations,
+                        requestId
+                    )
+                );
+
+                if(pendingTimeoutRef.current !== null)
+                {
+                    window.clearTimeout(
+                        pendingTimeoutRef.current
+                    );
+                }
+
+                pendingTimeoutRef.current =
+                    window.setTimeout(
+                        () =>
+                        {
+                            pendingTimeoutRef.current =
+                                null;
+
+                            if(
+                                !pendingRef.current ||
+                                pendingRequestIdRef.current !==
+                                requestId
+                            )
+                            {
+                                return;
+                            }
+
+                            pendingRef.current = false;
+                            pendingRequestIdRef.current =
+                                null;
+                            pendingStartedAtRef.current =
+                                0;
+
+                            setPending(false);
+
+                            setStatus(
+                                'Reemplazo sin confirmación del servidor.'
+                            );
+                        },
+                        MOVE_CONFIRM_TIMEOUT_MS
+                    );
+            }
+            catch(error)
+            {
+                console.error(
+                    `[BuilderProTrace] CLIENT REPLACE_SEND_ERROR #${ requestId }`,
+                    error
+                );
+
+                pendingRef.current = false;
+                pendingRequestIdRef.current =
+                    null;
+                pendingStartedAtRef.current =
+                    0;
+
+                setPending(false);
+
+                setStatus(
+                    'No se pudo enviar el reemplazo.'
+                );
+            }
+        }, []);
+
+    const requestReplacePreview =
+        useCallback((
+            referenceId: number
+        ) =>
+        {
+            if(!activeRef.current) return;
+            if(pendingRef.current) return;
+
+            const ids = [
+                ...selectedIdsRef.current
+            ];
+
+            if(!ids.length)
+            {
+                setStatus(
+                    'Selecciona primero lo que quieres reemplazar.'
+                );
+
+                return;
+            }
+
+            const rotations =
+                captureReplacementRotations(
+                    ids,
+                    referenceId
+                );
+
+            if(!rotations || rotations.length !== ids.length)
+            {
+                setStatus(
+                    'No se pudieron calcular las orientaciones del reemplazo.'
+                );
+
+                return;
+            }
+
+            const visualFootprintError =
+                validateReplacementVisualFootprints(
+                    ids,
+                    referenceId,
+                    rotations
+                );
+
+            if(visualFootprintError)
+            {
+                setStatus(
+                    visualFootprintError
+                );
+
+                return;
+            }
+
+            const sourceSnapshots =
+                captureTransformSnapshots(
+                    ids
+                );
+
+            if(!sourceSnapshots || sourceSnapshots.length !== ids.length)
+            {
+                setStatus(
+                    'No se pudo capturar la geometría completa del reemplazo.'
+                );
+
+                return;
+            }
+
+            const context: BuilderProReplacementContext = {
+                itemIds: ids,
+                referenceId,
+                targetRotations: rotations,
+                sourceSnapshots
+            };
+
+            replacementContextRef.current =
+                context;
+
+            sendReplaceRequest(
+                REPLACE_OP_PREVIEW,
+                context
+            );
+        }, [
+            captureReplacementRotations,
+            captureTransformSnapshots,
+            sendReplaceRequest,
+            validateReplacementVisualFootprints
+        ]);
+
+    const toggleReplacePick =
+        useCallback(() =>
+        {
+            if(!activeRef.current) return;
+            if(pendingRef.current) return;
+            if(dragRef.current) return;
+
+            if(replacePickModeRef.current)
+            {
+                clearReplacePick();
+                return;
+            }
+
+            if(!selectedIdsRef.current.length)
+            {
+                setStatus(
+                    'Selecciona primero lo que quieres reemplazar.'
+                );
+
+                return;
+            }
+
+            if(
+                pasteModeRef.current ||
+                duplicateModeRef.current ||
+                blueprintPlaceModeRef.current
+            )
+            {
+                setStatus(
+                    'Cancela primero Pegar, Duplicar o Colocar blueprint.'
+                );
+
+                return;
+            }
+
+            clearReferencePick(true);
+
+            if(pivotPickModeRef.current)
+            {
+                pivotPickModeRef.current =
+                    false;
+
+                setPivotPickMode(false);
+            }
+
+            if(areaModeRef.current)
+            {
+                areaModeRef.current =
+                    false;
+                areaStartRef.current =
+                    null;
+
+                setAreaMode(false);
+                setSelectionBox(null);
+            }
+
+            replacementContextRef.current =
+                null;
+            replacePickModeRef.current =
+                true;
+
+            setReplacePickMode(true);
+
+            setStatus(
+                'Reemplazar por: haz clic en un furni visible que servirá de modelo. Esc para cancelar.'
+            );
+        }, [
+            clearReferencePick,
+            clearReplacePick
+        ]);
 
 
     const requestReferencePlacement =
@@ -5396,6 +6189,11 @@ export const BuilderProView: FC<{}> = props =>
             if(pendingRef.current) return;
             if(dragRef.current) return;
 
+            if(replacePickModeRef.current)
+            {
+                clearReplacePick(true);
+            }
+
             if(
                 operation !== REFERENCE_OP_EQUAL_Z &&
                 operation !== REFERENCE_OP_PLACE_ABOVE
@@ -5468,7 +6266,8 @@ export const BuilderProView: FC<{}> = props =>
                     : 'Colocar encima: haz clic en el furni que servirá de superficie. Esc para cancelar.'
             );
         }, [
-            clearReferencePick
+            clearReferencePick,
+            clearReplacePick
         ]);
 
     const toggleAreaMode = useCallback(() =>
@@ -6284,7 +7083,8 @@ export const BuilderProView: FC<{}> = props =>
 
             if(
                 referencePickOperationRef.current ===
-                REFERENCE_OP_NONE
+                    REFERENCE_OP_NONE &&
+                !replacePickModeRef.current
             )
             {
                 return;
@@ -6297,6 +7097,12 @@ export const BuilderProView: FC<{}> = props =>
 
             event.stopPropagation();
             event.stopImmediatePropagation();
+
+            if(replacePickModeRef.current)
+            {
+                clearReplacePick();
+                return;
+            }
 
             clearReferencePick(true);
         };
@@ -6317,7 +7123,8 @@ export const BuilderProView: FC<{}> = props =>
         };
     }, [
         active,
-        clearReferencePick
+        clearReferencePick,
+        clearReplacePick
     ]);
 
     useEffect(() =>
@@ -6771,6 +7578,15 @@ export const BuilderProView: FC<{}> = props =>
                 );
 
                 if(
+                    replacementSourceIdsRef.current.has(
+                        removedId
+                    )
+                )
+                {
+                    return;
+                }
+
+                if(
                     traversableIdsRef.current.has(
                         removedId
                     )
@@ -6892,6 +7708,41 @@ export const BuilderProView: FC<{}> = props =>
                 roomSessionRef.current;
 
             if(!currentRoomSession) return;
+
+            if(replacePickModeRef.current)
+            {
+                if(
+                    selectedIdsRef.current.includes(
+                        event.objectId
+                    )
+                )
+                {
+                    setStatus(
+                        'El furni de referencia debe estar fuera de la selección.'
+                    );
+
+                    return;
+                }
+
+                if(
+                    !isItemLocallyVisible(
+                        event.objectId
+                    )
+                )
+                {
+                    setStatus(
+                        'El furni de referencia debe ser visible.'
+                    );
+
+                    return;
+                }
+
+                requestReplacePreview(
+                    event.objectId
+                );
+
+                return;
+            }
 
             if(
                 referencePickOperationRef.current !==
@@ -7726,6 +8577,216 @@ export const BuilderProView: FC<{}> = props =>
             setStatus(
                 `Error ${ parser.code }: ${ parser.message }`
             );
+        }
+    );
+
+    useMessageEvent<BuilderProReplaceGroupResultEvent>(
+        BuilderProReplaceGroupResultEvent,
+        event =>
+        {
+            const parser =
+                event.getParser();
+
+            if(!parser) return;
+
+            if(
+                pendingRequestIdRef.current !==
+                    parser.requestId ||
+                !pendingRef.current
+            )
+            {
+                return;
+            }
+
+            if(pendingTimeoutRef.current !== null)
+            {
+                window.clearTimeout(
+                    pendingTimeoutRef.current
+                );
+
+                pendingTimeoutRef.current =
+                    null;
+            }
+
+            pendingRef.current = false;
+            pendingRequestIdRef.current =
+                null;
+            pendingStartedAtRef.current =
+                0;
+
+            const operation =
+                parser.operation;
+
+            pendingReplaceOperationRef.current =
+                REPLACE_OP_PREVIEW;
+
+            setPending(false);
+
+            if(!parser.success)
+            {
+                if(operation === REPLACE_OP_EXECUTE)
+                {
+                    replacementSourceIdsRef.current =
+                        new Set<number>();
+
+                    replacementContextRef.current =
+                        null;
+
+                    replacePickModeRef.current =
+                        false;
+
+                    setReplacePickMode(false);
+
+                    requestGroupState(
+                        GROUP_OP_LIST
+                    );
+
+                    requestLayerState(
+                        LAYER_OP_LIST
+                    );
+
+                    requestTraversalState(
+                        TRAVERSAL_OP_QUERY
+                    );
+                }
+
+                setStatus(
+                    `Error ${ parser.code }: ${ parser.message }${
+                        parser.needed > 0
+                            ? ` Necesarios: ${ parser.needed } · Disponibles: ${ parser.available }.`
+                            : ''
+                    }`
+                );
+
+                return;
+            }
+
+            if(operation === REPLACE_OP_PREVIEW)
+            {
+                const context =
+                    replacementContextRef.current;
+
+                if(!context)
+                {
+                    setStatus(
+                        'La preparación del reemplazo ya no está disponible.'
+                    );
+
+                    return;
+                }
+
+                const accepted =
+                    window.confirm(
+                        `Reemplazar ${ parser.needed } furnis por "${ parser.referenceName }"?
+
+` +
+                        `Necesarios: ${ parser.needed }
+` +
+                        `Disponibles: ${ parser.available }
+
+` +
+                        'Se conservarán posición, altura, orientación compatible, capa, grupo y Atravesable. ' +
+                        'El estado del furni nuevo volverá a su estado inicial cuando corresponda.'
+                    );
+
+                if(!accepted)
+                {
+                    clearReplacePick(true);
+                    setStatus(
+                        'Reemplazo cancelado.'
+                    );
+                    return;
+                }
+
+                replacePickModeRef.current =
+                    false;
+                setReplacePickMode(false);
+
+                replacementSourceIdsRef.current =
+                    new Set<number>(
+                        context.itemIds
+                    );
+
+                window.setTimeout(
+                    () =>
+                    {
+                        const latest =
+                            replacementContextRef.current;
+
+                        if(!latest)
+                        {
+                            return;
+                        }
+
+                        sendReplaceRequest(
+                            REPLACE_OP_EXECUTE,
+                            latest
+                        );
+                    },
+                    0
+                );
+
+                return;
+            }
+
+            if(operation === REPLACE_OP_EXECUTE)
+            {
+                const replacementIds = [
+                    ...parser.itemIds
+                ];
+
+                const context =
+                    replacementContextRef.current;
+
+                replacePickModeRef.current =
+                    false;
+
+                setReplacePickMode(false);
+
+                if(parser.affectedCount > 0)
+                {
+                    setCanUndo(true);
+                    setCanRedo(false);
+                }
+
+                if(!context)
+                {
+                    replacementSourceIdsRef.current =
+                        new Set<number>();
+
+                    applySelection(
+                        replacementIds
+                    );
+
+                    requestGroupState(
+                        GROUP_OP_LIST
+                    );
+
+                    requestLayerState(
+                        LAYER_OP_LIST
+                    );
+
+                    requestTraversalState(
+                        TRAVERSAL_OP_QUERY
+                    );
+
+                    setStatus(
+                        `${ parser.message } Aviso: faltó el contexto visual del reemplazo.`
+                    );
+
+                    return;
+                }
+
+                setStatus(
+                    `${ parser.message } Sincronizando vista...`
+                );
+
+                finalizeReplacementVisuals(
+                    replacementIds,
+                    context,
+                    parser.message
+                );
+            }
         }
     );
 
@@ -12676,6 +13737,33 @@ export const BuilderProView: FC<{}> = props =>
 
                                 <div className="builder-pro-hint">
                                     Igualar altura conserva las diferencias internas de la estructura. Colocar encima usa el pivote actual para X/Y.
+                                </div>
+                            </div>
+                        </details>
+
+                        <details className="builder-pro-section">
+                            <summary>Reemplazar</summary>
+
+                            <div className="builder-pro-section-body">
+                                <button
+                                    type="button"
+                                    className="builder-pro-full"
+                                    disabled={
+                                        pending ||
+                                        !selectedIds.length
+                                    }
+                                    onClick={
+                                        toggleReplacePick
+                                    }>
+                                    {
+                                        replacePickMode
+                                            ? 'Cancelar reemplazo'
+                                            : 'Reemplazar por...'
+                                    }
+                                </button>
+
+                                <div className="builder-pro-hint">
+                                    Elige un furni visible de la sala como modelo. Usa unidades reales de tu inventario y cancela toda la operación si una sola pieza no cabe.
                                 </div>
                             </div>
                         </details>

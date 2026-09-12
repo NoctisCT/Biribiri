@@ -28,11 +28,11 @@ import { GetReactionProfileComposer, SaveReactionDisplayModeComposer, SaveReacti
 import { AvatarReactionComposer } from './messages/outgoing/reactions';
 import { EstadoBloqueoInventarioEvent, ResultadoConfigurarPatronEvent, ResultadoPatronInventarioEvent } from './messages/incoming/inventorylock';
 import { HoloGridWalkabilityEvent } from './messages/incoming/hologrid';
-import { BuilderProCopyGroupResultEvent, BuilderProPasteGroupResultEvent, BuilderProMoveGroupResultEvent, BuilderProTransformGroupResultEvent, BuilderProHistoryResultEvent, BuilderProOffsetGroupResultEvent, BuilderProLayoutGroupResultEvent, BuilderProGroupStateEvent, BuilderProTraversalStateEvent, BuilderProBlueprintStateEvent, BuilderProPickupGroupResultEvent, BuilderProLayerStateEvent, BuilderProMirrorDuplicateResultEvent } from './messages/incoming/builderpro';
+import { BuilderProCopyGroupResultEvent, BuilderProPasteGroupResultEvent, BuilderProMoveGroupResultEvent, BuilderProTransformGroupResultEvent, BuilderProHistoryResultEvent, BuilderProOffsetGroupResultEvent, BuilderProLayoutGroupResultEvent, BuilderProGroupStateEvent, BuilderProTraversalStateEvent, BuilderProBlueprintStateEvent, BuilderProPickupGroupResultEvent, BuilderProLayerStateEvent, BuilderProMirrorDuplicateResultEvent, BuilderProReplaceGroupResultEvent } from './messages/incoming/builderpro';
 import { RpgEngineResultEvent } from './messages/incoming/rpgengine';
 import { CerrarSesionInventarioComposer, ConfigurarPatronInventarioComposer, ConsultarBloqueoInventarioComposer, VerificarPatronInventarioComposer } from './messages/outgoing/inventorylock';
 import { GetHoloGridWalkabilityComposer } from './messages/outgoing/hologrid';
-import { BuilderProCopyGroupComposer, BuilderProPasteGroupComposer, BuilderProMoveGroupComposer, BuilderProTransformGroupComposer, BuilderProHistoryComposer, BuilderProOffsetGroupComposer, BuilderProLayoutGroupComposer, BuilderProGroupStateComposer, BuilderProTraversalStateComposer, BuilderProBlueprintStateComposer, BuilderProPickupGroupComposer, BuilderProLayerStateComposer, BuilderProReferencePlacementComposer, BuilderProMirrorDuplicateComposer } from './messages/outgoing/builderpro';
+import { BuilderProCopyGroupComposer, BuilderProPasteGroupComposer, BuilderProMoveGroupComposer, BuilderProTransformGroupComposer, BuilderProHistoryComposer, BuilderProOffsetGroupComposer, BuilderProLayoutGroupComposer, BuilderProGroupStateComposer, BuilderProTraversalStateComposer, BuilderProBlueprintStateComposer, BuilderProPickupGroupComposer, BuilderProLayerStateComposer, BuilderProReferencePlacementComposer, BuilderProMirrorDuplicateComposer, BuilderProReplaceGroupComposer } from './messages/outgoing/builderpro';
 import { RpgEngineCommandComposer } from './messages/outgoing/rpgengine';
 import { ObtenerRecordsSubastasComposer } from './messages/outgoing/subastas';
 import { RecordsSubastasEvent } from './messages/incoming/subastas';
@@ -135,6 +135,7 @@ export class NitroMessages implements IMessageConfiguration {
         this._events.set(IncomingHeader.BUILDER_PRO_PICKUP_GROUP_RESULT, BuilderProPickupGroupResultEvent);
         this._events.set(IncomingHeader.BUILDER_PRO_LAYER_STATE_RESULT, BuilderProLayerStateEvent);
         this._events.set(IncomingHeader.BUILDER_PRO_MIRROR_DUPLICATE_RESULT, BuilderProMirrorDuplicateResultEvent);
+        this._events.set(IncomingHeader.BUILDER_PRO_REPLACE_GROUP_RESULT, BuilderProReplaceGroupResultEvent);
         this._events.set(IncomingHeader.RPG_ENGINE_RESULT, RpgEngineResultEvent);
         this._events.set(IncomingHeader.ROOM_AD_ERROR, RoomAdErrorEvent);
 
@@ -758,6 +759,7 @@ export class NitroMessages implements IMessageConfiguration {
         this._composers.set(OutgoingHeader.BUILDER_PRO_LAYER_STATE, BuilderProLayerStateComposer);
         this._composers.set(OutgoingHeader.BUILDER_PRO_REFERENCE_PLACEMENT, BuilderProReferencePlacementComposer);
         this._composers.set(OutgoingHeader.BUILDER_PRO_MIRROR_DUPLICATE, BuilderProMirrorDuplicateComposer);
+        this._composers.set(OutgoingHeader.BUILDER_PRO_REPLACE_GROUP, BuilderProReplaceGroupComposer);
         this._composers.set(OutgoingHeader.RPG_ENGINE_COMMAND, RpgEngineCommandComposer);
 
         // SUBASTAS
