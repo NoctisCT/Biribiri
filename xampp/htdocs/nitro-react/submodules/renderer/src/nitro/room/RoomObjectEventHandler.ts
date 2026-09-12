@@ -354,7 +354,13 @@ export class RoomObjectEventHandler extends Disposable implements IRoomCanvasMou
         let didWalk = false;
         let didMove = false;
 
-        if(this._whereYouClickIsWhereYouGo)
+        const builderProAvatarMovementLocked =
+            !!(globalThis as any).__builderProAvatarMovementLocked;
+
+        if(
+            !builderProAvatarMovementLocked &&
+            this._whereYouClickIsWhereYouGo
+        )
         {
             if(!operation || (operation === RoomObjectOperationType.OBJECT_UNDEFINED))
             {
@@ -1093,6 +1099,8 @@ export class RoomObjectEventHandler extends Disposable implements IRoomCanvasMou
     private onRoomObjectTileMouseEvent(roomId: number, event: RoomObjectTileMouseEvent): void
     {
         if(!this._roomEngine || this._roomEngine.isDecorating || !this._roomEngine.roomSessionManager) return;
+
+        if((globalThis as any).__builderProAvatarMovementLocked) return;
 
         const session = this._roomEngine.roomSessionManager.getSession(roomId);
 

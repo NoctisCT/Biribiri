@@ -8,4 +8,5 @@ export * from './BuilderProLayoutGroupResultEvent';
 export * from './BuilderProGroupStateEvent';
 export * from './BuilderProTraversalStateEvent';
 export * from './BuilderProPickupGroupResultEvent';
+export * from './BuilderProLayerStateEvent';
 export * from './BuilderProBlueprintStateEvent';

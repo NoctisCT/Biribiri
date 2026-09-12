@@ -979,9 +979,15 @@ public final class BuilderProHistoryService
             }
         }
 
+        Map<Integer, Integer> layerMemberships =
+                BuilderProLayerRepository.memberships(
+                        requestedIds
+                );
+
         return new PickupMetadata(
                 groups,
-                traversable
+                traversable,
+                layerMemberships
         );
     }
 
@@ -1006,6 +1012,10 @@ public final class BuilderProHistoryService
             }
 
             BuilderProGroupRepository.removeItem(
+                    itemId.intValue()
+            );
+
+            BuilderProLayerRepository.removeItem(
                     itemId.intValue()
             );
         }
@@ -1115,6 +1125,48 @@ public final class BuilderProHistoryService
                         snapshot.itemIds
                 );
             }
+        }
+
+        Map<Integer, List<Integer>> layerItems =
+                new HashMap<Integer, List<Integer>>();
+
+        for(Map.Entry<Integer, Integer> membership :
+                metadata.layerMemberships.entrySet())
+        {
+            int itemId = membership.getKey().intValue();
+            int layerId = membership.getValue().intValue();
+
+            if(room.getHabboItem(itemId) == null)
+            {
+                continue;
+            }
+
+            if(BuilderProLayerRepository.find(
+                    room.getId(),
+                    layerId) == null)
+            {
+                continue;
+            }
+
+            List<Integer> items = layerItems.get(layerId);
+
+            if(items == null)
+            {
+                items = new ArrayList<Integer>();
+                layerItems.put(layerId, items);
+            }
+
+            items.add(itemId);
+        }
+
+        for(Map.Entry<Integer, List<Integer>> layerEntry :
+                layerItems.entrySet())
+        {
+            BuilderProLayerRepository.assignItems(
+                    room.getId(),
+                    layerEntry.getKey().intValue(),
+                    layerEntry.getValue()
+            );
         }
 
         if(!metadata.traversableIds.isEmpty())
@@ -3046,15 +3098,21 @@ public final class BuilderProHistoryService
     {
         private final List<GroupSnapshot> groups;
         private final List<Integer> traversableIds;
+        private final Map<Integer, Integer> layerMemberships;
 
         private PickupMetadata(
                 List<GroupSnapshot> groups,
-                List<Integer> traversableIds)
+                List<Integer> traversableIds,
+                Map<Integer, Integer> layerMemberships)
         {
             this.groups = groups;
             this.traversableIds =
                     new ArrayList<Integer>(
                             traversableIds
+                    );
+            this.layerMemberships =
+                    new HashMap<Integer, Integer>(
+                            layerMemberships
                     );
         }
     }

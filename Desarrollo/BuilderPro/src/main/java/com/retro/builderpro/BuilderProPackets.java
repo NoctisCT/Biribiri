@@ -38,4 +38,7 @@ public final class BuilderProPackets
 
     public static final int PICKUP_GROUP_REQUEST = 6320;
     public static final int PICKUP_GROUP_RESULT = 6321;
+
+    public static final int LAYER_STATE_REQUEST = 6322;
+    public static final int LAYER_STATE_RESULT = 6323;
 }

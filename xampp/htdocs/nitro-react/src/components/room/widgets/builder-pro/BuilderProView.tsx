@@ -1,6 +1,6 @@
-import { BuilderProPickupGroupComposer, BuilderProPickupGroupResultEvent, RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, BuilderProTraversalStateComposer, BuilderProTraversalStateEvent, BuilderProBlueprintStateComposer, BuilderProBlueprintStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
+import { BuilderProLayerStateComposer, BuilderProLayerStateEvent, BuilderProPickupGroupComposer, BuilderProPickupGroupResultEvent, RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, BuilderProTraversalStateComposer, BuilderProTraversalStateEvent, BuilderProBlueprintStateComposer, BuilderProBlueprintStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomEngineObjectPlacedEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
-import { FaBoxOpen, FaClone, FaCopy, FaMinus, FaPaste, FaQuestion, FaRedo, FaUndo } from 'react-icons/fa';
+import { FaBoxOpen, FaClone, FaCopy, FaEllipsisH, FaEye, FaEyeSlash, FaLock, FaMinus, FaPaste, FaPlus, FaQuestion, FaRedo, FaSearch, FaUndo, FaWalking } from 'react-icons/fa';
 import { AddEventLinkTracker, BuilderProSelectionVisualizer, CanManipulateFurniture, CreateLinkEvent, GetRoomEngine, GetSessionDataManager, HasHabboClub, RemoveLinkEventTracker, SendMessageComposer, SetBuilderProSelectionModeActive } from '../../../../api';
 import { useMessageEvent, useRoom, useRoomEngineEvent } from '../../../../hooks';
 import { NitroCardContentView, NitroCardHeaderView, NitroCardView } from '../../../../common';
@@ -30,6 +30,15 @@ const GROUP_OP_SET_LOCKED = 3;
 const GROUP_OP_DELETE = 4;
 const GROUP_OP_REPLACE_MEMBERS = 5;
 
+const LAYER_OP_LIST = 0;
+const LAYER_OP_CREATE = 1;
+const LAYER_OP_RENAME = 2;
+const LAYER_OP_DELETE = 3;
+const LAYER_OP_ASSIGN = 4;
+const LAYER_OP_UNASSIGN = 5;
+
+const LAYER_SCOPE_ALL = -1;
+
 const TRAVERSAL_OP_QUERY = 0;
 const TRAVERSAL_OP_SET = 1;
 
@@ -44,6 +53,13 @@ type BuilderProSavedGroupState = {
     id: number;
     name: string;
     locked: boolean;
+    itemIds: number[];
+};
+
+type BuilderProSavedLayerState = {
+    id: number;
+    name: string;
+    sortOrder: number;
     itemIds: number[];
 };
 
@@ -90,6 +106,8 @@ export const BuilderProView: FC<{}> = props =>
     const { roomSession = null } = useRoom();
 
     const [ active, setActive ] = useState(false);
+    const [ avatarMovementLocked, setAvatarMovementLocked ] =
+        useState(false);
     const [ selectedIds, setSelectedIds ] = useState<number[]>([]);
     const [ pending, setPending ] = useState(false);
     const [ status, setStatus ] = useState('');
@@ -105,6 +123,34 @@ export const BuilderProView: FC<{}> = props =>
         useState<number | null>(null);
     const [ groupName, setGroupName ] = useState('');
     const [ groupPending, setGroupPending ] = useState(false);
+    const [ savedLayers, setSavedLayers ] =
+        useState<BuilderProSavedLayerState[]>([]);
+    const [ selectedLayerId, setSelectedLayerId ] =
+        useState(0);
+    const [ layerScopeId, setLayerScopeId ] =
+        useState(LAYER_SCOPE_ALL);
+    const [ layerName, setLayerName ] = useState('');
+    const [ layerPending, setLayerPending ] = useState(false);
+    const [ hiddenLayerIds, setHiddenLayerIds ] =
+        useState<number[]>([]);
+    const [ isolatedLayerId, setIsolatedLayerId ] =
+        useState<number | null>(null);
+    const [ dimmedOthersLayerId, setDimmedOthersLayerId ] =
+        useState<number | null>(null);
+    const [ outlinerQuery, setOutlinerQuery ] =
+        useState('');
+    const [ outlinerCollapsedLayerIds, setOutlinerCollapsedLayerIds ] =
+        useState<number[]>([]);
+    const [ outlinerCollapsedGroupIds, setOutlinerCollapsedGroupIds ] =
+        useState<number[]>([]);
+    const [ outlinerRevision, setOutlinerRevision ] =
+        useState(0);
+    const [ outlinerMenuLayerId, setOutlinerMenuLayerId ] =
+        useState<number | null>(null);
+    const [ outlinerRenameLayerId, setOutlinerRenameLayerId ] =
+        useState<number | null>(null);
+    const [ outlinerRenameValue, setOutlinerRenameValue ] =
+        useState('');
     const [ traversableIds, setTraversableIds ] =
         useState<number[]>([]);
     const [ traversalPending, setTraversalPending ] =
@@ -197,6 +243,30 @@ export const BuilderProView: FC<{}> = props =>
     const groupOperationRef = useRef(GROUP_OP_LIST);
     const groupPendingTimeoutRef =
         useRef<number | null>(null);
+    const savedLayersRef =
+        useRef<BuilderProSavedLayerState[]>([]);
+    const layerPendingRef = useRef(false);
+    const layerRequestIdRef = useRef(0);
+    const layerOperationRef = useRef(LAYER_OP_LIST);
+    const layerPendingTimeoutRef =
+        useRef<number | null>(null);
+    const layerScopeIdRef =
+        useRef(LAYER_SCOPE_ALL);
+    const layerSilentRequestRef =
+        useRef(false);
+    const layerAutoAssignQueueRef =
+        useRef<Array<{
+            layerId: number;
+            itemId: number;
+        }>>([]);
+    const hiddenLayerIdsRef =
+        useRef<Set<number>>(new Set());
+    const isolatedLayerIdRef =
+        useRef<number | null>(null);
+    const dimmedOthersLayerIdRef =
+        useRef<number | null>(null);
+    const layerOriginalAlphaRef =
+        useRef<Map<number, number>>(new Map());
     const traversableIdsRef =
         useRef<Set<number>>(new Set());
     const traversalPendingRef = useRef(false);
@@ -236,6 +306,14 @@ export const BuilderProView: FC<{}> = props =>
 
     roomSessionRef.current = roomSession;
     savedGroupsRef.current = savedGroups;
+    savedLayersRef.current = savedLayers;
+    layerScopeIdRef.current = layerScopeId;
+    hiddenLayerIdsRef.current =
+        new Set(hiddenLayerIds);
+    isolatedLayerIdRef.current =
+        isolatedLayerId;
+    dimmedOthersLayerIdRef.current =
+        dimmedOthersLayerId;
     selectedBlueprintIdRef.current =
         selectedBlueprintId;
     moveStepRef.current = moveStep;
@@ -259,6 +337,16 @@ export const BuilderProView: FC<{}> = props =>
                 savedGroups.find(
                     group =>
                         group.id === selectedGroupId
+                ) || null
+            );
+
+    const selectedSavedLayer =
+        selectedLayerId <= 0
+            ? null
+            : (
+                savedLayers.find(
+                    layer =>
+                        layer.id === selectedLayerId
                 ) || null
             );
 
@@ -525,6 +613,808 @@ export const BuilderProView: FC<{}> = props =>
             );
         }, []);
 
+
+
+    const getLayerIdForItem =
+        useCallback((
+            itemId: number
+        ): number =>
+        {
+            for(const layer of savedLayersRef.current)
+            {
+                if(
+                    layer.itemIds.includes(
+                        itemId
+                    )
+                )
+                {
+                    return layer.id;
+                }
+            }
+
+            return 0;
+        }, []);
+
+    const isItemInWorkScope =
+        useCallback((
+            itemId: number
+        ): boolean =>
+        {
+            const scope =
+                layerScopeIdRef.current;
+
+            if(scope === LAYER_SCOPE_ALL)
+            {
+                return true;
+            }
+
+            return (
+                getLayerIdForItem(
+                    itemId
+                ) === scope
+            );
+        }, [
+            getLayerIdForItem
+        ]);
+
+    const getSelectableGroupItemIds =
+        useCallback((
+            group: BuilderProSavedGroupState
+        ): number[] =>
+        {
+            const available =
+                getAvailableGroupItemIds(
+                    group
+                );
+
+            if(
+                layerScopeIdRef.current ===
+                LAYER_SCOPE_ALL
+            )
+            {
+                return available;
+            }
+
+            const inScope =
+                available.filter(
+                    itemId =>
+                        isItemInWorkScope(
+                            itemId
+                        )
+                );
+
+            /*
+             * Un grupo bloqueado sigue siendo atómico,
+             * pero solo puede "arrancar" si al menos un
+             * miembro pertenece a la capa de trabajo.
+             */
+            if(group.locked)
+            {
+                return inScope.length
+                    ? available
+                    : [];
+            }
+
+            return inScope;
+        }, [
+            getAvailableGroupItemIds,
+            isItemInWorkScope
+        ]);
+
+
+    const isLayerLocallyVisible =
+        useCallback((
+            layerId: number
+        ): boolean =>
+        {
+            if(
+                hiddenLayerIdsRef.current.has(
+                    layerId
+                )
+            )
+            {
+                return false;
+            }
+
+            const isolated =
+                isolatedLayerIdRef.current;
+
+            if(
+                isolated !== null &&
+                layerId !== isolated
+            )
+            {
+                return false;
+            }
+
+            return true;
+        }, []);
+
+    const isItemLocallyVisible =
+        useCallback((
+            itemId: number
+        ): boolean =>
+            isLayerLocallyVisible(
+                getLayerIdForItem(
+                    itemId
+                )
+            ), [
+            getLayerIdForItem,
+            isLayerLocallyVisible
+        ]);
+
+    const restoreLayerVisibility =
+        useCallback(() =>
+        {
+            const currentRoomSession =
+                roomSessionRef.current;
+
+            const roomEngine =
+                GetRoomEngine();
+
+            if(
+                currentRoomSession &&
+                roomEngine
+            )
+            {
+                for(
+                    const [
+                        itemId,
+                        originalAlpha
+                    ] of
+                    layerOriginalAlphaRef.current.entries()
+                )
+                {
+                    const roomObject =
+                        roomEngine.getRoomObject(
+                            currentRoomSession.roomId,
+                            itemId,
+                            RoomObjectCategory.FLOOR
+                        );
+
+                    if(!roomObject)
+                    {
+                        continue;
+                    }
+
+                    roomObject.model.setValue(
+                        RoomObjectVariable.FURNITURE_ALPHA_MULTIPLIER,
+                        originalAlpha
+                    );
+                }
+            }
+
+            layerOriginalAlphaRef.current.clear();
+        }, []);
+
+    const applyLayerVisibility =
+        useCallback(() =>
+        {
+            if(!activeRef.current)
+            {
+                return;
+            }
+
+            const currentRoomSession =
+                roomSessionRef.current;
+
+            const roomEngine =
+                GetRoomEngine();
+
+            if(
+                !currentRoomSession ||
+                !roomEngine
+            )
+            {
+                return;
+            }
+
+            const assignedLayerByItem =
+                new Map<number, number>();
+
+            for(const layer of savedLayersRef.current)
+            {
+                for(const itemId of layer.itemIds)
+                {
+                    assignedLayerByItem.set(
+                        itemId,
+                        layer.id
+                    );
+                }
+            }
+
+            const hidden =
+                hiddenLayerIdsRef.current;
+
+            const isolated =
+                isolatedLayerIdRef.current;
+
+            const dimmed =
+                dimmedOthersLayerIdRef.current;
+
+            const count =
+                roomEngine.getRoomObjectCount(
+                    currentRoomSession.roomId,
+                    RoomObjectCategory.FLOOR
+                );
+
+            for(
+                let index = 0;
+                index < count;
+                index++
+            )
+            {
+                const roomObject =
+                    roomEngine.getRoomObjectByIndex(
+                        currentRoomSession.roomId,
+                        index,
+                        RoomObjectCategory.FLOOR
+                    );
+
+                if(!roomObject)
+                {
+                    continue;
+                }
+
+                const itemId =
+                    roomObject.id;
+
+                const layerId =
+                    assignedLayerByItem.get(
+                        itemId
+                    ) || 0;
+
+                const shouldHide =
+                    hidden.has(layerId) ||
+                    (
+                        isolated !== null &&
+                        layerId !== isolated
+                    );
+
+                const shouldDim =
+                    !shouldHide &&
+                    dimmed !== null &&
+                    layerId !== dimmed;
+
+                /*
+                 * Si este furni no necesita un efecto de capa,
+                 * Builder Pro no debe gestionar su alpha. Esto
+                 * evita capturar el 0.5 temporal que Nitro usa
+                 * al colocar/mover furnis.
+                 */
+                if(!shouldHide && !shouldDim)
+                {
+                    const originalAlpha =
+                        layerOriginalAlphaRef.current.get(
+                            itemId
+                        );
+
+                    if(originalAlpha !== undefined)
+                    {
+                        roomObject.model.setValue(
+                            RoomObjectVariable.FURNITURE_ALPHA_MULTIPLIER,
+                            originalAlpha
+                        );
+
+                        layerOriginalAlphaRef.current.delete(
+                            itemId
+                        );
+                    }
+
+                    continue;
+                }
+
+                if(
+                    !layerOriginalAlphaRef.current.has(
+                        itemId
+                    )
+                )
+                {
+                    const currentAlpha =
+                        roomObject.model.getValue<number>(
+                            RoomObjectVariable.FURNITURE_ALPHA_MULTIPLIER
+                        );
+
+                    layerOriginalAlphaRef.current.set(
+                        itemId,
+                        Number.isFinite(
+                            currentAlpha
+                        )
+                            ? currentAlpha
+                            : 1
+                    );
+                }
+
+                const originalAlpha =
+                    layerOriginalAlphaRef.current.get(
+                        itemId
+                    ) ?? 1;
+
+                roomObject.model.setValue(
+                    RoomObjectVariable.FURNITURE_ALPHA_MULTIPLIER,
+                    shouldHide
+                        ? 0
+                        : originalAlpha * 0.2
+                );
+            }
+        }, []);
+
+    const showAllLayers =
+        useCallback(() =>
+        {
+            hiddenLayerIdsRef.current =
+                new Set();
+
+            isolatedLayerIdRef.current =
+                null;
+
+            dimmedOthersLayerIdRef.current =
+                null;
+
+            setHiddenLayerIds([]);
+            setIsolatedLayerId(null);
+            setDimmedOthersLayerId(null);
+
+            restoreLayerVisibility();
+
+            setStatus(
+                'Todas las capas visibles.'
+            );
+        }, [
+            restoreLayerVisibility
+        ]);
+
+
+    const toggleLayerVisibility =
+        useCallback((
+            target: number
+        ) =>
+        {
+            if(target === LAYER_SCOPE_ALL)
+            {
+                return;
+            }
+
+            const next =
+                new Set(
+                    hiddenLayerIdsRef.current
+                );
+
+            const isolated =
+                isolatedLayerIdRef.current;
+
+            const effectivelyVisible =
+                !next.has(target) &&
+                (
+                    isolated === null ||
+                    isolated === target
+                );
+
+            if(effectivelyVisible)
+            {
+                next.add(target);
+
+                if(
+                    isolatedLayerIdRef.current ===
+                    target
+                )
+                {
+                    isolatedLayerIdRef.current =
+                        null;
+
+                    setIsolatedLayerId(null);
+                }
+
+                if(
+                    dimmedOthersLayerIdRef.current ===
+                    target
+                )
+                {
+                    dimmedOthersLayerIdRef.current =
+                        null;
+
+                    setDimmedOthersLayerId(null);
+                }
+            }
+            else
+            {
+                next.delete(target);
+
+                if(
+                    isolatedLayerIdRef.current !== null &&
+                    isolatedLayerIdRef.current !== target
+                )
+                {
+                    isolatedLayerIdRef.current =
+                        null;
+
+                    setIsolatedLayerId(null);
+                }
+            }
+
+            hiddenLayerIdsRef.current =
+                next;
+
+            setHiddenLayerIds(
+                Array.from(next)
+            );
+
+            window.requestAnimationFrame(
+                applyLayerVisibility
+            );
+
+            const label =
+                target === 0
+                    ? 'Sin capa'
+                    : (
+                        savedLayersRef.current.find(
+                            layer =>
+                                layer.id === target
+                        )?.name ||
+                        'Capa'
+                    );
+
+            setStatus(
+                effectivelyVisible
+                    ? `${ label } oculta localmente.`
+                    : `${ label } visible.`
+            );
+        }, [
+            applyLayerVisibility
+        ]);
+
+    const toggleIsolateWorkLayer =
+        useCallback(() =>
+        {
+            const target =
+                layerScopeIdRef.current;
+
+            if(target === LAYER_SCOPE_ALL)
+            {
+                setStatus(
+                    'Elige una capa de trabajo concreta para aislarla.'
+                );
+
+                return;
+            }
+
+            const next =
+                isolatedLayerIdRef.current ===
+                target
+                    ? null
+                    : target;
+
+            isolatedLayerIdRef.current =
+                next;
+
+            dimmedOthersLayerIdRef.current =
+                null;
+
+            setIsolatedLayerId(
+                next
+            );
+
+            setDimmedOthersLayerId(
+                null
+            );
+
+            if(next !== null)
+            {
+                const hidden =
+                    new Set(
+                        hiddenLayerIdsRef.current
+                    );
+
+                hidden.delete(
+                    target
+                );
+
+                hiddenLayerIdsRef.current =
+                    hidden;
+
+                setHiddenLayerIds(
+                    Array.from(hidden)
+                );
+            }
+
+            window.requestAnimationFrame(
+                applyLayerVisibility
+            );
+
+            setStatus(
+                next === null
+                    ? 'Aislamiento desactivado.'
+                    : 'Capa de trabajo aislada localmente.'
+            );
+        }, [
+            applyLayerVisibility
+        ]);
+
+    const toggleDimOtherLayers =
+        useCallback(() =>
+        {
+            const target =
+                layerScopeIdRef.current;
+
+            if(target === LAYER_SCOPE_ALL)
+            {
+                setStatus(
+                    'Elige una capa de trabajo concreta para atenuar el resto.'
+                );
+
+                return;
+            }
+
+            const next =
+                dimmedOthersLayerIdRef.current ===
+                target
+                    ? null
+                    : target;
+
+            dimmedOthersLayerIdRef.current =
+                next;
+
+            isolatedLayerIdRef.current =
+                null;
+
+            setDimmedOthersLayerId(
+                next
+            );
+
+            setIsolatedLayerId(
+                null
+            );
+
+            if(next !== null)
+            {
+                const hidden =
+                    new Set(
+                        hiddenLayerIdsRef.current
+                    );
+
+                hidden.delete(
+                    target
+                );
+
+                hiddenLayerIdsRef.current =
+                    hidden;
+
+                setHiddenLayerIds(
+                    Array.from(hidden)
+                );
+            }
+
+            window.requestAnimationFrame(
+                applyLayerVisibility
+            );
+
+            setStatus(
+                next === null
+                    ? 'Atenuación desactivada.'
+                    : 'Resto de capas atenuado localmente.'
+            );
+        }, [
+            applyLayerVisibility
+        ]);
+
+    const getAvailableLayerItemIds =
+        useCallback((
+            layerId: number
+        ): number[] =>
+        {
+            const currentRoomSession =
+                roomSessionRef.current;
+
+            const roomEngine =
+                GetRoomEngine();
+
+            if(
+                !currentRoomSession ||
+                !roomEngine
+            )
+            {
+                return [];
+            }
+
+            const assigned =
+                new Set<number>();
+
+            for(const layer of savedLayersRef.current)
+            {
+                for(const itemId of layer.itemIds)
+                {
+                    assigned.add(itemId);
+                }
+            }
+
+            const result: number[] = [];
+
+            if(layerId > 0)
+            {
+                const layer =
+                    savedLayersRef.current.find(
+                        entry =>
+                            entry.id === layerId
+                    );
+
+                if(!layer)
+                {
+                    return [];
+                }
+
+                for(const itemId of layer.itemIds)
+                {
+                    const roomObject =
+                        roomEngine.getRoomObject(
+                            currentRoomSession.roomId,
+                            itemId,
+                            RoomObjectCategory.FLOOR
+                        );
+
+                    if(!roomObject)
+                    {
+                        continue;
+                    }
+
+                    if(!CanManipulateFurniture(
+                        currentRoomSession,
+                        itemId,
+                        RoomObjectCategory.FLOOR
+                    ))
+                    {
+                        continue;
+                    }
+
+                    result.push(itemId);
+                }
+
+                return result;
+            }
+
+            const count =
+                roomEngine.getRoomObjectCount(
+                    currentRoomSession.roomId,
+                    RoomObjectCategory.FLOOR
+                );
+
+            for(let index = 0;
+                index < count;
+                index++)
+            {
+                const roomObject =
+                    roomEngine.getRoomObjectByIndex(
+                        currentRoomSession.roomId,
+                        index,
+                        RoomObjectCategory.FLOOR
+                    );
+
+                if(!roomObject)
+                {
+                    continue;
+                }
+
+                if(assigned.has(roomObject.id))
+                {
+                    continue;
+                }
+
+                if(!CanManipulateFurniture(
+                    currentRoomSession,
+                    roomObject.id,
+                    RoomObjectCategory.FLOOR
+                ))
+                {
+                    continue;
+                }
+
+                result.push(roomObject.id);
+            }
+
+            return result;
+        }, []);
+
+    const normalizeLayerSelection =
+        useCallback((
+            sourceIds: number[]
+        ): {
+            ids: number[];
+            limitReached: boolean;
+        } =>
+        {
+            const result: number[] = [];
+            const resultSet =
+                new Set<number>();
+
+            const handledLockedGroups =
+                new Set<number>();
+
+            let limitReached = false;
+
+            const append =
+                (itemId: number) =>
+                {
+                    if(resultSet.has(itemId))
+                    {
+                        return;
+                    }
+
+                    const lockedGroup =
+                        savedGroupsRef.current.find(
+                            group =>
+                                group.locked &&
+                                group.itemIds.includes(
+                                    itemId
+                                )
+                        );
+
+                    if(lockedGroup)
+                    {
+                        if(
+                            handledLockedGroups.has(
+                                lockedGroup.id
+                            )
+                        )
+                        {
+                            return;
+                        }
+
+                        handledLockedGroups.add(
+                            lockedGroup.id
+                        );
+
+                        const available =
+                            getAvailableGroupItemIds(
+                                lockedGroup
+                            );
+
+                        const missing =
+                            available.filter(
+                                id =>
+                                    !resultSet.has(id)
+                            );
+
+                        if(
+                            result.length +
+                            missing.length >
+                            MAX_SELECTION
+                        )
+                        {
+                            limitReached = true;
+                            return;
+                        }
+
+                        for(const id of missing)
+                        {
+                            result.push(id);
+                            resultSet.add(id);
+                        }
+
+                        return;
+                    }
+
+                    if(result.length >= MAX_SELECTION)
+                    {
+                        limitReached = true;
+                        return;
+                    }
+
+                    result.push(itemId);
+                    resultSet.add(itemId);
+                };
+
+            for(const itemId of sourceIds)
+            {
+                append(itemId);
+            }
+
+            return {
+                ids: result,
+                limitReached
+            };
+        }, [
+            getAvailableGroupItemIds
+        ]);
+
     const selectByAdvancedCriterion =
         useCallback((
             mode:
@@ -769,6 +1659,15 @@ export const BuilderProView: FC<{}> = props =>
                     continue;
                 }
 
+                if(
+                    !isItemInWorkScope(
+                        roomObject.id
+                    )
+                )
+                {
+                    continue;
+                }
+
                 let matches = false;
 
                 if(mode === 'all')
@@ -879,7 +1778,8 @@ export const BuilderProView: FC<{}> = props =>
             );
         }, [
             applySelection,
-            getAvailableGroupItemIds
+            getAvailableGroupItemIds,
+            isItemInWorkScope
         ]);
 
     const requestGroupState =
@@ -1185,7 +2085,7 @@ export const BuilderProView: FC<{}> = props =>
         ) =>
         {
             const ids =
-                getAvailableGroupItemIds(
+                getSelectableGroupItemIds(
                     group
                 );
 
@@ -1214,7 +2114,7 @@ export const BuilderProView: FC<{}> = props =>
             );
         }, [
             applySelection,
-            getAvailableGroupItemIds
+            getSelectableGroupItemIds
         ]);
 
     const createSavedGroup =
@@ -1350,6 +2250,1256 @@ export const BuilderProView: FC<{}> = props =>
         }, [
             requestGroupState,
             selectedSavedGroup
+        ]);
+
+
+    const requestLayerState =
+        useCallback((
+            operation: number,
+            layerId = 0,
+            name = '',
+            itemIds: number[] = [],
+            silent = false
+        ) =>
+        {
+            if(!activeRef.current) return;
+            if(!roomSessionRef.current) return;
+            if(layerPendingRef.current) return;
+
+            layerRequestIdRef.current++;
+
+            if(layerRequestIdRef.current > 2000000000)
+            {
+                layerRequestIdRef.current = 1;
+            }
+
+            const requestId =
+                layerRequestIdRef.current;
+
+            layerOperationRef.current =
+                operation;
+
+            layerSilentRequestRef.current =
+                silent;
+
+            layerPendingRef.current = true;
+            setLayerPending(true);
+
+            SendMessageComposer(
+                new BuilderProLayerStateComposer(
+                    requestId,
+                    operation,
+                    layerId,
+                    name,
+                    itemIds
+                )
+            );
+
+            if(layerPendingTimeoutRef.current !== null)
+            {
+                window.clearTimeout(
+                    layerPendingTimeoutRef.current
+                );
+            }
+
+            layerPendingTimeoutRef.current =
+                window.setTimeout(
+                    () =>
+                    {
+                        layerPendingTimeoutRef.current =
+                            null;
+
+                        if(
+                            !layerPendingRef.current ||
+                            layerRequestIdRef.current !==
+                            requestId
+                        )
+                        {
+                            return;
+                        }
+
+                        layerPendingRef.current = false;
+                        setLayerPending(false);
+
+                        setStatus(
+                            'Sin respuesta al gestionar capas.'
+                        );
+                    },
+                    3000
+                );
+        }, []);
+
+
+    const flushLayerAutoAssignQueue =
+        useCallback(() =>
+        {
+            if(!activeRef.current) return;
+            if(layerPendingRef.current) return;
+
+            const queue =
+                layerAutoAssignQueueRef.current;
+
+            if(!queue.length)
+            {
+                return;
+            }
+
+            const targetLayerId =
+                queue[0].layerId;
+
+            if(
+                targetLayerId <= 0 ||
+                !savedLayersRef.current.some(
+                    layer =>
+                        layer.id === targetLayerId
+                )
+            )
+            {
+                layerAutoAssignQueueRef.current =
+                    queue.filter(
+                        entry =>
+                            entry.layerId !==
+                            targetLayerId
+                    );
+
+                return;
+            }
+
+            const itemIds: number[] = [];
+            const itemIdSet =
+                new Set<number>();
+
+            const remaining:
+                Array<{
+                    layerId: number;
+                    itemId: number;
+                }> = [];
+
+            for(const entry of queue)
+            {
+                if(
+                    entry.layerId === targetLayerId &&
+                    itemIds.length < MAX_SELECTION &&
+                    !itemIdSet.has(entry.itemId)
+                )
+                {
+                    itemIds.push(
+                        entry.itemId
+                    );
+
+                    itemIdSet.add(
+                        entry.itemId
+                    );
+
+                    continue;
+                }
+
+                remaining.push(entry);
+            }
+
+            layerAutoAssignQueueRef.current =
+                remaining;
+
+            if(!itemIds.length)
+            {
+                return;
+            }
+
+            requestLayerState(
+                LAYER_OP_ASSIGN,
+                targetLayerId,
+                '',
+                itemIds,
+                true
+            );
+        }, [
+            requestLayerState
+        ]);
+
+    useMessageEvent<BuilderProLayerStateEvent>(
+        BuilderProLayerStateEvent,
+        event =>
+        {
+            const parser =
+                event.getParser();
+
+            if(!parser) return;
+
+            if(
+                parser.requestId !==
+                layerRequestIdRef.current
+            )
+            {
+                return;
+            }
+
+            if(layerPendingTimeoutRef.current !== null)
+            {
+                window.clearTimeout(
+                    layerPendingTimeoutRef.current
+                );
+
+                layerPendingTimeoutRef.current =
+                    null;
+            }
+
+            const silentRequest =
+                layerSilentRequestRef.current;
+
+            layerSilentRequestRef.current =
+                false;
+
+            layerPendingRef.current = false;
+            setLayerPending(false);
+
+            const nextLayers:
+                BuilderProSavedLayerState[] =
+                parser.layers
+                    .map(
+                        layer => ({
+                            id: layer.id,
+                            name: layer.name,
+                            sortOrder: layer.sortOrder,
+                            itemIds: [ ...layer.itemIds ]
+                        })
+                    )
+                    .sort(
+                        (left, right) =>
+                            (
+                                left.sortOrder -
+                                right.sortOrder
+                            ) ||
+                            (
+                                left.id -
+                                right.id
+                            )
+                    );
+
+            savedLayersRef.current =
+                nextLayers;
+
+            setSavedLayers(
+                nextLayers
+            );
+
+            const operation =
+                layerOperationRef.current;
+
+            setLayerScopeId(
+                current =>
+                {
+                    if(
+                        parser.success &&
+                        operation === LAYER_OP_CREATE &&
+                        nextLayers.length
+                    )
+                    {
+                        return nextLayers[
+                            nextLayers.length - 1
+                        ].id;
+                    }
+
+                    if(
+                        current > 0 &&
+                        !nextLayers.some(
+                            layer =>
+                                layer.id === current
+                        )
+                    )
+                    {
+                        return LAYER_SCOPE_ALL;
+                    }
+
+                    return current;
+                }
+            );
+
+            setSelectedLayerId(
+                current =>
+                {
+                    if(
+                        parser.success &&
+                        operation === LAYER_OP_CREATE &&
+                        nextLayers.length
+                    )
+                    {
+                        return nextLayers[
+                            nextLayers.length - 1
+                        ].id;
+                    }
+
+                    if(
+                        current > 0 &&
+                        nextLayers.some(
+                            layer =>
+                                layer.id === current
+                        )
+                    )
+                    {
+                        return current;
+                    }
+
+                    return 0;
+                }
+            );
+
+            if(
+                !silentRequest &&
+                (
+                    operation !== LAYER_OP_LIST ||
+                    !parser.success
+                )
+            )
+            {
+                setStatus(
+                    parser.success
+                        ? parser.message
+                        : `Error ${ parser.code }: ${ parser.message }`
+                );
+            }
+            else if(
+                silentRequest &&
+                !parser.success
+            )
+            {
+                setStatus(
+                    `No se pudo asignar automáticamente el furni a la capa: ${ parser.message }`
+                );
+            }
+
+            window.setTimeout(
+                flushLayerAutoAssignQueue,
+                0
+            );
+        }
+    );
+
+
+    useRoomEngineEvent<RoomEngineObjectPlacedEvent>(
+        RoomEngineObjectEvent.PLACED,
+        event =>
+        {
+            if(!activeRef.current)
+            {
+                return;
+            }
+
+            if(
+                event.category !==
+                RoomObjectCategory.FLOOR
+            )
+            {
+                return;
+            }
+
+            /*
+             * Inventario usa un itemId positivo.
+             * Catalogo usa un id temporal negativo.
+             */
+            if(event.objectId <= 0)
+            {
+                return;
+            }
+
+            if(!event.placedInRoom)
+            {
+                return;
+            }
+
+            layerOriginalAlphaRef.current.delete(
+                event.objectId
+            );
+
+            const targetLayerId =
+                layerScopeIdRef.current;
+
+            /*
+             * -1 = Todas las capas
+             *  0 = Sin capa
+             * Solo una capa real recibe nuevos furnis.
+             */
+            if(targetLayerId <= 0)
+            {
+                return;
+            }
+
+            if(
+                !savedLayersRef.current.some(
+                    layer =>
+                        layer.id === targetLayerId
+                )
+            )
+            {
+                return;
+            }
+
+            const queue =
+                layerAutoAssignQueueRef.current;
+
+            if(
+                !queue.some(
+                    entry =>
+                        entry.layerId === targetLayerId &&
+                        entry.itemId === event.objectId
+                )
+            )
+            {
+                layerAutoAssignQueueRef.current = [
+                    ...queue,
+                    {
+                        layerId: targetLayerId,
+                        itemId: event.objectId
+                    }
+                ];
+            }
+
+            window.setTimeout(
+                flushLayerAutoAssignQueue,
+                0
+            );
+        }
+    );
+
+    useEffect(() =>
+    {
+        if(!active) return;
+        if(!roomSession) return;
+
+        if(layerPendingTimeoutRef.current !== null)
+        {
+            window.clearTimeout(
+                layerPendingTimeoutRef.current
+            );
+
+            layerPendingTimeoutRef.current =
+                null;
+        }
+
+        layerPendingRef.current = false;
+        setLayerPending(false);
+
+        requestLayerState(
+            LAYER_OP_LIST
+        );
+    }, [
+        active,
+        roomSession?.roomId,
+        requestLayerState
+    ]);
+
+
+
+    useEffect(() =>
+    {
+        const validIds =
+            new Set<number>([
+                0,
+                ...savedLayers.map(
+                    layer =>
+                        layer.id
+                )
+            ]);
+
+        setHiddenLayerIds(
+            current =>
+                current.filter(
+                    id =>
+                        validIds.has(id)
+                )
+        );
+
+        setIsolatedLayerId(
+            current =>
+                (
+                    current !== null &&
+                    !validIds.has(current)
+                )
+                    ? null
+                    : current
+        );
+
+        setDimmedOthersLayerId(
+            current =>
+                (
+                    current !== null &&
+                    !validIds.has(current)
+                )
+                    ? null
+                    : current
+        );
+
+        setOutlinerMenuLayerId(
+            current =>
+                (
+                    current !== null &&
+                    !validIds.has(current)
+                )
+                    ? null
+                    : current
+        );
+
+        setOutlinerRenameLayerId(
+            current =>
+                (
+                    current !== null &&
+                    !validIds.has(current)
+                )
+                    ? null
+                    : current
+        );
+    }, [
+        savedLayers
+    ]);
+
+    useEffect(() =>
+    {
+        if(!active)
+        {
+            return;
+        }
+
+        window.requestAnimationFrame(
+            applyLayerVisibility
+        );
+    }, [
+        active,
+        savedLayers,
+        hiddenLayerIds,
+        isolatedLayerId,
+        dimmedOthersLayerId,
+        roomSession?.roomId,
+        applyLayerVisibility
+    ]);
+
+    useEffect(() =>
+    {
+        if(selectedLayerId <= 0)
+        {
+            setLayerName('');
+            return;
+        }
+
+        const layer =
+            savedLayers.find(
+                entry =>
+                    entry.id ===
+                    selectedLayerId
+            );
+
+        setLayerName(
+            layer?.name || ''
+        );
+    }, [
+        savedLayers,
+        selectedLayerId
+    ]);
+
+    const selectSavedLayer =
+        useCallback((
+            layerId: number
+        ) =>
+        {
+            const sourceIds =
+                getAvailableLayerItemIds(
+                    layerId
+                );
+
+            if(!sourceIds.length)
+            {
+                setStatus(
+                    layerId === 0
+                        ? 'No hay furnis disponibles en Sin capa.'
+                        : 'Esta capa no contiene furnis disponibles.'
+                );
+
+                return;
+            }
+
+            const normalized =
+                normalizeLayerSelection(
+                    sourceIds
+                );
+
+            if(!normalized.ids.length)
+            {
+                setStatus(
+                    'No hay furnis disponibles para seleccionar.'
+                );
+
+                return;
+            }
+
+            applySelection(
+                normalized.ids
+            );
+
+            setSelectedLayerId(
+                layerId
+            );
+
+            const layer =
+                layerId === 0
+                    ? null
+                    : (
+                        savedLayersRef.current.find(
+                            entry =>
+                                entry.id === layerId
+                        ) || null
+                    );
+
+            const label =
+                layer?.name ||
+                'Sin capa';
+
+            setStatus(
+                `${ label }: ${ normalized.ids.length } furnis seleccionados.${ normalized.limitReached ? ` Límite de ${ MAX_SELECTION } alcanzado.` : '' }`
+            );
+        }, [
+            applySelection,
+            getAvailableLayerItemIds,
+            normalizeLayerSelection
+        ]);
+
+
+    const getOutlinerItemName =
+        useCallback((
+            itemId: number
+        ): string =>
+        {
+            const currentRoomSession =
+                roomSessionRef.current;
+
+            const roomEngine =
+                GetRoomEngine();
+
+            if(
+                !currentRoomSession ||
+                !roomEngine
+            )
+            {
+                return `Furni #${ itemId }`;
+            }
+
+            const roomObject =
+                roomEngine.getRoomObject(
+                    currentRoomSession.roomId,
+                    itemId,
+                    RoomObjectCategory.FLOOR
+                );
+
+            if(!roomObject)
+            {
+                return `Furni #${ itemId }`;
+            }
+
+            let name =
+                roomObject.type ||
+                'Furni';
+
+            const typeId =
+                roomObject.model.getValue<number>(
+                    RoomObjectVariable.FURNITURE_TYPE_ID
+                );
+
+            const furniData =
+                GetSessionDataManager()
+                    ?.getFloorItemData(
+                        typeId
+                    );
+
+            if(
+                furniData &&
+                furniData.name?.length
+            )
+            {
+                name =
+                    furniData.name;
+            }
+
+            return name;
+        }, []);
+
+    const setOutlinerWorkLayer =
+        useCallback((
+            layerId: number
+        ) =>
+        {
+            layerScopeIdRef.current =
+                layerId;
+
+            setLayerScopeId(
+                layerId
+            );
+
+            setSelectedLayerId(
+                layerId
+            );
+
+            setOutlinerMenuLayerId(
+                null
+            );
+        }, []);
+
+    const selectOutlinerLayer =
+        useCallback((
+            layerId: number
+        ) =>
+        {
+            setOutlinerWorkLayer(
+                layerId
+            );
+
+            const sourceIds =
+                getAvailableLayerItemIds(
+                    layerId
+                );
+
+            if(!sourceIds.length)
+            {
+                clearSelection();
+
+                setStatus(
+                    layerId === 0
+                        ? 'Sin capa activa. No contiene furnis disponibles.'
+                        : 'Capa de trabajo activa. No contiene furnis disponibles.'
+                );
+
+                return;
+            }
+
+            const normalized =
+                normalizeLayerSelection(
+                    sourceIds
+                );
+
+            applySelection(
+                normalized.ids
+            );
+
+            const label =
+                layerId === 0
+                    ? 'Sin capa'
+                    : (
+                        savedLayersRef.current.find(
+                            layer =>
+                                layer.id === layerId
+                        )?.name ||
+                        'Capa'
+                    );
+
+            setStatus(
+                `${ label } activa: ${ normalized.ids.length } furnis seleccionados.${ normalized.limitReached ? ` Límite de ${ MAX_SELECTION } alcanzado.` : '' }`
+            );
+        }, [
+            applySelection,
+            clearSelection,
+            getAvailableLayerItemIds,
+            normalizeLayerSelection,
+            setOutlinerWorkLayer
+        ]);
+
+    const selectOutlinerGroup =
+        useCallback((
+            group: BuilderProSavedGroupState,
+            layerId: number
+        ) =>
+        {
+            setOutlinerWorkLayer(
+                layerId
+            );
+
+            const ids =
+                getSelectableGroupItemIds(
+                    group
+                );
+
+            if(!ids.length)
+            {
+                setStatus(
+                    'El grupo no contiene furnis disponibles.'
+                );
+
+                return;
+            }
+
+            if(ids.length > MAX_SELECTION)
+            {
+                setStatus(
+                    `El grupo supera el límite de ${ MAX_SELECTION } furnis.`
+                );
+
+                return;
+            }
+
+            applySelection(
+                ids
+            );
+
+            setSelectedGroupId(
+                group.id
+            );
+
+            setStatus(
+                `${ group.name }: ${ ids.length } furnis seleccionados.`
+            );
+        }, [
+            applySelection,
+            getSelectableGroupItemIds,
+            setOutlinerWorkLayer
+        ]);
+
+    const selectOutlinerItem =
+        useCallback((
+            itemId: number,
+            layerId: number
+        ) =>
+        {
+            setOutlinerWorkLayer(
+                layerId
+            );
+
+            const group =
+                savedGroupsRef.current.find(
+                    entry =>
+                        entry.itemIds.includes(
+                            itemId
+                        )
+                ) || null;
+
+            if(group?.locked)
+            {
+                const ids =
+                    getAvailableGroupItemIds(
+                        group
+                    );
+
+                if(ids.length > MAX_SELECTION)
+                {
+                    setStatus(
+                        `El grupo bloqueado supera el límite de ${ MAX_SELECTION } furnis.`
+                    );
+
+                    return;
+                }
+
+                applySelection(
+                    ids
+                );
+
+                setSelectedGroupId(
+                    group.id
+                );
+
+                setStatus(
+                    `${ group.name } seleccionado como unidad bloqueada.`
+                );
+
+                return;
+            }
+
+            applySelection([
+                itemId
+            ]);
+
+            setSelectedGroupId(
+                group?.id ??
+                null
+            );
+
+            setStatus(
+                `${ getOutlinerItemName(itemId) } #${ itemId } seleccionado.`
+            );
+        }, [
+            applySelection,
+            getAvailableGroupItemIds,
+            getOutlinerItemName,
+            setOutlinerWorkLayer
+        ]);
+
+
+    const moveSelectionToOutlinerLayer =
+        useCallback((
+            layerId: number
+        ) =>
+        {
+            if(!selectedIdsRef.current.length)
+            {
+                setStatus(
+                    'Selecciona furnis antes de moverlos a una capa.'
+                );
+
+                return;
+            }
+
+            const normalized =
+                normalizeLayerSelection(
+                    selectedIdsRef.current
+                );
+
+            if(normalized.limitReached)
+            {
+                setStatus(
+                    `La operación supera el límite de ${ MAX_SELECTION } furnis al completar grupos bloqueados.`
+                );
+
+                return;
+            }
+
+            if(!normalized.ids.length)
+            {
+                return;
+            }
+
+            if(
+                normalized.ids.length !==
+                selectedIdsRef.current.length
+            )
+            {
+                applySelection(
+                    normalized.ids
+                );
+            }
+
+            setOutlinerWorkLayer(
+                layerId
+            );
+
+            if(layerId > 0)
+            {
+                requestLayerState(
+                    LAYER_OP_ASSIGN,
+                    layerId,
+                    '',
+                    normalized.ids
+                );
+            }
+            else
+            {
+                requestLayerState(
+                    LAYER_OP_UNASSIGN,
+                    0,
+                    '',
+                    normalized.ids
+                );
+            }
+
+            setOutlinerMenuLayerId(
+                null
+            );
+        }, [
+            applySelection,
+            normalizeLayerSelection,
+            requestLayerState,
+            setOutlinerWorkLayer
+        ]);
+
+    const beginOutlinerRename =
+        useCallback((
+            layerId: number
+        ) =>
+        {
+            const layer =
+                savedLayersRef.current.find(
+                    entry =>
+                        entry.id === layerId
+                );
+
+            if(!layer)
+            {
+                return;
+            }
+
+            setOutlinerRenameLayerId(
+                layerId
+            );
+
+            setOutlinerRenameValue(
+                layer.name
+            );
+
+            setOutlinerMenuLayerId(
+                null
+            );
+        }, []);
+
+    const cancelOutlinerRename =
+        useCallback(() =>
+        {
+            setOutlinerRenameLayerId(
+                null
+            );
+
+            setOutlinerRenameValue(
+                ''
+            );
+        }, []);
+
+    const confirmOutlinerRename =
+        useCallback((
+            layerId: number
+        ) =>
+        {
+            const name =
+                outlinerRenameValue
+                    .trim();
+
+            if(!name)
+            {
+                setStatus(
+                    'Escribe un nombre para la capa.'
+                );
+
+                return;
+            }
+
+            requestLayerState(
+                LAYER_OP_RENAME,
+                layerId,
+                name
+            );
+
+            setOutlinerRenameLayerId(
+                null
+            );
+
+            setOutlinerRenameValue(
+                ''
+            );
+
+            setOutlinerMenuLayerId(
+                null
+            );
+        }, [
+            outlinerRenameValue,
+            requestLayerState
+        ]);
+
+    const deleteOutlinerLayer =
+        useCallback((
+            layerId: number
+        ) =>
+        {
+            const layer =
+                savedLayersRef.current.find(
+                    entry =>
+                        entry.id === layerId
+                );
+
+            if(!layer)
+            {
+                return;
+            }
+
+            if(
+                !window.confirm(
+                    `¿Eliminar la capa "${ layer.name }"? Sus furnis pasarán a Sin capa.`
+                )
+            )
+            {
+                return;
+            }
+
+            requestLayerState(
+                LAYER_OP_DELETE,
+                layerId
+            );
+
+            setOutlinerMenuLayerId(
+                null
+            );
+
+            setOutlinerRenameLayerId(
+                null
+            );
+
+            setOutlinerRenameValue(
+                ''
+            );
+        }, [
+            requestLayerState
+        ]);
+
+    const isolateOutlinerLayer =
+        useCallback((
+            layerId: number
+        ) =>
+        {
+            layerScopeIdRef.current =
+                layerId;
+
+            setLayerScopeId(
+                layerId
+            );
+
+            setSelectedLayerId(
+                layerId
+            );
+
+            toggleIsolateWorkLayer();
+
+            setOutlinerMenuLayerId(
+                null
+            );
+        }, [
+            toggleIsolateWorkLayer
+        ]);
+
+    const dimOutlinerLayer =
+        useCallback((
+            layerId: number
+        ) =>
+        {
+            layerScopeIdRef.current =
+                layerId;
+
+            setLayerScopeId(
+                layerId
+            );
+
+            setSelectedLayerId(
+                layerId
+            );
+
+            toggleDimOtherLayers();
+
+            setOutlinerMenuLayerId(
+                null
+            );
+        }, [
+            toggleDimOtherLayers
+        ]);
+
+    const createLayer =
+        useCallback(() =>
+        {
+            requestLayerState(
+                LAYER_OP_CREATE
+            );
+        }, [
+            requestLayerState
+        ]);
+
+    const renameLayer =
+        useCallback(() =>
+        {
+            if(!selectedSavedLayer)
+            {
+                return;
+            }
+
+            const name =
+                layerName.trim();
+
+            if(!name)
+            {
+                setStatus(
+                    'Escribe un nombre para la capa.'
+                );
+
+                return;
+            }
+
+            requestLayerState(
+                LAYER_OP_RENAME,
+                selectedSavedLayer.id,
+                name
+            );
+        }, [
+            layerName,
+            requestLayerState,
+            selectedSavedLayer
+        ]);
+
+    const deleteLayer =
+        useCallback(() =>
+        {
+            if(!selectedSavedLayer)
+            {
+                return;
+            }
+
+            if(
+                !window.confirm(
+                    `¿Eliminar la capa "${ selectedSavedLayer.name }"? Sus furnis pasarán a Sin capa.`
+                )
+            )
+            {
+                return;
+            }
+
+            requestLayerState(
+                LAYER_OP_DELETE,
+                selectedSavedLayer.id
+            );
+        }, [
+            requestLayerState,
+            selectedSavedLayer
+        ]);
+
+    const moveSelectionToLayer =
+        useCallback(() =>
+        {
+            if(!selectedIdsRef.current.length)
+            {
+                setStatus(
+                    'Selecciona furnis antes de cambiar su capa.'
+                );
+
+                return;
+            }
+
+            const normalized =
+                normalizeLayerSelection(
+                    selectedIdsRef.current
+                );
+
+            if(normalized.limitReached)
+            {
+                setStatus(
+                    `La operación supera el límite de ${ MAX_SELECTION } furnis al completar grupos bloqueados.`
+                );
+
+                return;
+            }
+
+            if(!normalized.ids.length)
+            {
+                return;
+            }
+
+            if(
+                normalized.ids.length !==
+                selectedIdsRef.current.length
+            )
+            {
+                applySelection(
+                    normalized.ids
+                );
+            }
+
+            if(selectedLayerId > 0)
+            {
+                requestLayerState(
+                    LAYER_OP_ASSIGN,
+                    selectedLayerId,
+                    '',
+                    normalized.ids
+                );
+
+                return;
+            }
+
+            requestLayerState(
+                LAYER_OP_UNASSIGN,
+                0,
+                '',
+                normalized.ids
+            );
+        }, [
+            applySelection,
+            normalizeLayerSelection,
+            requestLayerState,
+            selectedLayerId
         ]);
 
     const requestBlueprintState =
@@ -2487,6 +4637,19 @@ export const BuilderProView: FC<{}> = props =>
 
         clearSelection();
 
+        restoreLayerVisibility();
+
+        hiddenLayerIdsRef.current =
+            new Set();
+        isolatedLayerIdRef.current =
+            null;
+        dimmedOthersLayerIdRef.current =
+            null;
+
+        setHiddenLayerIds([]);
+        setIsolatedLayerId(null);
+        setDimmedOthersLayerId(null);
+
         setActive(false);
         setPending(false);
         setAreaMode(false);
@@ -2495,6 +4658,16 @@ export const BuilderProView: FC<{}> = props =>
         setHelpOpen(false);
         setGroupPending(false);
         setSavedGroups([]);
+        setLayerScopeId(LAYER_SCOPE_ALL);
+        layerScopeIdRef.current = LAYER_SCOPE_ALL;
+        layerSilentRequestRef.current = false;
+        layerAutoAssignQueueRef.current = [];
+        setOutlinerQuery('');
+        setOutlinerCollapsedLayerIds([]);
+        setOutlinerCollapsedGroupIds([]);
+        setOutlinerMenuLayerId(null);
+        setOutlinerRenameLayerId(null);
+        setOutlinerRenameValue('');
 
         if(traversalTimeoutRef.current !== null)
         {
@@ -2513,7 +4686,10 @@ export const BuilderProView: FC<{}> = props =>
         setSelectedGroupId(null);
         setGroupName('');
         setStatus('');
-    }, [ clearSelection ]);
+    }, [
+        clearSelection,
+        restoreLayerVisibility
+    ]);
 
     const activate = useCallback(() =>
     {
@@ -2548,6 +4724,16 @@ export const BuilderProView: FC<{}> = props =>
         setHelpOpen(false);
         setGroupPending(false);
         setSavedGroups([]);
+        setLayerScopeId(LAYER_SCOPE_ALL);
+        layerScopeIdRef.current = LAYER_SCOPE_ALL;
+        layerSilentRequestRef.current = false;
+        layerAutoAssignQueueRef.current = [];
+        setOutlinerQuery('');
+        setOutlinerCollapsedLayerIds([]);
+        setOutlinerCollapsedGroupIds([]);
+        setOutlinerMenuLayerId(null);
+        setOutlinerRenameLayerId(null);
+        setOutlinerRenameValue('');
 
         if(traversalTimeoutRef.current !== null)
         {
@@ -2700,20 +4886,158 @@ export const BuilderProView: FC<{}> = props =>
 
         if(!roomEngine) return;
 
-        const next = [
-            ...selectedIdsRef.current
-        ];
 
+        const assignedLayerByItem =
+            new Map<number, number>();
+
+        for(const layer of savedLayersRef.current)
+        {
+            for(const itemId of layer.itemIds)
+            {
+                assignedLayerByItem.set(
+                    itemId,
+                    layer.id
+                );
+            }
+        }
+
+        const isInScope =
+            (itemId: number): boolean =>
+            {
+                if(
+                    layerScopeId ===
+                    LAYER_SCOPE_ALL
+                )
+                {
+                    return true;
+                }
+
+                return (
+                    assignedLayerByItem.get(
+                        itemId
+                    ) || 0
+                ) === layerScopeId;
+            };
+
+        const initialIds =
+            layerScopeId === LAYER_SCOPE_ALL
+                ? [ ...selectedIdsRef.current ]
+                : selectedIdsRef.current.filter(
+                    itemId =>
+                        isInScope(
+                            itemId
+                        )
+                );
+
+        const next: number[] = [];
         const nextSet =
-            new Set(next);
+            new Set<number>();
+
+        const handledLockedGroups =
+            new Set<number>();
+
+        let added = 0;
+        let limitReached = false;
+
+        const appendCandidate =
+            (
+                itemId: number,
+                countAsAdded = true
+            ) =>
+            {
+                if(nextSet.has(itemId))
+                {
+                    return;
+                }
+
+                const lockedGroup =
+                    savedGroupsRef.current.find(
+                        group =>
+                            group.locked &&
+                            group.itemIds.includes(
+                                itemId
+                            )
+                    );
+
+                if(lockedGroup)
+                {
+                    if(
+                        handledLockedGroups.has(
+                            lockedGroup.id
+                        )
+                    )
+                    {
+                        return;
+                    }
+
+                    handledLockedGroups.add(
+                        lockedGroup.id
+                    );
+
+                    const available =
+                        getAvailableGroupItemIds(
+                            lockedGroup
+                        );
+
+                    const missing =
+                        available.filter(
+                            id =>
+                                !nextSet.has(id)
+                        );
+
+                    if(
+                        next.length +
+                        missing.length >
+                        MAX_SELECTION
+                    )
+                    {
+                        limitReached = true;
+                        return;
+                    }
+
+                    for(const id of missing)
+                    {
+                        next.push(id);
+                        nextSet.add(id);
+                    }
+
+                    if(countAsAdded)
+                    {
+                        added +=
+                            missing.length;
+                    }
+
+                    return;
+                }
+
+                if(next.length >= MAX_SELECTION)
+                {
+                    limitReached = true;
+                    return;
+                }
+
+                next.push(itemId);
+                nextSet.add(itemId);
+
+                if(countAsAdded)
+                {
+                    added++;
+                }
+            };
+
+        for(const itemId of initialIds)
+        {
+            appendCandidate(
+                itemId,
+                false
+            );
+        }
 
         const count =
             roomEngine.getRoomObjectCount(
                 currentRoomSession.roomId,
                 RoomObjectCategory.FLOOR
             );
-
-        let added = 0;
 
         for(
             let index = 0;
@@ -2723,6 +5047,7 @@ export const BuilderProView: FC<{}> = props =>
         {
             if(next.length >= MAX_SELECTION)
             {
+                limitReached = true;
                 break;
             }
 
@@ -2733,7 +5058,24 @@ export const BuilderProView: FC<{}> = props =>
                     RoomObjectCategory.FLOOR
                 );
 
-            if(!roomObject) continue;
+            if(!roomObject)
+            {
+                continue;
+            }
+
+            if(!isInScope(roomObject.id))
+            {
+                continue;
+            }
+
+            if(
+                !isItemLocallyVisible(
+                    roomObject.id
+                )
+            )
+            {
+                continue;
+            }
 
             if(nextSet.has(roomObject.id))
             {
@@ -2758,13 +5100,18 @@ export const BuilderProView: FC<{}> = props =>
                         1
                     );
 
-            if(!bounds) continue;
+            if(!bounds)
+            {
+                continue;
+            }
 
             const boundsRight =
-                bounds.x + bounds.width;
+                bounds.x +
+                bounds.width;
 
             const boundsBottom =
-                bounds.y + bounds.height;
+                bounds.y +
+                bounds.height;
 
             const intersects =
                 bounds.x <= maxX &&
@@ -2772,74 +5119,49 @@ export const BuilderProView: FC<{}> = props =>
                 bounds.y <= maxY &&
                 boundsBottom >= minY;
 
-            if(!intersects) continue;
-
-            next.push(roomObject.id);
-            nextSet.add(roomObject.id);
-            added++;
-        }
-
-        for(const group of savedGroupsRef.current)
-        {
-            if(!group.locked)
+            if(!intersects)
             {
                 continue;
             }
 
-            if(
-                !group.itemIds.some(
-                    itemId =>
-                        nextSet.has(
-                            itemId
-                        )
-                )
-            )
-            {
-                continue;
-            }
-
-            const available =
-                getAvailableGroupItemIds(
-                    group
-                );
-
-            for(const itemId of available)
-            {
-                if(nextSet.has(itemId))
-                {
-                    continue;
-                }
-
-                if(next.length >= MAX_SELECTION)
-                {
-                    break;
-                }
-
-                next.push(itemId);
-                nextSet.add(itemId);
-            }
+            appendCandidate(
+                roomObject.id
+            );
         }
 
         applySelection(next);
 
-        if(
-            next.length >= MAX_SELECTION &&
-            added > 0
-        )
+        const scopeLabel =
+            layerScopeId === LAYER_SCOPE_ALL
+                ? 'Todas las capas'
+                : (
+                    layerScopeId === 0
+                        ? 'Sin capa'
+                        : (
+                            savedLayersRef.current.find(
+                                layer =>
+                                    layer.id === layerScopeId
+                            )?.name || 'Capa'
+                        )
+                );
+
+        if(limitReached)
         {
             setStatus(
-                `Área: ${ added } añadidos. Límite ${ MAX_SELECTION } alcanzado.`
+                `Área · ${ scopeLabel }: ${ added } añadidos. Límite ${ MAX_SELECTION } alcanzado sin partir grupos bloqueados.`
             );
 
             return;
         }
 
         setStatus(
-            `Área: ${ added } añadidos. ${ next.length } seleccionados.`
+            `Área · ${ scopeLabel }: ${ added } añadidos. ${ next.length } seleccionados.`
         );
     }, [
         applySelection,
-        getAvailableGroupItemIds
+        getAvailableGroupItemIds,
+        isItemLocallyVisible,
+        layerScopeId
     ]);
 
     useEffect(() =>
@@ -3189,6 +5511,7 @@ export const BuilderProView: FC<{}> = props =>
 
         SetBuilderProSelectionModeActive(false);
 
+        restoreLayerVisibility();
         clearSelection();
 
         setActive(false);
@@ -3196,7 +5519,11 @@ export const BuilderProView: FC<{}> = props =>
         setAreaMode(false);
         setSelectionBox(null);
         setStatus('');
-    }, [ roomSession?.roomId, clearSelection ]);
+    }, [
+        roomSession?.roomId,
+        clearSelection,
+        restoreLayerVisibility
+    ]);
 
     useEffect(() =>
     {
@@ -3217,6 +5544,8 @@ export const BuilderProView: FC<{}> = props =>
 
             SetBuilderProSelectionModeActive(false);
 
+            restoreLayerVisibility();
+
             if(keyboardRepeatTimerRef.current !== null)
             {
                 window.clearTimeout(
@@ -3231,11 +5560,18 @@ export const BuilderProView: FC<{}> = props =>
                 );
             }
 
+            if(layerPendingTimeoutRef.current !== null)
+            {
+                window.clearTimeout(
+                    layerPendingTimeoutRef.current
+                );
+            }
+
             BuilderProSelectionVisualizer.clear(
                 selectedIdsRef.current
             );
         };
-    }, []);
+    }, [ restoreLayerVisibility ]);
 
     useEffect(() =>
     {
@@ -3318,6 +5654,7 @@ export const BuilderProView: FC<{}> = props =>
     useRoomEngineEvent<RoomEngineObjectEvent>(
         [
             RoomEngineObjectEvent.SELECTED,
+            RoomEngineObjectEvent.ADDED,
             RoomEngineObjectEvent.REMOVED,
             RoomEngineObjectEvent.REQUEST_MOVE
         ],
@@ -3326,8 +5663,39 @@ export const BuilderProView: FC<{}> = props =>
             if(!activeRef.current) return;
             if(event.category !== RoomObjectCategory.FLOOR) return;
 
+            if(event.type === RoomEngineObjectEvent.ADDED)
+            {
+                layerOriginalAlphaRef.current.delete(
+                    event.objectId
+                );
+
+                setOutlinerRevision(
+                    current =>
+                        current + 1
+                );
+
+                window.requestAnimationFrame(
+                    applyLayerVisibility
+                );
+
+                return;
+            }
+
             if(event.type === RoomEngineObjectEvent.REQUEST_MOVE)
             {
+                if(
+                    !isItemInWorkScope(
+                        event.objectId
+                    )
+                )
+                {
+                    setStatus(
+                        'Ese furni pertenece a otra capa de trabajo.'
+                    );
+
+                    return;
+                }
+
                 if(pendingRef.current) return;
 
                 if(!selectedIdsRef.current.includes(
@@ -3604,6 +5972,15 @@ export const BuilderProView: FC<{}> = props =>
                 const removedId =
                     event.objectId;
 
+                layerOriginalAlphaRef.current.delete(
+                    removedId
+                );
+
+                setOutlinerRevision(
+                    current =>
+                        current + 1
+                );
+
                 if(
                     traversableIdsRef.current.has(
                         removedId
@@ -3735,6 +6112,33 @@ export const BuilderProView: FC<{}> = props =>
             {
                 setStatus(
                     'No puedes manipular este furni.'
+                );
+
+                return;
+            }
+
+            if(
+                !isItemInWorkScope(
+                    event.objectId
+                )
+            )
+            {
+                const scope =
+                    layerScopeIdRef.current;
+
+                const label =
+                    scope === 0
+                        ? 'Sin capa'
+                        : (
+                            savedLayersRef.current.find(
+                                layer =>
+                                    layer.id === scope
+                            )?.name ||
+                            'la capa de trabajo'
+                        );
+
+                setStatus(
+                    `Furni fuera de ${ label }. Cambia de capa para interactuar con él.`
                 );
 
                 return;
@@ -4248,6 +6652,10 @@ export const BuilderProView: FC<{}> = props =>
                     GROUP_OP_LIST
                 );
 
+                requestLayerState(
+                    LAYER_OP_LIST
+                );
+
                 requestTraversalState(
                     TRAVERSAL_OP_QUERY
                 );
@@ -4317,6 +6725,10 @@ export const BuilderProView: FC<{}> = props =>
 
                 requestGroupState(
                     GROUP_OP_LIST
+                );
+
+                requestLayerState(
+                    LAYER_OP_LIST
                 );
 
                 requestTraversalState(
@@ -6941,6 +9353,33 @@ export const BuilderProView: FC<{}> = props =>
 
     useEffect(() =>
     {
+        const enabled =
+            active &&
+            avatarMovementLocked;
+
+        (globalThis as any).__builderProAvatarMovementLocked = enabled;
+
+        if(
+            !active &&
+            avatarMovementLocked
+        )
+        {
+            setAvatarMovementLocked(
+                false
+            );
+        }
+
+        return () =>
+        {
+            (globalThis as any).__builderProAvatarMovementLocked = false;
+        };
+    }, [
+        active,
+        avatarMovementLocked
+    ]);
+
+    useEffect(() =>
+    {
         if(!active) return;
 
         const arrowKeys = new Set([
@@ -7109,13 +9548,670 @@ export const BuilderProView: FC<{}> = props =>
                 )
         ).length;
 
+
     const allSelectedTraversable =
         selectedIds.length > 0 &&
         selectedTraversableCount ===
         selectedIds.length;
 
+    const renderOutlinerLayer = (
+        layerId: number,
+        layerName: string
+    ) =>
+    {
+        const itemIds =
+            getAvailableLayerItemIds(
+                layerId
+            );
+
+        const itemIdSet =
+            new Set(itemIds);
+
+        const query =
+            outlinerQuery
+                .trim()
+                .toLocaleLowerCase();
+
+        const layerNameMatches =
+            !query ||
+            layerName
+                .toLocaleLowerCase()
+                .includes(query);
+
+        const itemMatches =
+            (itemId: number) =>
+            {
+                if(!query)
+                {
+                    return true;
+                }
+
+                const name =
+                    getOutlinerItemName(
+                        itemId
+                    )
+                        .toLocaleLowerCase();
+
+                return (
+                    name.includes(query) ||
+                    String(itemId)
+                        .includes(query)
+                );
+            };
+
+        const groupedIds =
+            new Set<number>();
+
+        const groupRows =
+            savedGroups
+                .map(
+                    group =>
+                    {
+                        const memberIds =
+                            group.itemIds.filter(
+                                itemId =>
+                                    itemIdSet.has(
+                                        itemId
+                                    )
+                            );
+
+                        if(!memberIds.length)
+                        {
+                            return null;
+                        }
+
+                        for(const itemId of memberIds)
+                        {
+                            groupedIds.add(
+                                itemId
+                            );
+                        }
+
+                        const groupNameMatches =
+                            !query ||
+                            group.name
+                                .toLocaleLowerCase()
+                                .includes(query);
+
+                        const matchingMembers =
+                            memberIds.filter(
+                                itemMatches
+                            );
+
+                        if(
+                            !layerNameMatches &&
+                            !groupNameMatches &&
+                            !matchingMembers.length
+                        )
+                        {
+                            return null;
+                        }
+
+                        const visibleMembers =
+                            (
+                                layerNameMatches ||
+                                groupNameMatches ||
+                                !query
+                            )
+                                ? memberIds
+                                : matchingMembers;
+
+                        return {
+                            group,
+                            visibleMembers
+                        };
+                    }
+                )
+                .filter(
+                    entry =>
+                        entry !== null
+                );
+
+        const ungroupedIds =
+            itemIds.filter(
+                itemId =>
+                    (
+                        !groupedIds.has(
+                            itemId
+                        )
+                    ) &&
+                    (
+                        layerNameMatches ||
+                        itemMatches(
+                            itemId
+                        )
+                    )
+            );
+
+        if(
+            query &&
+            !layerNameMatches &&
+            !groupRows.length &&
+            !ungroupedIds.length
+        )
+        {
+            return null;
+        }
+
+        const collapsed =
+            outlinerCollapsedLayerIds.includes(
+                layerId
+            ) &&
+            !query;
+
+        const effectivelyHidden =
+            hiddenLayerIds.includes(
+                layerId
+            ) ||
+            (
+                isolatedLayerId !== null &&
+                isolatedLayerId !== layerId
+            );
+
+        return (
+            <div
+                key={ `outliner-layer-${ layerId }` }
+                className={
+                    `builder-pro-outliner-layer ${
+                        layerScopeId === layerId
+                            ? 'is-active'
+                            : ''
+                    } ${
+                        effectivelyHidden
+                            ? 'is-hidden'
+                            : ''
+                    }`
+                }>
+                <div className="builder-pro-outliner-layer-row">
+                    <button
+                        type="button"
+                        className="builder-pro-outliner-disclosure"
+                        title={
+                            collapsed
+                                ? 'Expandir capa'
+                                : 'Contraer capa'
+                        }
+                        aria-label={
+                            collapsed
+                                ? 'Expandir capa'
+                                : 'Contraer capa'
+                        }
+                        onClick={ () =>
+                            setOutlinerCollapsedLayerIds(
+                                current =>
+                                    current.includes(
+                                        layerId
+                                    )
+                                        ? current.filter(
+                                            id =>
+                                                id !== layerId
+                                        )
+                                        : [
+                                            ...current,
+                                            layerId
+                                        ]
+                            )
+                        }>
+                        { collapsed
+                            ? '›'
+                            : '⌄' }
+                    </button>
+
+                    <button
+                        type="button"
+                        className="builder-pro-outliner-eye"
+                        title={
+                            effectivelyHidden
+                                ? `Mostrar ${ layerName }`
+                                : `Ocultar ${ layerName }`
+                        }
+                        aria-label={
+                            effectivelyHidden
+                                ? `Mostrar ${ layerName }`
+                                : `Ocultar ${ layerName }`
+                        }
+                        onClick={
+                            () =>
+                                toggleLayerVisibility(
+                                    layerId
+                                )
+                        }>
+                        { effectivelyHidden
+                            ? <FaEyeSlash />
+                            : <FaEye /> }
+                    </button>
+
+                    { outlinerRenameLayerId === layerId &&
+                        layerId > 0
+                        ? <input
+                            type="text"
+                            className="builder-pro-outliner-layer-rename-input"
+                            maxLength={ 40 }
+                            autoFocus
+                            value={ outlinerRenameValue }
+                            aria-label={ `Renombrar ${ layerName }` }
+                            onChange={
+                                event =>
+                                    setOutlinerRenameValue(
+                                        event.target.value
+                                    )
+                            }
+                            onMouseDown={
+                                event =>
+                                    event.stopPropagation()
+                            }
+                            onClick={
+                                event =>
+                                    event.stopPropagation()
+                            }
+                            onKeyDown={
+                                event =>
+                                {
+                                    if(
+                                        event.key === 'Enter' ||
+                                        event.key === 'NumpadEnter'
+                                    )
+                                    {
+                                        event.preventDefault();
+                                        event.stopPropagation();
+                                        event.nativeEvent.stopImmediatePropagation();
+
+                                        confirmOutlinerRename(
+                                            layerId
+                                        );
+
+                                        return;
+                                    }
+
+                                    if(event.key === 'Escape')
+                                    {
+                                        event.preventDefault();
+                                        event.stopPropagation();
+                                        event.nativeEvent.stopImmediatePropagation();
+
+                                        cancelOutlinerRename();
+                                    }
+                                }
+                            }
+                            onKeyUp={
+                                event =>
+                                {
+                                    if(
+                                        event.key === 'Enter' ||
+                                        event.key === 'NumpadEnter' ||
+                                        event.key === 'Escape'
+                                    )
+                                    {
+                                        event.preventDefault();
+                                        event.stopPropagation();
+                                        event.nativeEvent.stopImmediatePropagation();
+                                    }
+                                }
+                            } />
+                        : <button
+                            type="button"
+                            className="builder-pro-outliner-name"
+                            title={
+                                layerId > 0
+                                    ? 'Clic: activar capa · Doble clic: renombrar'
+                                    : 'Activar Sin capa y seleccionar contenido'
+                            }
+                            onClick={
+                                () =>
+                                    selectOutlinerLayer(
+                                        layerId
+                                    )
+                            }
+                            onDoubleClick={
+                                event =>
+                                {
+                                    if(layerId <= 0)
+                                    {
+                                        return;
+                                    }
+
+                                    event.preventDefault();
+                                    event.stopPropagation();
+
+                                    beginOutlinerRename(
+                                        layerId
+                                    );
+                                }
+                            }>
+                            <span>
+                                { layerName }
+                            </span>
+                        </button> }
+
+                    <span className="builder-pro-outliner-count">
+                        { itemIds.length }
+                    </span>
+
+                    <button
+                        type="button"
+                        className="builder-pro-outliner-more"
+                        title={ `Acciones de ${ layerName }` }
+                        aria-label={ `Acciones de ${ layerName }` }
+                        onClick={
+                            () =>
+                            {
+                                setOutlinerMenuLayerId(
+                                    current =>
+                                        current === layerId
+                                            ? null
+                                            : layerId
+                                );
+
+                                setOutlinerRenameLayerId(
+                                    null
+                                );
+
+                                setOutlinerRenameValue(
+                                    ''
+                                );
+                            }
+                        }>
+                        <FaEllipsisH />
+                    </button>
+                </div>
+
+
+                { outlinerMenuLayerId === layerId &&
+                    <div className="builder-pro-outliner-menu">
+                        { layerId > 0 &&
+                            <button
+                                type="button"
+                                disabled={
+                                    pending ||
+                                    layerPending
+                                }
+                                onClick={
+                                    () =>
+                                        beginOutlinerRename(
+                                            layerId
+                                        )
+                                }>
+                                Renombrar
+                            </button> }
+
+                        <button
+                            type="button"
+                            disabled={
+                                pending ||
+                                layerPending ||
+                                !selectedIds.length
+                            }
+                            onClick={
+                                () =>
+                                    moveSelectionToOutlinerLayer(
+                                        layerId
+                                    )
+                            }>
+                            Mover selección aquí
+                        </button>
+
+                        <button
+                            type="button"
+                            className={
+                                isolatedLayerId === layerId
+                                    ? 'is-selected'
+                                    : ''
+                            }
+                            disabled={
+                                pending ||
+                                layerPending
+                            }
+                            onClick={
+                                () =>
+                                    isolateOutlinerLayer(
+                                        layerId
+                                    )
+                            }>
+                            { isolatedLayerId === layerId
+                                ? 'Quitar aislamiento'
+                                : 'Aislar capa' }
+                        </button>
+
+                        <button
+                            type="button"
+                            className={
+                                dimmedOthersLayerId === layerId
+                                    ? 'is-selected'
+                                    : ''
+                            }
+                            disabled={
+                                pending ||
+                                layerPending
+                            }
+                            onClick={
+                                () =>
+                                    dimOutlinerLayer(
+                                        layerId
+                                    )
+                            }>
+                            { dimmedOthersLayerId === layerId
+                                ? 'Quitar atenuación'
+                                : 'Atenuar resto' }
+                        </button>
+
+                        { layerId > 0 &&
+                            <button
+                                type="button"
+                                className="is-danger"
+                                disabled={
+                                    pending ||
+                                    layerPending
+                                }
+                                onClick={
+                                    () =>
+                                        deleteOutlinerLayer(
+                                            layerId
+                                        )
+                                }>
+                                Eliminar capa
+                            </button> }
+                    </div> }
+
+                { !collapsed &&
+
+                    <div className="builder-pro-outliner-children">
+                        { groupRows.map(
+                            entry =>
+                            {
+                                if(!entry)
+                                {
+                                    return null;
+                                }
+
+                                const {
+                                    group,
+                                    visibleMembers
+                                } = entry;
+
+                                const groupCollapsed =
+                                    outlinerCollapsedGroupIds.includes(
+                                        group.id
+                                    ) &&
+                                    !query;
+
+                                const fullGroupIds =
+                                    getAvailableGroupItemIds(
+                                        group
+                                    );
+
+                                const groupSelected =
+                                    fullGroupIds.length > 0 &&
+                                    fullGroupIds.every(
+                                        itemId =>
+                                            selectedIds.includes(
+                                                itemId
+                                            )
+                                    );
+
+                                return (
+                                    <div
+                                        key={
+                                            `outliner-group-${ layerId }-${ group.id }`
+                                        }
+                                        className="builder-pro-outliner-group">
+                                        <div
+                                            className={
+                                                `builder-pro-outliner-group-row ${
+                                                    groupSelected
+                                                        ? 'is-selected'
+                                                        : ''
+                                                }`
+                                            }>
+                                            <button
+                                                type="button"
+                                                className="builder-pro-outliner-disclosure"
+                                                title={
+                                                    groupCollapsed
+                                                        ? 'Expandir grupo'
+                                                        : 'Contraer grupo'
+                                                }
+                                                onClick={
+                                                    () =>
+                                                        setOutlinerCollapsedGroupIds(
+                                                            current =>
+                                                                current.includes(
+                                                                    group.id
+                                                                )
+                                                                    ? current.filter(
+                                                                        id =>
+                                                                            id !==
+                                                                            group.id
+                                                                    )
+                                                                    : [
+                                                                        ...current,
+                                                                        group.id
+                                                                    ]
+                                                        )
+                                                }>
+                                                { groupCollapsed
+                                                    ? '›'
+                                                    : '⌄' }
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                className="builder-pro-outliner-name"
+                                                title="Seleccionar grupo completo"
+                                                onClick={
+                                                    () =>
+                                                        selectOutlinerGroup(
+                                                            group,
+                                                            layerId
+                                                        )
+                                                }>
+                                                { group.locked &&
+                                                    <FaLock /> }
+
+                                                <span>
+                                                    { group.name }
+                                                </span>
+                                            </button>
+
+                                            <span className="builder-pro-outliner-count">
+                                                { visibleMembers.length }
+                                            </span>
+                                        </div>
+
+                                        { !groupCollapsed &&
+                                            <div className="builder-pro-outliner-group-children">
+                                                { visibleMembers.map(
+                                                    itemId =>
+                                                        <button
+                                                            key={
+                                                                `outliner-item-${ layerId }-${ itemId }`
+                                                            }
+                                                            type="button"
+                                                            className={
+                                                                `builder-pro-outliner-item ${
+                                                                    selectedIds.includes(
+                                                                        itemId
+                                                                    )
+                                                                        ? 'is-selected'
+                                                                        : ''
+                                                                }`
+                                                            }
+                                                            title={
+                                                                `${ getOutlinerItemName(itemId) } #${ itemId }`
+                                                            }
+                                                            onClick={
+                                                                () =>
+                                                                    selectOutlinerItem(
+                                                                        itemId,
+                                                                        layerId
+                                                                    )
+                                                            }>
+                                                            <span>
+                                                                { getOutlinerItemName(
+                                                                    itemId
+                                                                ) }
+                                                            </span>
+
+                                                            <small>
+                                                                #{ itemId }
+                                                            </small>
+                                                        </button>
+                                                ) }
+                                            </div> }
+                                    </div>
+                                );
+                            }
+                        ) }
+
+                        { ungroupedIds.map(
+                            itemId =>
+                                <button
+                                    key={
+                                        `outliner-item-${ layerId }-${ itemId }`
+                                    }
+                                    type="button"
+                                    className={
+                                        `builder-pro-outliner-item ${
+                                            selectedIds.includes(
+                                                itemId
+                                            )
+                                                ? 'is-selected'
+                                                : ''
+                                        }`
+                                    }
+                                    title={
+                                        `${ getOutlinerItemName(itemId) } #${ itemId }`
+                                    }
+                                    onClick={
+                                        () =>
+                                            selectOutlinerItem(
+                                                itemId,
+                                                layerId
+                                            )
+                                    }>
+                                    <span>
+                                        { getOutlinerItemName(
+                                            itemId
+                                        ) }
+                                    </span>
+
+                                    <small>
+                                        #{ itemId }
+                                    </small>
+                                </button>
+                        ) }
+
+                        { !itemIds.length &&
+                            <div className="builder-pro-outliner-empty">
+                                Capa vacía
+                            </div> }
+                    </div> }
+            </div>
+        );
+    };
+
 
     return (
+
         <>
             { active &&
                 <NitroCardView
@@ -7627,6 +10723,186 @@ export const BuilderProView: FC<{}> = props =>
                                     Desagrupar
                                 </button>
 
+                            </div>
+                        </details>
+
+
+                        <details className="builder-pro-section">
+                            <summary>Capas</summary>
+
+
+                            <div className="builder-pro-section-body">
+                                <div className="builder-pro-subtitle">
+                                    Capa de trabajo
+                                </div>
+
+                                <select
+                                    className="builder-pro-group-select"
+                                    disabled={
+                                        pending ||
+                                        layerPending
+                                    }
+                                    value={ layerScopeId }
+                                    onChange={
+                                        event =>
+                                        {
+                                            const value =
+                                                Number(
+                                                    event.target.value
+                                                );
+
+                                            if(
+                                                value ===
+                                                LAYER_SCOPE_ALL
+                                            )
+                                            {
+                                                layerScopeIdRef.current =
+                                                    LAYER_SCOPE_ALL;
+
+                                                setLayerScopeId(
+                                                    LAYER_SCOPE_ALL
+                                                );
+
+                                                clearSelection();
+
+                                                setStatus(
+                                                    'Capa de trabajo: todas las capas. Builder Pro puede interactuar con cualquier furni; los nuevos quedarán en Sin capa.'
+                                                );
+
+                                                return;
+                                            }
+
+                                            if(
+                                                Number.isSafeInteger(
+                                                    value
+                                                ) &&
+                                                value >= 0
+                                            )
+                                            {
+                                                layerScopeIdRef.current =
+                                                    value;
+
+                                                setLayerScopeId(
+                                                    value
+                                                );
+
+                                                clearSelection();
+
+                                                const label =
+                                                    value === 0
+                                                        ? 'Sin capa'
+                                                        : (
+                                                            savedLayersRef.current.find(
+                                                                layer =>
+                                                                    layer.id === value
+                                                            )?.name ||
+                                                            'Capa'
+                                                        );
+
+                                                setStatus(
+                                                    value > 0
+                                                        ? `Capa de trabajo: ${ label }. Todo Builder Pro queda limitado a esta capa y los furnis nuevos entran en ella.`
+                                                        : 'Capa de trabajo: Sin capa. Todo Builder Pro queda limitado a los furnis sin capa.'
+                                                );
+                                            }
+                                        }
+                                    }>
+                                    <option
+                                        value={ LAYER_SCOPE_ALL }>
+                                        Todas las capas
+                                    </option>
+
+                                    <option value={ 0 }>
+                                        Sin capa
+                                    </option>
+
+                                    { savedLayers.map(
+                                        layer =>
+                                            <option
+                                                key={ `work-${ layer.id }` }
+                                                value={ layer.id }>
+                                                { `${ layer.name } · ${ layer.itemIds.length } furnis` }
+                                            </option>
+                                    ) }
+                                </select>
+
+                                <div className="builder-pro-hint">
+                                    La capa de trabajo limita toda la interacción de Builder Pro: selección, área, mover, rotar, recoger y acciones avanzadas. Los furnis nuevos entran directamente en ella. Los grupos bloqueados siguen siendo atómicos aunque crucen capas.
+                                </div>
+
+
+                                <div className="builder-pro-subtitle">
+                                    Outliner
+                                </div>
+
+                                <div className="builder-pro-outliner-search">
+                                    <FaSearch />
+
+                                    <input
+                                        type="text"
+                                        value={ outlinerQuery }
+                                        placeholder="Buscar furni, grupo o ID..."
+                                        onChange={
+                                            event =>
+                                                setOutlinerQuery(
+                                                    event.target.value
+                                                )
+                                        } />
+
+                                    <button
+                                        type="button"
+                                        className="builder-pro-outliner-toolbar-button"
+                                        title="Crear capa"
+                                        aria-label="Crear capa"
+                                        disabled={
+                                            pending ||
+                                            layerPending ||
+                                            savedLayers.length >= 50
+                                        }
+                                        onClick={ createLayer }>
+                                        <FaPlus />
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className="builder-pro-outliner-toolbar-button"
+                                        title="Mostrar todas las capas"
+                                        aria-label="Mostrar todas las capas"
+                                        disabled={
+                                            pending ||
+                                            layerPending ||
+                                            (
+                                                !hiddenLayerIds.length &&
+                                                isolatedLayerId === null &&
+                                                dimmedOthersLayerId === null
+                                            )
+                                        }
+                                        onClick={ showAllLayers }>
+                                        <FaEye />
+                                    </button>
+                                </div>
+
+                                <div
+                                    className="builder-pro-outliner"
+                                    data-revision={ outlinerRevision }>
+                                    { savedLayers.map(
+                                        layer =>
+                                            renderOutlinerLayer(
+                                                layer.id,
+                                                layer.name
+                                            )
+                                    ) }
+
+                                    { renderOutlinerLayer(
+                                        0,
+                                        'Sin capa'
+                                    ) }
+                                </div>
+
+
+                                <div className="builder-pro-hint">
+                                    Clic activa la capa. Doble clic en su nombre renombra; ⋯ reúne mover, aislar, atenuar y eliminar.
+                                </div>
                             </div>
                         </details>
 
@@ -8405,6 +11681,42 @@ export const BuilderProView: FC<{}> = props =>
                             }
                             onClick={ () => pickupSelection() }>
                             <FaBoxOpen />
+                        </button>
+                        <button
+                            type="button"
+                            className={
+                                `btn btn-sm ${
+                                    avatarMovementLocked
+                                        ? 'btn-primary'
+                                        : 'btn-secondary'
+                                } builder-pro-icon-button`
+                            }
+                            title={
+                                avatarMovementLocked
+                                    ? 'Permitir movimiento del avatar'
+                                    : 'Bloquear movimiento del avatar'
+                            }
+                            aria-label={
+                                avatarMovementLocked
+                                    ? 'Permitir movimiento del avatar'
+                                    : 'Bloquear movimiento del avatar'
+                            }
+                            onClick={ () =>
+                            {
+                                const next =
+                                    !avatarMovementLocked;
+
+                                setAvatarMovementLocked(
+                                    next
+                                );
+
+                                setStatus(
+                                    next
+                                        ? 'Movimiento del avatar bloqueado.'
+                                        : 'Movimiento del avatar permitido.'
+                                );
+                            } }>
+                            <FaWalking />
                         </button>
 
                         <button

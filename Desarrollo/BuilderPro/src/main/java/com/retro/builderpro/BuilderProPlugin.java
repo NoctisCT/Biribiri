@@ -26,6 +26,7 @@ import com.retro.builderpro.handlers.GroupStateRequest;
 import com.retro.builderpro.handlers.TraversalStateRequest;
 import com.retro.builderpro.handlers.BlueprintStateRequest;
 import com.retro.builderpro.handlers.PickupGroupRequest;
+import com.retro.builderpro.handlers.LayerStateRequest;
 
 public class BuilderProPlugin
         extends HabboPlugin
@@ -46,6 +47,7 @@ public class BuilderProPlugin
         BuilderProGroupRepository.initialize();
         BuilderProTraversalService.initialize();
         BuilderProBlueprintRepository.initialize();
+        BuilderProLayerRepository.initialize();
 
         Emulator.getGameServer()
                 .getPacketManager()
@@ -124,6 +126,13 @@ public class BuilderProPlugin
                         PickupGroupRequest.class
                 );
 
+        Emulator.getGameServer()
+                .getPacketManager()
+                .registerHandler(
+                        BuilderProPackets.LAYER_STATE_REQUEST,
+                        LayerStateRequest.class
+                );
+
         System.out.println(
                 "[BuilderPro] Backend MVP 0 cargado."
         );
@@ -156,6 +165,10 @@ public class BuilderProPlugin
                     try
                     {
                         BuilderProGroupRepository.removeItem(
+                                itemId
+                        );
+
+                        BuilderProLayerRepository.removeItem(
                                 itemId
                         );
 

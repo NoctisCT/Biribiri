@@ -297,7 +297,12 @@ export class FurnitureVisualization extends RoomObjectSpriteVisualization
                     sprite.offsetX = (assetData.offsetX + this.getLayerXOffset(scale, this._direction, layerId));
                     sprite.offsetY = (assetData.offsetY + this.getLayerYOffset(scale, this._direction, layerId));
                     sprite.blendMode = this.getLayerInk(scale, this._direction, layerId);
-                    sprite.alphaTolerance = (this.getLayerIgnoreMouse(scale, this._direction, layerId) ? AlphaTolerance.MATCH_NOTHING : AlphaTolerance.MATCH_OPAQUE_PIXELS);
+                    sprite.alphaTolerance = (
+                        this._alphaMultiplier <= 0 ||
+                        this.getLayerIgnoreMouse(scale, this._direction, layerId)
+                    )
+                        ? AlphaTolerance.MATCH_NOTHING
+                        : AlphaTolerance.MATCH_OPAQUE_PIXELS;
 
                     relativeDepth = this.getLayerZOffset(scale, this._direction, layerId);
                     relativeDepth = (relativeDepth - (layerId * 0.001));
