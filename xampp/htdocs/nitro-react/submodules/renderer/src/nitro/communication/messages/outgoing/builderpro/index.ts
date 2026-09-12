@@ -9,4 +9,5 @@ export * from './BuilderProGroupStateComposer';
 export * from './BuilderProTraversalStateComposer';
 export * from './BuilderProPickupGroupComposer';
 export * from './BuilderProLayerStateComposer';
+export * from './BuilderProReferencePlacementComposer';
 export * from './BuilderProBlueprintStateComposer';

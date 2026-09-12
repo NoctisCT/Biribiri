@@ -1,4 +1,4 @@
-import { BuilderProLayerStateComposer, BuilderProLayerStateEvent, BuilderProPickupGroupComposer, BuilderProPickupGroupResultEvent, RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, BuilderProTraversalStateComposer, BuilderProTraversalStateEvent, BuilderProBlueprintStateComposer, BuilderProBlueprintStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomEngineObjectPlacedEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
+import { BuilderProLayerStateComposer, BuilderProLayerStateEvent, BuilderProPickupGroupComposer, BuilderProPickupGroupResultEvent, RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProReferencePlacementComposer, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, BuilderProTraversalStateComposer, BuilderProTraversalStateEvent, BuilderProBlueprintStateComposer, BuilderProBlueprintStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomEngineObjectPlacedEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { FaBoxOpen, FaClone, FaCopy, FaEllipsisH, FaEye, FaEyeSlash, FaLock, FaMinus, FaPaste, FaPlus, FaQuestion, FaRedo, FaSearch, FaUndo, FaWalking } from 'react-icons/fa';
 import { AddEventLinkTracker, BuilderProSelectionVisualizer, CanManipulateFurniture, CreateLinkEvent, GetRoomEngine, GetSessionDataManager, HasHabboClub, RemoveLinkEventTracker, SendMessageComposer, SetBuilderProSelectionModeActive } from '../../../../api';
@@ -48,6 +48,10 @@ const BLUEPRINT_OP_RENAME = 2;
 const BLUEPRINT_OP_DELETE = 3;
 const BLUEPRINT_OP_PLACE = 4;
 const BLUEPRINT_OP_PREVIEW = 5;
+
+const REFERENCE_OP_NONE = 0;
+const REFERENCE_OP_EQUAL_Z = 1;
+const REFERENCE_OP_PLACE_ABOVE = 2;
 
 type BuilderProSavedGroupState = {
     id: number;
@@ -137,6 +141,10 @@ export const BuilderProView: FC<{}> = props =>
         useState<number | null>(null);
     const [ dimmedOthersLayerId, setDimmedOthersLayerId ] =
         useState<number | null>(null);
+    const [ individualHiddenItemIds, setIndividualHiddenItemIds ] =
+        useState<number[]>([]);
+    const [ individualDimmedItemIds, setIndividualDimmedItemIds ] =
+        useState<number[]>([]);
     const [ outlinerQuery, setOutlinerQuery ] =
         useState('');
     const [ outlinerCollapsedLayerIds, setOutlinerCollapsedLayerIds ] =
@@ -177,6 +185,8 @@ export const BuilderProView: FC<{}> = props =>
         useState<number | null>(null);
     const [ pivotPickMode, setPivotPickMode ] =
         useState(false);
+    const [ referencePickOperation, setReferencePickOperation ] =
+        useState(REFERENCE_OP_NONE);
     const [ areaMode, setAreaMode ] = useState(false);
     const [ selectionBox, setSelectionBox ] = useState<{
         left: number;
@@ -265,6 +275,10 @@ export const BuilderProView: FC<{}> = props =>
         useRef<number | null>(null);
     const dimmedOthersLayerIdRef =
         useRef<number | null>(null);
+    const individualHiddenItemIdsRef =
+        useRef<Set<number>>(new Set());
+    const individualDimmedItemIdsRef =
+        useRef<Set<number>>(new Set());
     const layerOriginalAlphaRef =
         useRef<Map<number, number>>(new Map());
     const traversableIdsRef =
@@ -292,6 +306,10 @@ export const BuilderProView: FC<{}> = props =>
     const suppressAreaClickRef = useRef(false);
     const pivotIdRef = useRef<number | null>(null);
     const pivotPickModeRef = useRef(false);
+    const referencePickOperationRef =
+        useRef(REFERENCE_OP_NONE);
+    const pendingReferenceOperationRef =
+        useRef(REFERENCE_OP_NONE);
     const quickShiftRef = useRef(false);
     const quickCtrlRef = useRef(false);
     const areaStartRef = useRef<{
@@ -314,8 +332,14 @@ export const BuilderProView: FC<{}> = props =>
         isolatedLayerId;
     dimmedOthersLayerIdRef.current =
         dimmedOthersLayerId;
+    individualHiddenItemIdsRef.current =
+        new Set(individualHiddenItemIds);
+    individualDimmedItemIdsRef.current =
+        new Set(individualDimmedItemIds);
     selectedBlueprintIdRef.current =
         selectedBlueprintId;
+    referencePickOperationRef.current =
+        referencePickOperation;
     moveStepRef.current = moveStep;
 
     const sessionDataManager = GetSessionDataManager();
@@ -359,6 +383,27 @@ export const BuilderProView: FC<{}> = props =>
                         blueprint.id === selectedBlueprintId
                 ) || null
             );
+
+
+    const clearReferencePick =
+        useCallback((
+            updateStatus: boolean = false
+        ) =>
+        {
+            referencePickOperationRef.current =
+                REFERENCE_OP_NONE;
+
+            setReferencePickOperation(
+                REFERENCE_OP_NONE
+            );
+
+            if(updateStatus)
+            {
+                setStatus(
+                    'Operación con referencia cancelada.'
+                );
+            }
+        }, []);
 
     const applySelection = useCallback((next: number[]) =>
     {
@@ -734,6 +779,9 @@ export const BuilderProView: FC<{}> = props =>
         useCallback((
             itemId: number
         ): boolean =>
+            !individualHiddenItemIdsRef.current.has(
+                itemId
+            ) &&
             isLayerLocallyVisible(
                 getLayerIdForItem(
                     itemId
@@ -832,6 +880,12 @@ export const BuilderProView: FC<{}> = props =>
             const dimmed =
                 dimmedOthersLayerIdRef.current;
 
+            const individualHidden =
+                individualHiddenItemIdsRef.current;
+
+            const individualDimmed =
+                individualDimmedItemIdsRef.current;
+
             const count =
                 roomEngine.getRoomObjectCount(
                     currentRoomSession.roomId,
@@ -865,6 +919,9 @@ export const BuilderProView: FC<{}> = props =>
                     ) || 0;
 
                 const shouldHide =
+                    individualHidden.has(
+                        itemId
+                    ) ||
                     hidden.has(layerId) ||
                     (
                         isolated !== null &&
@@ -873,8 +930,15 @@ export const BuilderProView: FC<{}> = props =>
 
                 const shouldDim =
                     !shouldHide &&
-                    dimmed !== null &&
-                    layerId !== dimmed;
+                    (
+                        individualDimmed.has(
+                            itemId
+                        ) ||
+                        (
+                            dimmed !== null &&
+                            layerId !== dimmed
+                        )
+                    );
 
                 /*
                  * Si este furni no necesita un efecto de capa,
@@ -1192,6 +1256,147 @@ export const BuilderProView: FC<{}> = props =>
                 next === null
                     ? 'Atenuación desactivada.'
                     : 'Resto de capas atenuado localmente.'
+            );
+        }, [
+            applyLayerVisibility
+        ]);
+
+
+    const hideSelectedItemsLocally =
+        useCallback(() =>
+        {
+            const ids = [
+                ...selectedIdsRef.current
+            ];
+
+            if(!ids.length)
+            {
+                setStatus(
+                    'Selecciona primero los furnis que quieres ocultar.'
+                );
+
+                return;
+            }
+
+            const hidden =
+                new Set(
+                    individualHiddenItemIdsRef.current
+                );
+
+            const dimmed =
+                new Set(
+                    individualDimmedItemIdsRef.current
+                );
+
+            for(const itemId of ids)
+            {
+                hidden.add(itemId);
+                dimmed.delete(itemId);
+            }
+
+            individualHiddenItemIdsRef.current =
+                hidden;
+
+            individualDimmedItemIdsRef.current =
+                dimmed;
+
+            setIndividualHiddenItemIds(
+                Array.from(hidden)
+            );
+
+            setIndividualDimmedItemIds(
+                Array.from(dimmed)
+            );
+
+            window.requestAnimationFrame(
+                applyLayerVisibility
+            );
+
+            clearSelection();
+
+            setStatus(
+                `${ ids.length } furnis ocultos localmente.`
+            );
+        }, [
+            applyLayerVisibility,
+            clearSelection
+        ]);
+
+    const dimSelectedItemsLocally =
+        useCallback(() =>
+        {
+            const ids = [
+                ...selectedIdsRef.current
+            ];
+
+            if(!ids.length)
+            {
+                setStatus(
+                    'Selecciona primero los furnis que quieres atenuar.'
+                );
+
+                return;
+            }
+
+            const hidden =
+                new Set(
+                    individualHiddenItemIdsRef.current
+                );
+
+            const dimmed =
+                new Set(
+                    individualDimmedItemIdsRef.current
+                );
+
+            for(const itemId of ids)
+            {
+                hidden.delete(itemId);
+                dimmed.add(itemId);
+            }
+
+            individualHiddenItemIdsRef.current =
+                hidden;
+
+            individualDimmedItemIdsRef.current =
+                dimmed;
+
+            setIndividualHiddenItemIds(
+                Array.from(hidden)
+            );
+
+            setIndividualDimmedItemIds(
+                Array.from(dimmed)
+            );
+
+            window.requestAnimationFrame(
+                applyLayerVisibility
+            );
+
+            setStatus(
+                `${ ids.length } furnis atenuados localmente.`
+            );
+        }, [
+            applyLayerVisibility
+        ]);
+
+    const restoreIndividualItemVisibility =
+        useCallback(() =>
+        {
+            individualHiddenItemIdsRef.current =
+                new Set();
+
+            individualDimmedItemIdsRef.current =
+                new Set();
+
+            setIndividualHiddenItemIds([]);
+            setIndividualDimmedItemIds([]);
+
+            window.requestAnimationFrame(
+                applyLayerVisibility
+            );
+
+            setStatus(
+                'Visibilidad individual restaurada.'
             );
         }, [
             applyLayerVisibility
@@ -4611,6 +4816,10 @@ export const BuilderProView: FC<{}> = props =>
         pointerDownRef.current = null;
         dragRef.current = null;
         suppressDragClickRef.current = false;
+        referencePickOperationRef.current =
+            REFERENCE_OP_NONE;
+        pendingReferenceOperationRef.current =
+            REFERENCE_OP_NONE;
 
         if(suppressDragClickTimerRef.current !== null)
         {
@@ -4645,15 +4854,24 @@ export const BuilderProView: FC<{}> = props =>
             null;
         dimmedOthersLayerIdRef.current =
             null;
+        individualHiddenItemIdsRef.current =
+            new Set();
+        individualDimmedItemIdsRef.current =
+            new Set();
 
         setHiddenLayerIds([]);
         setIsolatedLayerId(null);
         setDimmedOthersLayerId(null);
+        setIndividualHiddenItemIds([]);
+        setIndividualDimmedItemIds([]);
 
         setActive(false);
         setPending(false);
         setAreaMode(false);
         setSelectionBox(null);
+        setReferencePickOperation(
+            REFERENCE_OP_NONE
+        );
         setMinimized(false);
         setHelpOpen(false);
         setGroupPending(false);
@@ -4713,6 +4931,10 @@ export const BuilderProView: FC<{}> = props =>
         pendingRef.current = false;
         areaModeRef.current = false;
         areaStartRef.current = null;
+        referencePickOperationRef.current =
+            REFERENCE_OP_NONE;
+        pendingReferenceOperationRef.current =
+            REFERENCE_OP_NONE;
 
         SetBuilderProSelectionModeActive(true);
 
@@ -4720,6 +4942,9 @@ export const BuilderProView: FC<{}> = props =>
         setPending(false);
         setAreaMode(false);
         setSelectionBox(null);
+        setReferencePickOperation(
+            REFERENCE_OP_NONE
+        );
         setMinimized(false);
         setHelpOpen(false);
         setGroupPending(false);
@@ -4801,6 +5026,251 @@ export const BuilderProView: FC<{}> = props =>
         deactivate,
         toggleMode
     ]);
+
+
+    const requestReferencePlacement =
+        useCallback((
+            operation: number,
+            referenceId: number
+        ) =>
+        {
+            if(!activeRef.current) return;
+            if(pendingRef.current) return;
+
+            const ids = [
+                ...selectedIdsRef.current
+            ];
+
+            if(!ids.length)
+            {
+                clearReferencePick();
+
+                setStatus(
+                    'Selecciona primero lo que quieres modificar.'
+                );
+
+                return;
+            }
+
+            if(ids.includes(referenceId))
+            {
+                setStatus(
+                    'El furni de referencia debe estar fuera de la selección.'
+                );
+
+                return;
+            }
+
+            const pivotId =
+                (
+                    pivotIdRef.current !== null &&
+                    ids.includes(
+                        pivotIdRef.current
+                    )
+                )
+                    ? pivotIdRef.current
+                    : ids[0];
+
+            requestIdRef.current++;
+
+            if(requestIdRef.current > 2000000000)
+            {
+                requestIdRef.current = 1;
+            }
+
+            const requestId =
+                requestIdRef.current;
+
+            pendingRef.current = true;
+            pendingRequestIdRef.current =
+                requestId;
+
+            pendingStartedAtRef.current =
+                performance.now();
+
+            pendingReferenceOperationRef.current =
+                operation;
+
+            clearReferencePick();
+
+            setPending(true);
+
+            setStatus(
+                operation === REFERENCE_OP_EQUAL_Z
+                    ? `Igualando altura con furni #${ referenceId }...`
+                    : `Colocando selección encima de furni #${ referenceId }...`
+            );
+
+            try
+            {
+                SendMessageComposer(
+                    new BuilderProReferencePlacementComposer(
+                        ids,
+                        operation,
+                        referenceId,
+                        pivotId,
+                        requestId
+                    )
+                );
+
+                if(
+                    pendingTimeoutRef.current !==
+                    null
+                )
+                {
+                    window.clearTimeout(
+                        pendingTimeoutRef.current
+                    );
+                }
+
+                pendingTimeoutRef.current =
+                    window.setTimeout(
+                        () =>
+                        {
+                            pendingTimeoutRef.current =
+                                null;
+
+                            if(
+                                !pendingRef.current ||
+                                pendingRequestIdRef.current !==
+                                requestId
+                            )
+                            {
+                                return;
+                            }
+
+                            pendingRef.current =
+                                false;
+
+                            pendingRequestIdRef.current =
+                                null;
+
+                            pendingStartedAtRef.current =
+                                0;
+
+                            pendingReferenceOperationRef.current =
+                                REFERENCE_OP_NONE;
+
+                            setPending(false);
+
+                            setStatus(
+                                'Operación con referencia sin confirmación del servidor.'
+                            );
+                        },
+                        MOVE_CONFIRM_TIMEOUT_MS
+                    );
+            }
+            catch(error)
+            {
+                console.error(
+                    `[BuilderProTrace] CLIENT REFERENCE_SEND_ERROR #${ requestId }`,
+                    error
+                );
+
+                pendingRef.current = false;
+
+                pendingRequestIdRef.current =
+                    null;
+
+                pendingStartedAtRef.current =
+                    0;
+
+                pendingReferenceOperationRef.current =
+                    REFERENCE_OP_NONE;
+
+                setPending(false);
+
+                setStatus(
+                    'No se pudo enviar la operación con referencia.'
+                );
+            }
+        }, [
+            clearReferencePick
+        ]);
+
+    const toggleReferencePick =
+        useCallback((
+            operation: number
+        ) =>
+        {
+            if(!activeRef.current) return;
+            if(pendingRef.current) return;
+            if(dragRef.current) return;
+
+            if(
+                operation !== REFERENCE_OP_EQUAL_Z &&
+                operation !== REFERENCE_OP_PLACE_ABOVE
+            )
+            {
+                return;
+            }
+
+            if(
+                referencePickOperationRef.current ===
+                operation
+            )
+            {
+                clearReferencePick(true);
+                return;
+            }
+
+            if(!selectedIdsRef.current.length)
+            {
+                setStatus(
+                    'Selecciona primero lo que quieres modificar.'
+                );
+
+                return;
+            }
+
+            if(
+                pasteModeRef.current ||
+                duplicateModeRef.current ||
+                blueprintPlaceModeRef.current
+            )
+            {
+                setStatus(
+                    'Cancela primero Pegar, Duplicar o Colocar blueprint.'
+                );
+
+                return;
+            }
+
+            if(pivotPickModeRef.current)
+            {
+                pivotPickModeRef.current =
+                    false;
+
+                setPivotPickMode(false);
+            }
+
+            if(areaModeRef.current)
+            {
+                areaModeRef.current =
+                    false;
+
+                areaStartRef.current =
+                    null;
+
+                setAreaMode(false);
+                setSelectionBox(null);
+            }
+
+            referencePickOperationRef.current =
+                operation;
+
+            setReferencePickOperation(
+                operation
+            );
+
+            setStatus(
+                operation === REFERENCE_OP_EQUAL_Z
+                    ? 'Igualar altura: haz clic en el furni cuya altura quieres copiar. Esc para cancelar.'
+                    : 'Colocar encima: haz clic en el furni que servirá de superficie. Esc para cancelar.'
+            );
+        }, [
+            clearReferencePick
+        ]);
 
     const toggleAreaMode = useCallback(() =>
     {
@@ -5512,6 +5982,16 @@ export const BuilderProView: FC<{}> = props =>
         SetBuilderProSelectionModeActive(false);
 
         restoreLayerVisibility();
+
+        individualHiddenItemIdsRef.current =
+            new Set();
+
+        individualDimmedItemIdsRef.current =
+            new Set();
+
+        setIndividualHiddenItemIds([]);
+        setIndividualDimmedItemIds([]);
+
         clearSelection();
 
         setActive(false);
@@ -5572,6 +6052,74 @@ export const BuilderProView: FC<{}> = props =>
             );
         };
     }, [ restoreLayerVisibility ]);
+
+
+    useEffect(() =>
+    {
+        if(!active) return;
+
+        const onReferenceEscape = (
+            event: globalThis.KeyboardEvent
+        ) =>
+        {
+            if(event.key !== 'Escape')
+            {
+                return;
+            }
+
+            const target =
+                event.target;
+
+            if(
+                target instanceof HTMLInputElement ||
+                target instanceof HTMLTextAreaElement ||
+                target instanceof HTMLSelectElement ||
+                (
+                    target instanceof HTMLElement &&
+                    target.isContentEditable
+                )
+            )
+            {
+                return;
+            }
+
+            if(
+                referencePickOperationRef.current ===
+                REFERENCE_OP_NONE
+            )
+            {
+                return;
+            }
+
+            if(event.cancelable)
+            {
+                event.preventDefault();
+            }
+
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+
+            clearReferencePick(true);
+        };
+
+        window.addEventListener(
+            'keydown',
+            onReferenceEscape,
+            true
+        );
+
+        return () =>
+        {
+            window.removeEventListener(
+                'keydown',
+                onReferenceEscape,
+                true
+            );
+        };
+    }, [
+        active,
+        clearReferencePick
+    ]);
 
     useEffect(() =>
     {
@@ -5976,6 +6524,48 @@ export const BuilderProView: FC<{}> = props =>
                     removedId
                 );
 
+                if(
+                    individualHiddenItemIdsRef.current.has(
+                        removedId
+                    ) ||
+                    individualDimmedItemIdsRef.current.has(
+                        removedId
+                    )
+                )
+                {
+                    const nextHidden =
+                        new Set(
+                            individualHiddenItemIdsRef.current
+                        );
+
+                    const nextDimmed =
+                        new Set(
+                            individualDimmedItemIdsRef.current
+                        );
+
+                    nextHidden.delete(
+                        removedId
+                    );
+
+                    nextDimmed.delete(
+                        removedId
+                    );
+
+                    individualHiddenItemIdsRef.current =
+                        nextHidden;
+
+                    individualDimmedItemIdsRef.current =
+                        nextDimmed;
+
+                    setIndividualHiddenItemIds(
+                        Array.from(nextHidden)
+                    );
+
+                    setIndividualDimmedItemIds(
+                        Array.from(nextDimmed)
+                    );
+                }
+
                 setOutlinerRevision(
                     current =>
                         current + 1
@@ -6103,6 +6693,45 @@ export const BuilderProView: FC<{}> = props =>
                 roomSessionRef.current;
 
             if(!currentRoomSession) return;
+
+            if(
+                referencePickOperationRef.current !==
+                REFERENCE_OP_NONE
+            )
+            {
+                if(
+                    selectedIdsRef.current.includes(
+                        event.objectId
+                    )
+                )
+                {
+                    setStatus(
+                        'El furni de referencia debe estar fuera de la selección.'
+                    );
+
+                    return;
+                }
+
+                if(
+                    !isItemLocallyVisible(
+                        event.objectId
+                    )
+                )
+                {
+                    setStatus(
+                        'El furni de referencia debe ser visible.'
+                    );
+
+                    return;
+                }
+
+                requestReferencePlacement(
+                    referencePickOperationRef.current,
+                    event.objectId
+                );
+
+                return;
+            }
 
             if(!CanManipulateFurniture(
                 currentRoomSession,
@@ -6843,6 +7472,9 @@ export const BuilderProView: FC<{}> = props =>
                 return;
             }
 
+            const referenceOperation =
+                pendingReferenceOperationRef.current;
+
             if(pendingTimeoutRef.current !== null)
             {
                 window.clearTimeout(
@@ -6860,15 +7492,24 @@ export const BuilderProView: FC<{}> = props =>
             pendingStartedAtRef.current =
                 0;
 
+            pendingReferenceOperationRef.current =
+                REFERENCE_OP_NONE;
+
             setPending(false);
 
             if(parser.success)
             {
-                setCanUndo(true);
-                setCanRedo(false);
+                if(parser.affectedCount > 0)
+                {
+                    setCanUndo(true);
+                    setCanRedo(false);
+                }
 
                 setStatus(
-                    `Offset aplicado a ${ parser.affectedCount } furnis.`
+                    referenceOperation !==
+                    REFERENCE_OP_NONE
+                        ? parser.message
+                        : `Offset aplicado a ${ parser.affectedCount } furnis.`
                 );
 
                 window.requestAnimationFrame(
@@ -10466,6 +11107,56 @@ export const BuilderProView: FC<{}> = props =>
                                 </div>
 
                                 <div className="builder-pro-subtitle">
+                                    Visibilidad local
+                                </div>
+
+                                <div className="builder-pro-grid-2">
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            hideSelectedItemsLocally
+                                        }>
+                                        Ocultar selección
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            dimSelectedItemsLocally
+                                        }>
+                                        Atenuar selección
+                                    </button>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    className="builder-pro-full"
+                                    disabled={
+                                        pending ||
+                                        (
+                                            !individualHiddenItemIds.length &&
+                                            !individualDimmedItemIds.length
+                                        )
+                                    }
+                                    onClick={
+                                        restoreIndividualItemVisibility
+                                    }>
+                                    Restaurar visibilidad
+                                </button>
+
+                                <div className="builder-pro-hint">
+                                    Solo cambia tu vista. Ocultar limpia la selección; restaurar no modifica la visibilidad de las capas.
+                                </div>
+
+                                <div className="builder-pro-subtitle">
                                     Estado
                                 </div>
 
@@ -11389,6 +12080,54 @@ export const BuilderProView: FC<{}> = props =>
                                     }>
                                     Bajar al suelo
                                 </button>
+
+                                <div className="builder-pro-subtitle">
+                                    Referencia de altura
+                                </div>
+
+                                <div className="builder-pro-grid-2">
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () => toggleReferencePick(
+                                                REFERENCE_OP_EQUAL_Z
+                                            )
+                                        }>
+                                        {
+                                            referencePickOperation ===
+                                            REFERENCE_OP_EQUAL_Z
+                                                ? 'Cancelar Igualar altura'
+                                                : 'Igualar altura'
+                                        }
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () => toggleReferencePick(
+                                                REFERENCE_OP_PLACE_ABOVE
+                                            )
+                                        }>
+                                        {
+                                            referencePickOperation ===
+                                            REFERENCE_OP_PLACE_ABOVE
+                                                ? 'Cancelar Colocar encima'
+                                                : 'Colocar encima'
+                                        }
+                                    </button>
+                                </div>
+
+                                <div className="builder-pro-hint">
+                                    Igualar altura conserva las diferencias internas de la estructura. Colocar encima usa el pivote actual para X/Y.
+                                </div>
                             </div>
                         </details>
 

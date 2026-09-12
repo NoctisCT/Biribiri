@@ -528,4 +528,5 @@ export class OutgoingHeader
     public static BUILDER_PRO_BLUEPRINT_STATE = 6318;
     public static BUILDER_PRO_PICKUP_GROUP = 6320;
     public static BUILDER_PRO_LAYER_STATE = 6322;
+    public static BUILDER_PRO_REFERENCE_PLACEMENT = 6324;
 }

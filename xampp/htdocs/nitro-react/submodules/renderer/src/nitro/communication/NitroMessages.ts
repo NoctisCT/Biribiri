@@ -32,7 +32,7 @@ import { BuilderProCopyGroupResultEvent, BuilderProPasteGroupResultEvent, Builde
 import { RpgEngineResultEvent } from './messages/incoming/rpgengine';
 import { CerrarSesionInventarioComposer, ConfigurarPatronInventarioComposer, ConsultarBloqueoInventarioComposer, VerificarPatronInventarioComposer } from './messages/outgoing/inventorylock';
 import { GetHoloGridWalkabilityComposer } from './messages/outgoing/hologrid';
-import { BuilderProCopyGroupComposer, BuilderProPasteGroupComposer, BuilderProMoveGroupComposer, BuilderProTransformGroupComposer, BuilderProHistoryComposer, BuilderProOffsetGroupComposer, BuilderProLayoutGroupComposer, BuilderProGroupStateComposer, BuilderProTraversalStateComposer, BuilderProBlueprintStateComposer, BuilderProPickupGroupComposer, BuilderProLayerStateComposer } from './messages/outgoing/builderpro';
+import { BuilderProCopyGroupComposer, BuilderProPasteGroupComposer, BuilderProMoveGroupComposer, BuilderProTransformGroupComposer, BuilderProHistoryComposer, BuilderProOffsetGroupComposer, BuilderProLayoutGroupComposer, BuilderProGroupStateComposer, BuilderProTraversalStateComposer, BuilderProBlueprintStateComposer, BuilderProPickupGroupComposer, BuilderProLayerStateComposer, BuilderProReferencePlacementComposer } from './messages/outgoing/builderpro';
 import { RpgEngineCommandComposer } from './messages/outgoing/rpgengine';
 import { ObtenerRecordsSubastasComposer } from './messages/outgoing/subastas';
 import { RecordsSubastasEvent } from './messages/incoming/subastas';
@@ -755,6 +755,7 @@ export class NitroMessages implements IMessageConfiguration {
         this._composers.set(OutgoingHeader.BUILDER_PRO_BLUEPRINT_STATE, BuilderProBlueprintStateComposer);
         this._composers.set(OutgoingHeader.BUILDER_PRO_PICKUP_GROUP, BuilderProPickupGroupComposer);
         this._composers.set(OutgoingHeader.BUILDER_PRO_LAYER_STATE, BuilderProLayerStateComposer);
+        this._composers.set(OutgoingHeader.BUILDER_PRO_REFERENCE_PLACEMENT, BuilderProReferencePlacementComposer);
         this._composers.set(OutgoingHeader.RPG_ENGINE_COMMAND, RpgEngineCommandComposer);
 
         // SUBASTAS
