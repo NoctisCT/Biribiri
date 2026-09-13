@@ -12,4 +12,5 @@ export * from './BuilderProLayerStateComposer';
 export * from './BuilderProReferencePlacementComposer';
 export * from './BuilderProMirrorDuplicateComposer';
 export * from './BuilderProReplaceGroupComposer';
+export * from './BuilderProLinearRepeatComposer';
 export * from './BuilderProBlueprintStateComposer';

@@ -1,4 +1,4 @@
-import { BuilderProLayerStateComposer, BuilderProLayerStateEvent, BuilderProPickupGroupComposer, BuilderProPickupGroupResultEvent, RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProReferencePlacementComposer, BuilderProMirrorDuplicateComposer, BuilderProMirrorDuplicateResultEvent, BuilderProReplaceGroupComposer, BuilderProReplaceGroupResultEvent, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, BuilderProTraversalStateComposer, BuilderProTraversalStateEvent, BuilderProBlueprintStateComposer, BuilderProBlueprintStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomEngineObjectPlacedEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
+import { BuilderProLayerStateComposer, BuilderProLayerStateEvent, BuilderProPickupGroupComposer, BuilderProPickupGroupResultEvent, RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProReferencePlacementComposer, BuilderProMirrorDuplicateComposer, BuilderProMirrorDuplicateResultEvent, BuilderProReplaceGroupComposer, BuilderProReplaceGroupResultEvent, BuilderProLinearRepeatComposer, BuilderProLinearRepeatResultEvent, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, BuilderProTraversalStateComposer, BuilderProTraversalStateEvent, BuilderProBlueprintStateComposer, BuilderProBlueprintStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomEngineObjectPlacedEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { FaBoxOpen, FaClone, FaCopy, FaEllipsisH, FaEye, FaEyeSlash, FaLock, FaMinus, FaPaste, FaPlus, FaQuestion, FaRedo, FaSearch, FaUndo, FaWalking } from 'react-icons/fa';
 import { AddEventLinkTracker, BuilderProSelectionVisualizer, CanManipulateFurniture, CreateLinkEvent, GetRoomEngine, GetSessionDataManager, HasHabboClub, RemoveLinkEventTracker, SendMessageComposer, SetBuilderProSelectionModeActive } from '../../../../api';
@@ -61,11 +61,35 @@ const REFERENCE_OP_PLACE_ABOVE = 2;
 const REPLACE_OP_PREVIEW = 0;
 const REPLACE_OP_EXECUTE = 1;
 
+const LINEAR_REPEAT_OP_PREVIEW = 0;
+const LINEAR_REPEAT_OP_EXECUTE = 1;
+
+const LINEAR_REPEAT_DIRECTION_LEFT = 1;
+const LINEAR_REPEAT_DIRECTION_RIGHT = 2;
+const LINEAR_REPEAT_DIRECTION_UP = 3;
+const LINEAR_REPEAT_DIRECTION_DOWN = 4;
+
 type BuilderProReplacementContext = {
     itemIds: number[];
     referenceId: number;
     targetRotations: number[];
     sourceSnapshots: BuilderProTransformSnapshot[];
+};
+
+type BuilderProLinearRepeatContext = {
+    itemIds: number[];
+    direction: number;
+    copies: number;
+    spacing: number;
+};
+
+type BuilderProLinearRepeatPreviewEntry = {
+    baseItemId: number;
+    x: number;
+    y: number;
+    z: number;
+    rotation: number;
+    state: number;
 };
 
 type BuilderProSavedGroupState = {
@@ -120,6 +144,7 @@ type BuilderProClipboardPreview = {
 };
 
 const BUILDER_PRO_PASTE_GHOST_ID_BASE = -1900000000;
+const BUILDER_PRO_LINEAR_REPEAT_GHOST_ID_BASE = -1800000000;
 
 const normalizeBuilderProRotation = (
     value: number
@@ -316,6 +341,14 @@ export const BuilderProView: FC<{}> = props =>
     const [ offsetY, setOffsetY ] = useState('');
     const [ offsetZ, setOffsetZ ] = useState('');
     const [ formationSpacing, setFormationSpacing ] = useState('0');
+    const [ linearRepeatCopies, setLinearRepeatCopies ] =
+        useState('3');
+    const [ linearRepeatSpacing, setLinearRepeatSpacing ] =
+        useState('0');
+    const [ linearRepeatDirection, setLinearRepeatDirection ] =
+        useState(0);
+    const [ linearRepeatPreviewReady, setLinearRepeatPreviewReady ] =
+        useState(false);
     const [ highlightSelection, setHighlightSelection ] =
         useState(BuilderProSelectionVisualizer.enabled);
     const [ pivotId, setPivotId ] =
@@ -345,6 +378,30 @@ export const BuilderProView: FC<{}> = props =>
     const pastePreviewAnchorRef = useRef<{ x: number; y: number } | null>(null);
     const pasteGhostIdsRef = useRef<number[]>([]);
     const pastePreviewFrameRef = useRef<number | null>(null);
+    const linearRepeatContextRef =
+        useRef<BuilderProLinearRepeatContext | null>(
+            null
+        );
+    const pendingLinearRepeatContextRef =
+        useRef<BuilderProLinearRepeatContext | null>(
+            null
+        );
+    const pendingLinearRepeatOperationRef =
+        useRef<number | null>(
+            null
+        );
+    const linearRepeatPreviewEntriesRef =
+        useRef<BuilderProLinearRepeatPreviewEntry[]>(
+            []
+        );
+    const linearRepeatGhostIdsRef =
+        useRef<number[]>(
+            []
+        );
+    const linearRepeatPreviewFrameRef =
+        useRef<number | null>(
+            null
+        );
     const heldArrowRef = useRef<string | null>(null);
     const keyboardBlockedRef = useRef(false);
     const keyboardRepeatTimerRef = useRef<number | null>(null);
@@ -9219,6 +9276,948 @@ export const BuilderProView: FC<{}> = props =>
         });
     }, [ syncPastePreview ]);
 
+
+    const clearLinearRepeatPreview = useCallback(() =>
+    {
+        if(linearRepeatPreviewFrameRef.current !== null)
+        {
+            window.cancelAnimationFrame(
+                linearRepeatPreviewFrameRef.current
+            );
+
+            linearRepeatPreviewFrameRef.current =
+                null;
+        }
+
+        const currentRoomSession =
+            roomSessionRef.current;
+
+        const roomEngine =
+            GetRoomEngine();
+
+        if(currentRoomSession && roomEngine)
+        {
+            for(const ghostId of
+                linearRepeatGhostIdsRef.current)
+            {
+                roomEngine.removeRoomObjectFloor(
+                    currentRoomSession.roomId,
+                    ghostId
+                );
+            }
+        }
+
+        linearRepeatGhostIdsRef.current = [];
+        linearRepeatPreviewEntriesRef.current = [];
+    }, []);
+
+    const syncLinearRepeatPreview = useCallback(() =>
+    {
+        const entries =
+            linearRepeatPreviewEntriesRef.current;
+
+        const currentRoomSession =
+            roomSessionRef.current;
+
+        const roomEngine =
+            GetRoomEngine();
+
+        if(
+            !entries.length ||
+            !currentRoomSession ||
+            !roomEngine
+        )
+        {
+            return;
+        }
+
+        const roomId =
+            currentRoomSession.roomId;
+
+        for(let index = 0;
+                index < entries.length;
+                index++)
+        {
+            const entry =
+                entries[index];
+
+            const ghostId =
+                BUILDER_PRO_LINEAR_REPEAT_GHOST_ID_BASE
+                    - index;
+
+            if(
+                !linearRepeatGhostIdsRef.current
+                    .includes(
+                        ghostId
+                    )
+            )
+            {
+                const queued =
+                    roomEngine.addFurnitureFloor(
+                        roomId,
+                        ghostId,
+                        entry.baseItemId,
+                        new Vector3d(
+                            entry.x,
+                            entry.y,
+                            entry.z
+                        ),
+                        new Vector3d(
+                            entry.rotation * 45
+                        ),
+                        entry.state,
+                        null,
+                        Number.NaN,
+                        -1,
+                        0,
+                        0,
+                        '',
+                        false,
+                        false
+                    );
+
+                if(queued)
+                {
+                    linearRepeatGhostIdsRef.current
+                        .push(
+                            ghostId
+                        );
+                }
+            }
+
+            const roomObject =
+                roomEngine.getRoomObject(
+                    roomId,
+                    ghostId,
+                    RoomObjectCategory.FLOOR
+                ) as any;
+
+            if(!roomObject)
+            {
+                continue;
+            }
+
+            roomObject.setLocation(
+                new Vector3d(
+                    entry.x,
+                    entry.y,
+                    entry.z
+                )
+            );
+
+            roomObject.setDirection(
+                new Vector3d(
+                    entry.rotation * 45
+                )
+            );
+
+            if(roomObject.model)
+            {
+                roomObject.model.setValue(
+                    RoomObjectVariable
+                        .FURNITURE_ALPHA_MULTIPLIER,
+                    0.45
+                );
+            }
+
+            const sprites =
+                (
+                    roomObject.visualization as any
+                )?.sprites;
+
+            if(Array.isArray(sprites))
+            {
+                for(const sprite of sprites)
+                {
+                    if(sprite)
+                    {
+                        sprite.clickHandling =
+                            false;
+                    }
+                }
+            }
+        }
+    }, []);
+
+    const renderLinearRepeatPreview =
+        useCallback((
+            entries: BuilderProLinearRepeatPreviewEntry[]
+        ) =>
+        {
+            clearLinearRepeatPreview();
+
+            linearRepeatPreviewEntriesRef.current =
+                entries.map(
+                    entry => ({
+                        ...entry
+                    })
+                );
+
+            syncLinearRepeatPreview();
+
+            linearRepeatPreviewFrameRef.current =
+                window.requestAnimationFrame(
+                    () =>
+                    {
+                        linearRepeatPreviewFrameRef.current =
+                            null;
+
+                        syncLinearRepeatPreview();
+
+                        window.requestAnimationFrame(
+                            () =>
+                                syncLinearRepeatPreview()
+                        );
+                    }
+                );
+        }, [
+            clearLinearRepeatPreview,
+            syncLinearRepeatPreview
+        ]);
+
+    const resetLinearRepeatPreview =
+        useCallback((
+            clearDirection: boolean = true
+        ) =>
+        {
+            clearLinearRepeatPreview();
+
+            linearRepeatContextRef.current =
+                null;
+
+            pendingLinearRepeatContextRef.current =
+                null;
+
+            setLinearRepeatPreviewReady(
+                false
+            );
+
+            if(clearDirection)
+            {
+                setLinearRepeatDirection(
+                    0
+                );
+            }
+        }, [
+            clearLinearRepeatPreview
+        ]);
+
+
+    const finalizeLinearRepeatVisuals =
+        useCallback((
+            repeatedIds: number[],
+            copies: number,
+            placedCount: number
+        ) =>
+        {
+            const settle = (
+                attempt: number
+            ) =>
+            {
+                if(!activeRef.current)
+                {
+                    suppressPasteLayerAutoAssignRef.current =
+                        false;
+
+                    return;
+                }
+
+                const currentRoomSession =
+                    roomSessionRef.current;
+
+                const roomEngine =
+                    GetRoomEngine();
+
+                if(
+                    !currentRoomSession ||
+                    !roomEngine
+                )
+                {
+                    suppressPasteLayerAutoAssignRef.current =
+                        false;
+
+                    return;
+                }
+
+                const presentIds =
+                    repeatedIds.filter(
+                        id =>
+                            !!roomEngine.getRoomObject(
+                                currentRoomSession.roomId,
+                                id,
+                                RoomObjectCategory.FLOOR
+                            )
+                    );
+
+                if(
+                    presentIds.length ===
+                        repeatedIds.length ||
+                    attempt >= 45
+                )
+                {
+                    suppressPasteLayerAutoAssignRef.current =
+                        false;
+
+                    applySelection(
+                        presentIds
+                    );
+
+                    setCanUndo(
+                        true
+                    );
+
+                    setCanRedo(
+                        false
+                    );
+
+                    setOutlinerRevision(
+                        current =>
+                            current + 1
+                    );
+
+                    requestLayerState(
+                        LAYER_OP_LIST
+                    );
+
+                    requestTraversalState(
+                        TRAVERSAL_OP_QUERY
+                    );
+
+                    if(
+                        presentIds.length ===
+                        repeatedIds.length
+                    )
+                    {
+                        setStatus(
+                            `Repetición creada: ${ copies } copias · ${ placedCount } furnis.`
+                        );
+                    }
+                    else
+                    {
+                        setStatus(
+                            `Repetición creada en servidor, pero Nitro solo sincronizó ${ presentIds.length }/${ repeatedIds.length } furnis.`
+                        );
+                    }
+
+                    window.requestAnimationFrame(
+                        () =>
+                        {
+                            BuilderProSelectionVisualizer
+                                .refresh(
+                                    presentIds
+                                );
+                        }
+                    );
+
+                    return;
+                }
+
+                window.requestAnimationFrame(
+                    () =>
+                        settle(
+                            attempt + 1
+                        )
+                );
+            };
+
+            settle(
+                0
+            );
+        }, [
+            applySelection,
+            requestLayerState,
+            requestTraversalState
+        ]);
+
+    const requestLinearRepeat =
+        useCallback((
+            operation: number,
+            context: BuilderProLinearRepeatContext
+        ) =>
+        {
+            if(!activeRef.current) return;
+            if(pendingRef.current) return;
+
+            if(
+                operation !== LINEAR_REPEAT_OP_PREVIEW &&
+                operation !== LINEAR_REPEAT_OP_EXECUTE
+            )
+            {
+                return;
+            }
+
+            if(
+                !context ||
+                !context.itemIds.length
+            )
+            {
+                setStatus(
+                    'Selecciona primero lo que quieres repetir.'
+                );
+
+                return;
+            }
+
+            duplicateRequestedRef.current =
+                false;
+
+            mirrorDuplicateModeRef.current =
+                false;
+
+            duplicateModeRef.current =
+                false;
+
+            setDuplicateMode(
+                false
+            );
+
+            clearPastePreview();
+
+            pasteModeRef.current =
+                false;
+
+            setPasteMode(
+                false
+            );
+
+            blueprintPlaceModeRef.current =
+                false;
+
+            setBlueprintPlaceMode(
+                false
+            );
+
+            replacePickModeRef.current =
+                false;
+
+            setReplacePickMode(
+                false
+            );
+
+            if(operation === LINEAR_REPEAT_OP_PREVIEW)
+            {
+                resetLinearRepeatPreview(
+                    false
+                );
+            }
+            else
+            {
+                clearLinearRepeatPreview();
+
+                setLinearRepeatPreviewReady(
+                    false
+                );
+            }
+
+            requestIdRef.current++;
+
+            if(requestIdRef.current > 2000000000)
+            {
+                requestIdRef.current = 1;
+            }
+
+            const requestId =
+                requestIdRef.current;
+
+            pendingRef.current =
+                true;
+
+            pendingRequestIdRef.current =
+                requestId;
+
+            pendingStartedAtRef.current =
+                performance.now();
+
+            pendingLinearRepeatOperationRef.current =
+                operation;
+
+            pendingLinearRepeatContextRef.current = {
+                itemIds: [
+                    ...context.itemIds
+                ],
+                direction:
+                    context.direction,
+                copies:
+                    context.copies,
+                spacing:
+                    context.spacing
+            };
+
+            if(operation === LINEAR_REPEAT_OP_EXECUTE)
+            {
+                suppressPasteLayerAutoAssignRef.current =
+                    true;
+            }
+
+            setPending(
+                true
+            );
+
+            setStatus(
+                operation === LINEAR_REPEAT_OP_PREVIEW
+                    ? 'Preparando vista previa de la repetición...'
+                    : 'Creando repetición lineal...'
+            );
+
+            try
+            {
+                SendMessageComposer(
+                    new BuilderProLinearRepeatComposer(
+                        context.itemIds,
+                        operation,
+                        context.direction,
+                        context.copies,
+                        context.spacing,
+                        requestId
+                    )
+                );
+
+                if(pendingTimeoutRef.current !== null)
+                {
+                    window.clearTimeout(
+                        pendingTimeoutRef.current
+                    );
+                }
+
+                pendingTimeoutRef.current =
+                    window.setTimeout(
+                        () =>
+                        {
+                            pendingTimeoutRef.current =
+                                null;
+
+                            if(
+                                !pendingRef.current ||
+                                pendingRequestIdRef.current !==
+                                    requestId ||
+                                pendingLinearRepeatOperationRef.current !==
+                                    operation
+                            )
+                            {
+                                return;
+                            }
+
+                            pendingRef.current =
+                                false;
+
+                            pendingRequestIdRef.current =
+                                null;
+
+                            pendingStartedAtRef.current =
+                                0;
+
+                            pendingLinearRepeatOperationRef.current =
+                                null;
+
+                            pendingLinearRepeatContextRef.current =
+                                null;
+
+                            suppressPasteLayerAutoAssignRef.current =
+                                false;
+
+                            setPending(
+                                false
+                            );
+
+                            setStatus(
+                                'Repetición sin confirmación del servidor.'
+                            );
+                        },
+                        MOVE_CONFIRM_TIMEOUT_MS
+                    );
+            }
+            catch(error)
+            {
+                console.error(
+                    `[BuilderProTrace] CLIENT LINEAR_REPEAT_SEND_ERROR #${ requestId }`,
+                    error
+                );
+
+                pendingRef.current =
+                    false;
+
+                pendingRequestIdRef.current =
+                    null;
+
+                pendingStartedAtRef.current =
+                    0;
+
+                pendingLinearRepeatOperationRef.current =
+                    null;
+
+                pendingLinearRepeatContextRef.current =
+                    null;
+
+                suppressPasteLayerAutoAssignRef.current =
+                    false;
+
+                setPending(
+                    false
+                );
+
+                setStatus(
+                    'No se pudo enviar la repetición al servidor.'
+                );
+            }
+        }, [
+            clearLinearRepeatPreview,
+            clearPastePreview,
+            resetLinearRepeatPreview
+        ]);
+
+    const startLinearRepeatPreview =
+        useCallback((
+            direction: number
+        ) =>
+        {
+            if(!activeRef.current) return;
+            if(pendingRef.current) return;
+
+            const ids = [
+                ...selectedIdsRef.current
+            ];
+
+            if(!ids.length)
+            {
+                setStatus(
+                    'Selecciona primero lo que quieres repetir.'
+                );
+
+                return;
+            }
+
+            const copies =
+                Number.parseInt(
+                    linearRepeatCopies,
+                    10
+                );
+
+            const spacing =
+                Number.parseInt(
+                    linearRepeatSpacing,
+                    10
+                );
+
+            if(
+                !Number.isInteger(copies) ||
+                copies < 1 ||
+                copies > 100
+            )
+            {
+                setStatus(
+                    'Copias debe estar entre 1 y 100.'
+                );
+
+                return;
+            }
+
+            if(
+                !Number.isInteger(spacing) ||
+                spacing < 0 ||
+                spacing > 50
+            )
+            {
+                setStatus(
+                    'Separación debe estar entre 0 y 50.'
+                );
+
+                return;
+            }
+
+            const total =
+                ids.length * copies;
+
+            if(total > MAX_SELECTION)
+            {
+                setStatus(
+                    `La repetición generaría ${ total } furnis; el límite actual es ${ MAX_SELECTION }.`
+                );
+
+                return;
+            }
+
+            setLinearRepeatDirection(
+                direction
+            );
+
+            requestLinearRepeat(
+                LINEAR_REPEAT_OP_PREVIEW,
+                {
+                    itemIds: ids,
+                    direction,
+                    copies,
+                    spacing
+                }
+            );
+        }, [
+            linearRepeatCopies,
+            linearRepeatSpacing,
+            requestLinearRepeat
+        ]);
+
+    const confirmLinearRepeat =
+        useCallback(() =>
+        {
+            if(!activeRef.current) return;
+            if(pendingRef.current) return;
+
+            const context =
+                linearRepeatContextRef.current;
+
+            if(
+                !context ||
+                !linearRepeatPreviewReady
+            )
+            {
+                setStatus(
+                    'Genera primero una vista previa válida.'
+                );
+
+                return;
+            }
+
+            requestLinearRepeat(
+                LINEAR_REPEAT_OP_EXECUTE,
+                context
+            );
+        }, [
+            linearRepeatPreviewReady,
+            requestLinearRepeat
+        ]);
+
+    useMessageEvent<BuilderProLinearRepeatResultEvent>(
+        BuilderProLinearRepeatResultEvent,
+        event =>
+        {
+            const parser =
+                event.getParser();
+
+            if(!parser) return;
+
+            const requestId =
+                parser.requestId;
+
+            if(
+                pendingRequestIdRef.current !==
+                    requestId ||
+                !pendingRef.current
+            )
+            {
+                return;
+            }
+
+            const expectedOperation =
+                pendingLinearRepeatOperationRef.current;
+
+            const context =
+                pendingLinearRepeatContextRef.current;
+
+            if(
+                expectedOperation === null ||
+                parser.operation !==
+                    expectedOperation
+            )
+            {
+                return;
+            }
+
+            if(pendingTimeoutRef.current !== null)
+            {
+                window.clearTimeout(
+                    pendingTimeoutRef.current
+                );
+
+                pendingTimeoutRef.current =
+                    null;
+            }
+
+            pendingRef.current =
+                false;
+
+            pendingRequestIdRef.current =
+                null;
+
+            pendingStartedAtRef.current =
+                0;
+
+            pendingLinearRepeatOperationRef.current =
+                null;
+
+            pendingLinearRepeatContextRef.current =
+                null;
+
+            setPending(
+                false
+            );
+
+            if(!parser.success)
+            {
+                suppressPasteLayerAutoAssignRef.current =
+                    false;
+
+                if(
+                    expectedOperation ===
+                    LINEAR_REPEAT_OP_PREVIEW
+                )
+                {
+                    resetLinearRepeatPreview(
+                        false
+                    );
+                }
+
+                setStatus(
+                    `Error ${ parser.code }: ${ parser.message }`
+                );
+
+                return;
+            }
+
+            if(
+                expectedOperation ===
+                LINEAR_REPEAT_OP_PREVIEW
+            )
+            {
+                if(!context)
+                {
+                    resetLinearRepeatPreview();
+
+                    setStatus(
+                        'La vista previa perdió su contexto.'
+                    );
+
+                    return;
+                }
+
+                const entries =
+                    parser.previewEntries;
+
+                const expectedCount =
+                    context.itemIds.length
+                        * context.copies;
+
+                if(entries.length !== expectedCount)
+                {
+                    resetLinearRepeatPreview();
+
+                    setStatus(
+                        'La vista previa no coincide con la repetición solicitada.'
+                    );
+
+                    return;
+                }
+
+                linearRepeatContextRef.current = {
+                    itemIds: [
+                        ...context.itemIds
+                    ],
+                    direction:
+                        context.direction,
+                    copies:
+                        context.copies,
+                    spacing:
+                        context.spacing
+                };
+
+                setLinearRepeatDirection(
+                    context.direction
+                );
+
+                setLinearRepeatPreviewReady(
+                    true
+                );
+
+                renderLinearRepeatPreview(
+                    entries
+                );
+
+                setStatus(
+                    `Vista previa: ${ context.copies } copias · ${ entries.length } furnis.`
+                );
+
+                return;
+            }
+
+            resetLinearRepeatPreview();
+
+            finalizeLinearRepeatVisuals(
+                parser.itemIds,
+                parser.copies,
+                parser.placedCount
+            );
+        }
+    );
+
+    useEffect(() =>
+    {
+        if(active) return;
+
+        resetLinearRepeatPreview();
+
+        pendingLinearRepeatOperationRef.current =
+            null;
+
+        pendingLinearRepeatContextRef.current =
+            null;
+    }, [
+        active,
+        resetLinearRepeatPreview
+    ]);
+
+
+    useEffect(() =>
+    {
+        return () =>
+        {
+            clearLinearRepeatPreview();
+        };
+    }, [
+        clearLinearRepeatPreview
+    ]);
+
+    useEffect(() =>
+    {
+        const context =
+            linearRepeatContextRef.current;
+
+        if(!context)
+        {
+            return;
+        }
+
+        if(
+            context.itemIds.length !==
+                selectedIds.length ||
+            context.itemIds.some(
+                (id, index) =>
+                    id !== selectedIds[index]
+            )
+        )
+        {
+            resetLinearRepeatPreview();
+        }
+    }, [
+        selectedIds,
+        resetLinearRepeatPreview
+    ]);
+
+    useEffect(() =>
+    {
+        if(!pending) return;
+
+        if(
+            pendingLinearRepeatOperationRef.current !==
+            null
+        )
+        {
+            return;
+        }
+
+        resetLinearRepeatPreview();
+    }, [
+        pending,
+        resetLinearRepeatPreview
+    ]);
+
     useMessageEvent<BuilderProCopyGroupResultEvent>(
         BuilderProCopyGroupResultEvent,
         event =>
@@ -13868,6 +14867,183 @@ export const BuilderProView: FC<{}> = props =>
                                     { pivotId !== null
                                         ? `Pivote: furni #${ pivotId }`
                                         : 'Pivote: primer furni seleccionado' }
+                                </div>
+                            </div>
+                        </details>
+
+
+                        <details className="builder-pro-section">
+                            <summary>Repetición lineal</summary>
+
+                            <div className="builder-pro-section-body">
+                                <label className="builder-pro-field-row">
+                                    <span>Copias</span>
+
+                                    <input
+                                        className="builder-pro-small-input"
+                                        type="number"
+                                        min="1"
+                                        max="100"
+                                        step="1"
+                                        value={ linearRepeatCopies }
+                                        disabled={ pending }
+                                        onChange={
+                                            event =>
+                                            {
+                                                resetLinearRepeatPreview();
+                                                setLinearRepeatCopies(
+                                                    event.target.value
+                                                );
+                                            }
+                                        } />
+                                </label>
+
+                                <label className="builder-pro-field-row">
+                                    <span>Separación</span>
+
+                                    <input
+                                        className="builder-pro-small-input"
+                                        type="number"
+                                        min="0"
+                                        max="50"
+                                        step="1"
+                                        value={ linearRepeatSpacing }
+                                        disabled={ pending }
+                                        onChange={
+                                            event =>
+                                            {
+                                                resetLinearRepeatPreview();
+                                                setLinearRepeatSpacing(
+                                                    event.target.value
+                                                );
+                                            }
+                                        } />
+                                </label>
+
+                                <div className="builder-pro-grid-2">
+                                    <button
+                                        type="button"
+                                        className={
+                                            linearRepeatPreviewReady &&
+                                            linearRepeatDirection ===
+                                                LINEAR_REPEAT_DIRECTION_LEFT
+                                                ? 'btn btn-sm btn-primary'
+                                                : 'btn btn-sm btn-secondary'
+                                        }
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () =>
+                                                startLinearRepeatPreview(
+                                                    LINEAR_REPEAT_DIRECTION_LEFT
+                                                )
+                                        }>
+                                        Izquierda
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className={
+                                            linearRepeatPreviewReady &&
+                                            linearRepeatDirection ===
+                                                LINEAR_REPEAT_DIRECTION_RIGHT
+                                                ? 'btn btn-sm btn-primary'
+                                                : 'btn btn-sm btn-secondary'
+                                        }
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () =>
+                                                startLinearRepeatPreview(
+                                                    LINEAR_REPEAT_DIRECTION_RIGHT
+                                                )
+                                        }>
+                                        Derecha
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className={
+                                            linearRepeatPreviewReady &&
+                                            linearRepeatDirection ===
+                                                LINEAR_REPEAT_DIRECTION_UP
+                                                ? 'btn btn-sm btn-primary'
+                                                : 'btn btn-sm btn-secondary'
+                                        }
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () =>
+                                                startLinearRepeatPreview(
+                                                    LINEAR_REPEAT_DIRECTION_UP
+                                                )
+                                        }>
+                                        Arriba
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className={
+                                            linearRepeatPreviewReady &&
+                                            linearRepeatDirection ===
+                                                LINEAR_REPEAT_DIRECTION_DOWN
+                                                ? 'btn btn-sm btn-primary'
+                                                : 'btn btn-sm btn-secondary'
+                                        }
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () =>
+                                                startLinearRepeatPreview(
+                                                    LINEAR_REPEAT_DIRECTION_DOWN
+                                                )
+                                        }>
+                                        Abajo
+                                    </button>
+                                </div>
+
+                                {
+                                    linearRepeatPreviewReady &&
+                                    <div className="builder-pro-grid-2">
+                                        <button
+                                            type="button"
+                                            className="btn btn-sm btn-primary"
+                                            disabled={ pending }
+                                            onClick={
+                                                confirmLinearRepeat
+                                            }>
+                                            Confirmar
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            className="btn btn-sm btn-secondary"
+                                            disabled={ pending }
+                                            onClick={
+                                                () =>
+                                                {
+                                                    resetLinearRepeatPreview();
+
+                                                    setStatus(
+                                                        'Repetición cancelada.'
+                                                    );
+                                                }
+                                            }>
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                }
+
+                                <div className="builder-pro-hint">
+                                    Copias nuevas; el original no cuenta. Separación 0 coloca cada módulo pegado al anterior. La vista previa se valida completa antes de confirmar.
                                 </div>
                             </div>
                         </details>

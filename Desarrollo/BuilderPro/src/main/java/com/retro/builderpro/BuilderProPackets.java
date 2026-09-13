@@ -49,4 +49,7 @@ public final class BuilderProPackets
 
     public static final int REPLACE_GROUP_REQUEST = 6327;
     public static final int REPLACE_GROUP_RESULT = 6328;
+
+    public static final int LINEAR_REPEAT_REQUEST = 6329;
+    public static final int LINEAR_REPEAT_RESULT = 6330;
 }
