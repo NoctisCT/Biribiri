@@ -1,4 +1,4 @@
-import { BuilderProLayerStateComposer, BuilderProLayerStateEvent, BuilderProPickupGroupComposer, BuilderProPickupGroupResultEvent, RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProReferencePlacementComposer, BuilderProMirrorDuplicateComposer, BuilderProMirrorDuplicateResultEvent, BuilderProReplaceGroupComposer, BuilderProReplaceGroupResultEvent, BuilderProLinearRepeatComposer, BuilderProLinearRepeatResultEvent, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, BuilderProTraversalStateComposer, BuilderProTraversalStateEvent, BuilderProBlueprintStateComposer, BuilderProBlueprintStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomEngineObjectPlacedEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
+import { BuilderProLayerStateComposer, BuilderProLayerStateEvent, BuilderProPickupGroupComposer, BuilderProPickupGroupResultEvent, RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProReferencePlacementComposer, BuilderProMirrorDuplicateComposer, BuilderProMirrorDuplicateResultEvent, BuilderProReplaceGroupComposer, BuilderProReplaceGroupResultEvent, BuilderProLinearRepeatComposer, BuilderProLinearRepeatResultEvent, BuilderProGridRepeatComposer, BuilderProGridRepeatResultEvent, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, BuilderProTraversalStateComposer, BuilderProTraversalStateEvent, BuilderProBlueprintStateComposer, BuilderProBlueprintStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomEngineObjectPlacedEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { FaBoxOpen, FaClone, FaCopy, FaEllipsisH, FaEye, FaEyeSlash, FaLock, FaMinus, FaPaste, FaPlus, FaQuestion, FaRedo, FaSearch, FaUndo, FaWalking } from 'react-icons/fa';
 import { AddEventLinkTracker, BuilderProSelectionVisualizer, CanManipulateFurniture, CreateLinkEvent, GetRoomEngine, GetSessionDataManager, HasHabboClub, RemoveLinkEventTracker, SendMessageComposer, SetBuilderProSelectionModeActive } from '../../../../api';
@@ -69,6 +69,9 @@ const LINEAR_REPEAT_DIRECTION_RIGHT = 2;
 const LINEAR_REPEAT_DIRECTION_UP = 3;
 const LINEAR_REPEAT_DIRECTION_DOWN = 4;
 
+const GRID_REPEAT_OP_PREVIEW = 0;
+const GRID_REPEAT_OP_EXECUTE = 1;
+
 type BuilderProReplacementContext = {
     itemIds: number[];
     referenceId: number;
@@ -84,6 +87,23 @@ type BuilderProLinearRepeatContext = {
 };
 
 type BuilderProLinearRepeatPreviewEntry = {
+    baseItemId: number;
+    x: number;
+    y: number;
+    z: number;
+    rotation: number;
+    state: number;
+};
+
+type BuilderProGridRepeatContext = {
+    itemIds: number[];
+    columns: number;
+    rows: number;
+    spacingX: number;
+    spacingY: number;
+};
+
+type BuilderProGridRepeatPreviewEntry = {
     baseItemId: number;
     x: number;
     y: number;
@@ -145,6 +165,7 @@ type BuilderProClipboardPreview = {
 
 const BUILDER_PRO_PASTE_GHOST_ID_BASE = -1900000000;
 const BUILDER_PRO_LINEAR_REPEAT_GHOST_ID_BASE = -1800000000;
+const BUILDER_PRO_GRID_REPEAT_GHOST_ID_BASE = -1700000000;
 
 const normalizeBuilderProRotation = (
     value: number
@@ -349,6 +370,16 @@ export const BuilderProView: FC<{}> = props =>
         useState(0);
     const [ linearRepeatPreviewReady, setLinearRepeatPreviewReady ] =
         useState(false);
+    const [ gridRepeatColumns, setGridRepeatColumns ] =
+        useState('3');
+    const [ gridRepeatRows, setGridRepeatRows ] =
+        useState('3');
+    const [ gridRepeatSpacingX, setGridRepeatSpacingX ] =
+        useState('0');
+    const [ gridRepeatSpacingY, setGridRepeatSpacingY ] =
+        useState('0');
+    const [ gridRepeatPreviewReady, setGridRepeatPreviewReady ] =
+        useState(false);
     const [ highlightSelection, setHighlightSelection ] =
         useState(BuilderProSelectionVisualizer.enabled);
     const [ pivotId, setPivotId ] =
@@ -399,6 +430,30 @@ export const BuilderProView: FC<{}> = props =>
             []
         );
     const linearRepeatPreviewFrameRef =
+        useRef<number | null>(
+            null
+        );
+    const gridRepeatContextRef =
+        useRef<BuilderProGridRepeatContext | null>(
+            null
+        );
+    const pendingGridRepeatContextRef =
+        useRef<BuilderProGridRepeatContext | null>(
+            null
+        );
+    const pendingGridRepeatOperationRef =
+        useRef<number | null>(
+            null
+        );
+    const gridRepeatPreviewEntriesRef =
+        useRef<BuilderProGridRepeatPreviewEntry[]>(
+            []
+        );
+    const gridRepeatGhostIdsRef =
+        useRef<number[]>(
+            []
+        );
+    const gridRepeatPreviewFrameRef =
         useRef<number | null>(
             null
         );
@@ -10218,6 +10273,989 @@ export const BuilderProView: FC<{}> = props =>
         resetLinearRepeatPreview
     ]);
 
+
+    const clearGridRepeatPreview = useCallback(() =>
+    {
+        if(gridRepeatPreviewFrameRef.current !== null)
+        {
+            window.cancelAnimationFrame(
+                gridRepeatPreviewFrameRef.current
+            );
+
+            gridRepeatPreviewFrameRef.current =
+                null;
+        }
+
+        const currentRoomSession =
+            roomSessionRef.current;
+
+        const roomEngine =
+            GetRoomEngine();
+
+        if(currentRoomSession && roomEngine)
+        {
+            for(const ghostId of
+                gridRepeatGhostIdsRef.current)
+            {
+                roomEngine.removeRoomObjectFloor(
+                    currentRoomSession.roomId,
+                    ghostId
+                );
+            }
+        }
+
+        gridRepeatGhostIdsRef.current = [];
+        gridRepeatPreviewEntriesRef.current = [];
+    }, []);
+
+    const syncGridRepeatPreview = useCallback(() =>
+    {
+        const entries =
+            gridRepeatPreviewEntriesRef.current;
+
+        const currentRoomSession =
+            roomSessionRef.current;
+
+        const roomEngine =
+            GetRoomEngine();
+
+        if(
+            !entries.length ||
+            !currentRoomSession ||
+            !roomEngine
+        )
+        {
+            return;
+        }
+
+        const roomId =
+            currentRoomSession.roomId;
+
+        for(let index = 0;
+                index < entries.length;
+                index++)
+        {
+            const entry =
+                entries[index];
+
+            const ghostId =
+                BUILDER_PRO_GRID_REPEAT_GHOST_ID_BASE
+                    - index;
+
+            if(
+                !gridRepeatGhostIdsRef.current
+                    .includes(
+                        ghostId
+                    )
+            )
+            {
+                const queued =
+                    roomEngine.addFurnitureFloor(
+                        roomId,
+                        ghostId,
+                        entry.baseItemId,
+                        new Vector3d(
+                            entry.x,
+                            entry.y,
+                            entry.z
+                        ),
+                        new Vector3d(
+                            entry.rotation * 45
+                        ),
+                        entry.state,
+                        null,
+                        Number.NaN,
+                        -1,
+                        0,
+                        0,
+                        '',
+                        false,
+                        false
+                    );
+
+                if(queued)
+                {
+                    gridRepeatGhostIdsRef.current
+                        .push(
+                            ghostId
+                        );
+                }
+            }
+
+            const roomObject =
+                roomEngine.getRoomObject(
+                    roomId,
+                    ghostId,
+                    RoomObjectCategory.FLOOR
+                ) as any;
+
+            if(!roomObject)
+            {
+                continue;
+            }
+
+            roomObject.setLocation(
+                new Vector3d(
+                    entry.x,
+                    entry.y,
+                    entry.z
+                )
+            );
+
+            roomObject.setDirection(
+                new Vector3d(
+                    entry.rotation * 45
+                )
+            );
+
+            if(roomObject.model)
+            {
+                roomObject.model.setValue(
+                    RoomObjectVariable
+                        .FURNITURE_ALPHA_MULTIPLIER,
+                    0.45
+                );
+            }
+
+            const sprites =
+                (
+                    roomObject.visualization as any
+                )?.sprites;
+
+            if(Array.isArray(sprites))
+            {
+                for(const sprite of sprites)
+                {
+                    if(sprite)
+                    {
+                        sprite.clickHandling =
+                            false;
+                    }
+                }
+            }
+        }
+    }, []);
+
+    const renderGridRepeatPreview =
+        useCallback((
+            entries: BuilderProGridRepeatPreviewEntry[]
+        ) =>
+        {
+            clearGridRepeatPreview();
+
+            gridRepeatPreviewEntriesRef.current =
+                entries.map(
+                    entry => ({
+                        ...entry
+                    })
+                );
+
+            syncGridRepeatPreview();
+
+            gridRepeatPreviewFrameRef.current =
+                window.requestAnimationFrame(
+                    () =>
+                    {
+                        gridRepeatPreviewFrameRef.current =
+                            null;
+
+                        syncGridRepeatPreview();
+
+                        window.requestAnimationFrame(
+                            () =>
+                                syncGridRepeatPreview()
+                        );
+                    }
+                );
+        }, [
+            clearGridRepeatPreview,
+            syncGridRepeatPreview
+        ]);
+
+    const resetGridRepeatPreview =
+        useCallback(() =>
+        {
+            clearGridRepeatPreview();
+
+            gridRepeatContextRef.current =
+                null;
+
+            pendingGridRepeatContextRef.current =
+                null;
+
+            setGridRepeatPreviewReady(
+                false
+            );
+        }, [
+            clearGridRepeatPreview
+        ]);
+
+    const finalizeGridRepeatVisuals =
+        useCallback((
+            repeatedIds: number[],
+            columns: number,
+            rows: number,
+            placedCount: number
+        ) =>
+        {
+            const settle = (
+                attempt: number
+            ) =>
+            {
+                if(!activeRef.current)
+                {
+                    suppressPasteLayerAutoAssignRef.current =
+                        false;
+
+                    return;
+                }
+
+                const currentRoomSession =
+                    roomSessionRef.current;
+
+                const roomEngine =
+                    GetRoomEngine();
+
+                if(
+                    !currentRoomSession ||
+                    !roomEngine
+                )
+                {
+                    suppressPasteLayerAutoAssignRef.current =
+                        false;
+
+                    return;
+                }
+
+                const presentIds =
+                    repeatedIds.filter(
+                        id =>
+                            !!roomEngine.getRoomObject(
+                                currentRoomSession.roomId,
+                                id,
+                                RoomObjectCategory.FLOOR
+                            )
+                    );
+
+                if(
+                    presentIds.length ===
+                        repeatedIds.length ||
+                    attempt >= 45
+                )
+                {
+                    suppressPasteLayerAutoAssignRef.current =
+                        false;
+
+                    applySelection(
+                        presentIds
+                    );
+
+                    setCanUndo(
+                        true
+                    );
+
+                    setCanRedo(
+                        false
+                    );
+
+                    setOutlinerRevision(
+                        current =>
+                            current + 1
+                    );
+
+                    requestLayerState(
+                        LAYER_OP_LIST
+                    );
+
+                    requestTraversalState(
+                        TRAVERSAL_OP_QUERY
+                    );
+
+                    if(
+                        presentIds.length ===
+                        repeatedIds.length
+                    )
+                    {
+                        setStatus(
+                            `Cuadrícula creada: ${ columns } × ${ rows } · ${ placedCount } furnis nuevos.`
+                        );
+                    }
+                    else
+                    {
+                        setStatus(
+                            `Cuadrícula creada en servidor, pero Nitro solo sincronizó ${ presentIds.length }/${ repeatedIds.length } furnis.`
+                        );
+                    }
+
+                    window.requestAnimationFrame(
+                        () =>
+                        {
+                            BuilderProSelectionVisualizer
+                                .refresh(
+                                    presentIds
+                                );
+                        }
+                    );
+
+                    return;
+                }
+
+                window.requestAnimationFrame(
+                    () =>
+                        settle(
+                            attempt + 1
+                        )
+                );
+            };
+
+            settle(
+                0
+            );
+        }, [
+            applySelection,
+            requestLayerState,
+            requestTraversalState
+        ]);
+
+    const requestGridRepeat =
+        useCallback((
+            operation: number,
+            context: BuilderProGridRepeatContext
+        ) =>
+        {
+            if(!activeRef.current) return;
+            if(pendingRef.current) return;
+
+            if(
+                operation !== GRID_REPEAT_OP_PREVIEW &&
+                operation !== GRID_REPEAT_OP_EXECUTE
+            )
+            {
+                return;
+            }
+
+            if(
+                !context ||
+                !context.itemIds.length
+            )
+            {
+                setStatus(
+                    'Selecciona primero lo que quieres repetir.'
+                );
+
+                return;
+            }
+
+            duplicateRequestedRef.current =
+                false;
+
+            mirrorDuplicateModeRef.current =
+                false;
+
+            duplicateModeRef.current =
+                false;
+
+            setDuplicateMode(
+                false
+            );
+
+            clearPastePreview();
+
+            pasteModeRef.current =
+                false;
+
+            setPasteMode(
+                false
+            );
+
+            blueprintPlaceModeRef.current =
+                false;
+
+            setBlueprintPlaceMode(
+                false
+            );
+
+            replacePickModeRef.current =
+                false;
+
+            setReplacePickMode(
+                false
+            );
+
+            if(operation === GRID_REPEAT_OP_PREVIEW)
+            {
+                resetGridRepeatPreview();
+            }
+            else
+            {
+                clearGridRepeatPreview();
+
+                setGridRepeatPreviewReady(
+                    false
+                );
+            }
+
+            requestIdRef.current++;
+
+            if(requestIdRef.current > 2000000000)
+            {
+                requestIdRef.current = 1;
+            }
+
+            const requestId =
+                requestIdRef.current;
+
+            pendingRef.current =
+                true;
+
+            pendingRequestIdRef.current =
+                requestId;
+
+            pendingStartedAtRef.current =
+                performance.now();
+
+            pendingGridRepeatOperationRef.current =
+                operation;
+
+            pendingGridRepeatContextRef.current = {
+                itemIds: [
+                    ...context.itemIds
+                ],
+                columns:
+                    context.columns,
+                rows:
+                    context.rows,
+                spacingX:
+                    context.spacingX,
+                spacingY:
+                    context.spacingY
+            };
+
+            if(operation === GRID_REPEAT_OP_EXECUTE)
+            {
+                suppressPasteLayerAutoAssignRef.current =
+                    true;
+            }
+
+            setPending(
+                true
+            );
+
+            setStatus(
+                operation === GRID_REPEAT_OP_PREVIEW
+                    ? 'Preparando vista previa de la cuadrícula...'
+                    : 'Creando cuadrícula...'
+            );
+
+            try
+            {
+                SendMessageComposer(
+                    new BuilderProGridRepeatComposer(
+                        context.itemIds,
+                        operation,
+                        context.columns,
+                        context.rows,
+                        context.spacingX,
+                        context.spacingY,
+                        requestId
+                    )
+                );
+
+                if(pendingTimeoutRef.current !== null)
+                {
+                    window.clearTimeout(
+                        pendingTimeoutRef.current
+                    );
+                }
+
+                pendingTimeoutRef.current =
+                    window.setTimeout(
+                        () =>
+                        {
+                            pendingTimeoutRef.current =
+                                null;
+
+                            if(
+                                !pendingRef.current ||
+                                pendingRequestIdRef.current !==
+                                    requestId ||
+                                pendingGridRepeatOperationRef.current !==
+                                    operation
+                            )
+                            {
+                                return;
+                            }
+
+                            pendingRef.current =
+                                false;
+
+                            pendingRequestIdRef.current =
+                                null;
+
+                            pendingStartedAtRef.current =
+                                0;
+
+                            pendingGridRepeatOperationRef.current =
+                                null;
+
+                            pendingGridRepeatContextRef.current =
+                                null;
+
+                            suppressPasteLayerAutoAssignRef.current =
+                                false;
+
+                            setPending(
+                                false
+                            );
+
+                            setStatus(
+                                'Cuadrícula sin confirmación del servidor.'
+                            );
+                        },
+                        MOVE_CONFIRM_TIMEOUT_MS
+                    );
+            }
+            catch(error)
+            {
+                console.error(
+                    `[BuilderProTrace] CLIENT GRID_REPEAT_SEND_ERROR #${ requestId }`,
+                    error
+                );
+
+                pendingRef.current =
+                    false;
+
+                pendingRequestIdRef.current =
+                    null;
+
+                pendingStartedAtRef.current =
+                    0;
+
+                pendingGridRepeatOperationRef.current =
+                    null;
+
+                pendingGridRepeatContextRef.current =
+                    null;
+
+                suppressPasteLayerAutoAssignRef.current =
+                    false;
+
+                setPending(
+                    false
+                );
+
+                setStatus(
+                    'No se pudo enviar la cuadrícula al servidor.'
+                );
+            }
+        }, [
+            clearGridRepeatPreview,
+            clearPastePreview,
+            resetGridRepeatPreview
+        ]);
+
+    const startGridRepeatPreview =
+        useCallback(() =>
+        {
+            if(!activeRef.current) return;
+            if(pendingRef.current) return;
+
+            const ids = [
+                ...selectedIdsRef.current
+            ];
+
+            if(!ids.length)
+            {
+                setStatus(
+                    'Selecciona al menos un furni.'
+                );
+
+                return;
+            }
+
+            const columns =
+                Number.parseInt(
+                    gridRepeatColumns,
+                    10
+                );
+
+            const rows =
+                Number.parseInt(
+                    gridRepeatRows,
+                    10
+                );
+
+            const spacingX =
+                Number.parseInt(
+                    gridRepeatSpacingX,
+                    10
+                );
+
+            const spacingY =
+                Number.parseInt(
+                    gridRepeatSpacingY,
+                    10
+                );
+
+            if(
+                !Number.isSafeInteger(columns) ||
+                columns < 1 ||
+                columns > 100 ||
+                !Number.isSafeInteger(rows) ||
+                rows < 1 ||
+                rows > 100
+            )
+            {
+                setStatus(
+                    'Filas y columnas deben estar entre 1 y 100.'
+                );
+
+                return;
+            }
+
+            const copies =
+                (
+                    columns *
+                    rows
+                ) -
+                1;
+
+            if(copies < 1)
+            {
+                setStatus(
+                    'La cuadrícula debe ser mayor que 1 × 1.'
+                );
+
+                return;
+            }
+
+            if(
+                !Number.isSafeInteger(spacingX) ||
+                spacingX < 0 ||
+                spacingX > 50 ||
+                !Number.isSafeInteger(spacingY) ||
+                spacingY < 0 ||
+                spacingY > 50
+            )
+            {
+                setStatus(
+                    'Las separaciones deben estar entre 0 y 50.'
+                );
+
+                return;
+            }
+
+            const total =
+                ids.length *
+                copies;
+
+            if(total > MAX_SELECTION)
+            {
+                setStatus(
+                    `La cuadrícula generaría ${ total } furnis; el límite actual es ${ MAX_SELECTION }.`
+                );
+
+                return;
+            }
+
+            requestGridRepeat(
+                GRID_REPEAT_OP_PREVIEW,
+                {
+                    itemIds: ids,
+                    columns,
+                    rows,
+                    spacingX,
+                    spacingY
+                }
+            );
+        }, [
+            gridRepeatColumns,
+            gridRepeatRows,
+            gridRepeatSpacingX,
+            gridRepeatSpacingY,
+            requestGridRepeat
+        ]);
+
+    const confirmGridRepeat =
+        useCallback(() =>
+        {
+            if(!activeRef.current) return;
+            if(pendingRef.current) return;
+
+            const context =
+                gridRepeatContextRef.current;
+
+            if(
+                !context ||
+                !gridRepeatPreviewReady
+            )
+            {
+                setStatus(
+                    'Genera primero una vista previa válida.'
+                );
+
+                return;
+            }
+
+            requestGridRepeat(
+                GRID_REPEAT_OP_EXECUTE,
+                context
+            );
+        }, [
+            gridRepeatPreviewReady,
+            requestGridRepeat
+        ]);
+
+    useMessageEvent<BuilderProGridRepeatResultEvent>(
+        BuilderProGridRepeatResultEvent,
+        event =>
+        {
+            const parser =
+                event.getParser();
+
+            if(!parser) return;
+
+            const requestId =
+                parser.requestId;
+
+            if(
+                pendingRequestIdRef.current !==
+                    requestId ||
+                !pendingRef.current
+            )
+            {
+                return;
+            }
+
+            const expectedOperation =
+                pendingGridRepeatOperationRef.current;
+
+            const context =
+                pendingGridRepeatContextRef.current;
+
+            if(
+                expectedOperation === null ||
+                parser.operation !==
+                    expectedOperation
+            )
+            {
+                return;
+            }
+
+            if(pendingTimeoutRef.current !== null)
+            {
+                window.clearTimeout(
+                    pendingTimeoutRef.current
+                );
+
+                pendingTimeoutRef.current =
+                    null;
+            }
+
+            pendingRef.current =
+                false;
+
+            pendingRequestIdRef.current =
+                null;
+
+            pendingStartedAtRef.current =
+                0;
+
+            pendingGridRepeatOperationRef.current =
+                null;
+
+            pendingGridRepeatContextRef.current =
+                null;
+
+            setPending(
+                false
+            );
+
+            if(!parser.success)
+            {
+                suppressPasteLayerAutoAssignRef.current =
+                    false;
+
+                if(
+                    expectedOperation ===
+                    GRID_REPEAT_OP_PREVIEW
+                )
+                {
+                    resetGridRepeatPreview();
+                }
+
+                setStatus(
+                    `Error ${ parser.code }: ${ parser.message }`
+                );
+
+                return;
+            }
+
+            if(
+                expectedOperation ===
+                GRID_REPEAT_OP_PREVIEW
+            )
+            {
+                if(!context)
+                {
+                    resetGridRepeatPreview();
+
+                    setStatus(
+                        'La vista previa perdió su contexto.'
+                    );
+
+                    return;
+                }
+
+                const entries =
+                    parser.previewEntries;
+
+                const expectedCount =
+                    context.itemIds.length *
+                    (
+                        (
+                            context.columns *
+                            context.rows
+                        ) -
+                        1
+                    );
+
+                if(
+                    parser.columns !==
+                        context.columns ||
+                    parser.rows !==
+                        context.rows ||
+                    entries.length !==
+                        expectedCount
+                )
+                {
+                    resetGridRepeatPreview();
+
+                    setStatus(
+                        'La vista previa no coincide con la cuadrícula solicitada.'
+                    );
+
+                    return;
+                }
+
+                gridRepeatContextRef.current = {
+                    itemIds: [
+                        ...context.itemIds
+                    ],
+                    columns:
+                        context.columns,
+                    rows:
+                        context.rows,
+                    spacingX:
+                        context.spacingX,
+                    spacingY:
+                        context.spacingY
+                };
+
+                setGridRepeatPreviewReady(
+                    true
+                );
+
+                renderGridRepeatPreview(
+                    entries
+                );
+
+                const copies =
+                    (
+                        context.columns *
+                        context.rows
+                    ) -
+                    1;
+
+                setStatus(
+                    `Vista previa: ${ context.columns } × ${ context.rows } · ${ copies } copias · ${ entries.length } furnis.`
+                );
+
+                return;
+            }
+
+            resetGridRepeatPreview();
+
+            finalizeGridRepeatVisuals(
+                parser.itemIds,
+                parser.columns,
+                parser.rows,
+                parser.placedCount
+            );
+        }
+    );
+
+    useEffect(() =>
+    {
+        if(active) return;
+
+        resetGridRepeatPreview();
+
+        pendingGridRepeatOperationRef.current =
+            null;
+
+        pendingGridRepeatContextRef.current =
+            null;
+    }, [
+        active,
+        resetGridRepeatPreview
+    ]);
+
+    useEffect(() =>
+    {
+        return () =>
+        {
+            clearGridRepeatPreview();
+        };
+    }, [
+        clearGridRepeatPreview
+    ]);
+
+    useEffect(() =>
+    {
+        const context =
+            gridRepeatContextRef.current;
+
+        if(!context)
+        {
+            return;
+        }
+
+        if(
+            context.itemIds.length !==
+                selectedIds.length ||
+            context.itemIds.some(
+                (id, index) =>
+                    id !== selectedIds[index]
+            )
+        )
+        {
+            resetGridRepeatPreview();
+        }
+    }, [
+        selectedIds,
+        resetGridRepeatPreview
+    ]);
+
+    useEffect(() =>
+    {
+        if(!pending) return;
+
+        if(
+            pendingGridRepeatOperationRef.current !==
+            null
+        )
+        {
+            return;
+        }
+
+        resetGridRepeatPreview();
+    }, [
+        pending,
+        resetGridRepeatPreview
+    ]);
+
+
     useMessageEvent<BuilderProCopyGroupResultEvent>(
         BuilderProCopyGroupResultEvent,
         event =>
@@ -15044,6 +16082,157 @@ export const BuilderProView: FC<{}> = props =>
 
                                 <div className="builder-pro-hint">
                                     Copias nuevas; el original no cuenta. Separación 0 coloca cada módulo pegado al anterior. La vista previa se valida completa antes de confirmar.
+                                </div>
+                            </div>
+                        </details>
+
+
+                        <details className="builder-pro-section">
+                            <summary>Cuadrícula</summary>
+
+                            <div className="builder-pro-section-body">
+                                <div className="builder-pro-grid-2">
+                                    <label className="builder-pro-field-row">
+                                        <span>Columnas</span>
+
+                                        <input
+                                            className="builder-pro-small-input"
+                                            type="number"
+                                            min="1"
+                                            max="100"
+                                            step="1"
+                                            value={ gridRepeatColumns }
+                                            disabled={ pending }
+                                            onChange={
+                                                event =>
+                                                {
+                                                    resetGridRepeatPreview();
+                                                    setGridRepeatColumns(
+                                                        event.target.value
+                                                    );
+                                                }
+                                            } />
+                                    </label>
+
+                                    <label className="builder-pro-field-row">
+                                        <span>Filas</span>
+
+                                        <input
+                                            className="builder-pro-small-input"
+                                            type="number"
+                                            min="1"
+                                            max="100"
+                                            step="1"
+                                            value={ gridRepeatRows }
+                                            disabled={ pending }
+                                            onChange={
+                                                event =>
+                                                {
+                                                    resetGridRepeatPreview();
+                                                    setGridRepeatRows(
+                                                        event.target.value
+                                                    );
+                                                }
+                                            } />
+                                    </label>
+                                </div>
+
+                                <div className="builder-pro-grid-2">
+                                    <label className="builder-pro-field-row">
+                                        <span>Sep. horizontal</span>
+
+                                        <input
+                                            className="builder-pro-small-input"
+                                            type="number"
+                                            min="0"
+                                            max="50"
+                                            step="1"
+                                            value={ gridRepeatSpacingX }
+                                            disabled={ pending }
+                                            onChange={
+                                                event =>
+                                                {
+                                                    resetGridRepeatPreview();
+                                                    setGridRepeatSpacingX(
+                                                        event.target.value
+                                                    );
+                                                }
+                                            } />
+                                    </label>
+
+                                    <label className="builder-pro-field-row">
+                                        <span>Sep. vertical</span>
+
+                                        <input
+                                            className="builder-pro-small-input"
+                                            type="number"
+                                            min="0"
+                                            max="50"
+                                            step="1"
+                                            value={ gridRepeatSpacingY }
+                                            disabled={ pending }
+                                            onChange={
+                                                event =>
+                                                {
+                                                    resetGridRepeatPreview();
+                                                    setGridRepeatSpacingY(
+                                                        event.target.value
+                                                    );
+                                                }
+                                            } />
+                                    </label>
+                                </div>
+
+                                {
+                                    !gridRepeatPreviewReady &&
+                                    <button
+                                        type="button"
+                                        className="builder-pro-full"
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            startGridRepeatPreview
+                                        }>
+                                        Vista previa
+                                    </button>
+                                }
+
+                                {
+                                    gridRepeatPreviewReady &&
+                                    <div className="builder-pro-grid-2">
+                                        <button
+                                            type="button"
+                                            className="btn btn-sm btn-primary"
+                                            disabled={ pending }
+                                            onClick={
+                                                confirmGridRepeat
+                                            }>
+                                            Confirmar
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            className="btn btn-sm btn-secondary"
+                                            disabled={ pending }
+                                            onClick={
+                                                () =>
+                                                {
+                                                    resetGridRepeatPreview();
+
+                                                    setStatus(
+                                                        'Cuadrícula cancelada.'
+                                                    );
+                                                }
+                                            }>
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                }
+
+                                <div className="builder-pro-hint">
+                                    Filas × columnas cuenta también el módulo original: 3 × 3 son 9 módulos, por lo que se crean 8 copias. Se expande hacia la derecha y abajo. Las separaciones 0 dejan los módulos pegados.
                                 </div>
                             </div>
                         </details>

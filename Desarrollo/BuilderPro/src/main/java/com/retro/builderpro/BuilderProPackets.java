@@ -52,4 +52,7 @@ public final class BuilderProPackets
 
     public static final int LINEAR_REPEAT_REQUEST = 6329;
     public static final int LINEAR_REPEAT_RESULT = 6330;
+
+    public static final int GRID_REPEAT_REQUEST = 6331;
+    public static final int GRID_REPEAT_RESULT = 6332;
 }
