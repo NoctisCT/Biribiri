@@ -5,6 +5,7 @@ import { AddEventLinkTracker, BuilderProSelectionVisualizer, CanManipulateFurnit
 import { useMessageEvent, useRoom, useRoomEngineEvent } from '../../../../hooks';
 import { NitroCardContentView, NitroCardHeaderView, NitroCardView } from '../../../../common';
 import { useBuilderProItemLocks } from './useBuilderProItemLocks';
+import { BuilderProTransientOperation, ResolveBuilderProToolLifecycle } from './BuilderProToolLifecycle';
 import './BuilderProView.scss';
 
 const MAX_SELECTION = 100;
@@ -17132,6 +17133,117 @@ export const BuilderProView: FC<{}> = props =>
         );
     };
 
+    const pendingLifecycleOperation:
+        BuilderProTransientOperation =
+        pendingFillRepeatOperationRef.current !== null
+            ? 'fill-repeat'
+            : pendingRadialRepeatOperationRef.current !== null
+                ? 'radial-repeat'
+                : pendingGridRepeatOperationRef.current !== null
+                    ? 'grid-repeat'
+                    : pendingLinearRepeatOperationRef.current !== null
+                        ? 'linear-repeat'
+                        : pendingReplaceOperationRef.current ===
+                            REPLACE_OP_EXECUTE &&
+                            pendingRef.current
+                            ? 'replace'
+                            : pendingReferenceOperationRef.current !==
+                                REFERENCE_OP_NONE
+                                ? (
+                                    pendingReferenceOperationRef.current ===
+                                        REFERENCE_OP_EQUAL_Z
+                                        ? 'reference-equal-height'
+                                        : 'reference-place-above'
+                                )
+                                : (
+                                    blueprintPendingRef.current &&
+                                    blueprintOperationRef.current ===
+                                        BLUEPRINT_OP_PLACE
+                                )
+                                    ? 'blueprint-place'
+                                    : 'none';
+
+    const pendingLifecycleIsPreview =
+        pendingFillRepeatOperationRef.current ===
+            FILL_REPEAT_OP_PREVIEW ||
+        pendingRadialRepeatOperationRef.current ===
+            RADIAL_REPEAT_OP_PREVIEW ||
+        pendingGridRepeatOperationRef.current ===
+            GRID_REPEAT_OP_PREVIEW ||
+        pendingLinearRepeatOperationRef.current ===
+            LINEAR_REPEAT_OP_PREVIEW ||
+        (
+            pendingRef.current &&
+            pendingReplaceOperationRef.current ===
+                REPLACE_OP_PREVIEW
+        ) ||
+        (
+            blueprintPendingRef.current &&
+            blueprintOperationRef.current ===
+                BLUEPRINT_OP_PREVIEW
+        );
+
+    const placementLifecycleOperation:
+        BuilderProTransientOperation =
+        blueprintPlaceMode
+            ? 'blueprint-place'
+            : (
+                duplicateMode &&
+                mirrorDuplicateModeRef.current
+            )
+                ? 'mirror-duplicate'
+                : duplicateMode
+                    ? 'duplicate'
+                    : pasteMode
+                        ? 'paste'
+                        : 'none';
+
+    const captureLifecycleOperation:
+        BuilderProTransientOperation =
+        replacePickMode
+            ? 'replace'
+            : referencePickOperation ===
+                REFERENCE_OP_EQUAL_Z
+                ? 'reference-equal-height'
+                : referencePickOperation ===
+                    REFERENCE_OP_PLACE_ABOVE
+                    ? 'reference-place-above'
+                    : pivotPickMode
+                        ? 'pivot-pick'
+                        : areaMode
+                            ? 'area-selection'
+                            : 'none';
+
+    const previewLifecycleOperation:
+        BuilderProTransientOperation =
+        fillRepeatPreviewReady
+            ? 'fill-repeat'
+            : radialRepeatPreviewReady
+                ? 'radial-repeat'
+                : gridRepeatPreviewReady
+                    ? 'grid-repeat'
+                    : linearRepeatPreviewReady
+                        ? 'linear-repeat'
+                        : replacementContextRef.current
+                            ? 'replace'
+                            : 'none';
+
+    const toolLifecycle =
+        ResolveBuilderProToolLifecycle({
+            active,
+            pending,
+            pendingOperation:
+                pendingLifecycleOperation,
+            pendingIsPreview:
+                pendingLifecycleIsPreview,
+            placementOperation:
+                placementLifecycleOperation,
+            captureOperation:
+                captureLifecycleOperation,
+            previewOperation:
+                previewLifecycleOperation
+        });
+
 
     return (
 
@@ -17258,7 +17370,27 @@ export const BuilderProView: FC<{}> = props =>
                         </span>
                     </div>
 
-                    <div className="builder-pro-sections">
+                    <div
+                        className="builder-pro-sections"
+                        data-builder-pro-tool={
+                            toolLifecycle.suggestedTool
+                        }
+                        data-builder-pro-operation={
+                            toolLifecycle.operation
+                        }
+                        data-builder-pro-phase={
+                            toolLifecycle.phase
+                        }
+                        data-builder-pro-preview={
+                            toolLifecycle.hasPreview
+                                ? 'true'
+                                : 'false'
+                        }
+                        data-builder-pro-cancelable={
+                            toolLifecycle.canCancel
+                                ? 'true'
+                                : 'false'
+                        }>
 
                         <details className="builder-pro-section">
                             <summary>Selección</summary>
