@@ -1,9 +1,10 @@
 import { BuilderProLayerStateComposer, BuilderProLayerStateEvent, BuilderProPickupGroupComposer, BuilderProPickupGroupResultEvent, RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProReferencePlacementComposer, BuilderProMirrorDuplicateComposer, BuilderProMirrorDuplicateResultEvent, BuilderProReplaceGroupComposer, BuilderProReplaceGroupResultEvent, BuilderProLinearRepeatComposer, BuilderProLinearRepeatResultEvent, BuilderProGridRepeatComposer, BuilderProGridRepeatResultEvent, BuilderProRadialRepeatComposer, BuilderProRadialRepeatResultEvent, BuilderProFillRepeatComposer, BuilderProFillRepeatResultEvent, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, BuilderProTraversalStateComposer, BuilderProTraversalStateEvent, BuilderProBlueprintStateComposer, BuilderProBlueprintStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomEngineObjectPlacedEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { FaBoxOpen, FaClone, FaCopy, FaEllipsisH, FaEye, FaEyeSlash, FaLock, FaMinus, FaPaste, FaPlus, FaQuestion, FaRedo, FaSearch, FaUndo, FaWalking } from 'react-icons/fa';
-import { AddEventLinkTracker, BuilderProSelectionVisualizer, CanManipulateFurniture, CreateLinkEvent, GetRoomEngine, GetSessionDataManager, HasHabboClub, RemoveLinkEventTracker, SendMessageComposer, SetBuilderProSelectionModeActive } from '../../../../api';
+import { AddEventLinkTracker, BuilderProSelectionVisualizer, CanManipulateFurniture, ClearBuilderProInspectorState, CreateLinkEvent, GetRoomEngine, GetSessionDataManager, HasHabboClub, RemoveLinkEventTracker, SendMessageComposer, SetBuilderProInspectorState, SetBuilderProSelectionModeActive } from '../../../../api';
 import { useMessageEvent, useRoom, useRoomEngineEvent } from '../../../../hooks';
 import { NitroCardContentView, NitroCardHeaderView, NitroCardView } from '../../../../common';
+import { useBuilderProItemLocks } from './useBuilderProItemLocks';
 import './BuilderProView.scss';
 
 const MAX_SELECTION = 100;
@@ -465,6 +466,16 @@ export const BuilderProView: FC<{}> = props =>
         width: number;
         height: number;
     } | null>(null);
+
+    const {
+        lockedItemIds,
+        itemLockPending,
+        requestItemLockState
+    } = useBuilderProItemLocks(
+        active,
+        roomSession?.roomId ?? null,
+        setStatus
+    );
 
     const activeRef = useRef(false);
     const pendingRef = useRef(false);
@@ -3366,6 +3377,40 @@ export const BuilderProView: FC<{}> = props =>
 
     useEffect(() =>
     {
+        if(!active)
+        {
+            ClearBuilderProInspectorState();
+            return;
+        }
+
+        SetBuilderProInspectorState({
+            groups: savedGroups,
+            layers: savedLayers,
+            traversableIds,
+            hiddenLayerIds,
+            isolatedLayerId,
+            dimmedOthersLayerId,
+            hiddenItemIds: individualHiddenItemIds,
+            dimmedItemIds: individualDimmedItemIds,
+            lockedItemIds
+        });
+    }, [
+        active,
+        savedGroups,
+        savedLayers,
+        traversableIds,
+        hiddenLayerIds,
+        isolatedLayerId,
+        dimmedOthersLayerId,
+        individualHiddenItemIds,
+        individualDimmedItemIds,
+        lockedItemIds,
+        pending,
+        outlinerRevision
+    ]);
+
+    useEffect(() =>
+    {
         if(selectedLayerId <= 0)
         {
             setLayerName('');
@@ -4772,6 +4817,33 @@ export const BuilderProView: FC<{}> = props =>
             requestTraversalState
         ]);
 
+    const setConstructionLockSelection =
+        useCallback((
+            enabled: boolean
+        ) =>
+        {
+            const ids = [
+                ...selectedIdsRef.current
+            ];
+
+            if(!ids.length)
+            {
+                setStatus(
+                    'Selecciona furnis para cambiar su bloqueo.'
+                );
+
+                return;
+            }
+
+            requestItemLockState(
+                1,
+                enabled,
+                ids
+            );
+        }, [
+            requestItemLockState
+        ]);
+
     const captureTransformSnapshots =
         useCallback((
             orderedIds?: number[]
@@ -5351,6 +5423,8 @@ export const BuilderProView: FC<{}> = props =>
         savedGroupsRef.current = [];
 
         SetBuilderProSelectionModeActive(false);
+
+        ClearBuilderProInspectorState();
 
         clearSelection();
 
@@ -7207,6 +7281,8 @@ export const BuilderProView: FC<{}> = props =>
 
         SetBuilderProSelectionModeActive(false);
 
+        ClearBuilderProInspectorState();
+
         restoreLayerVisibility();
 
         individualHiddenItemIdsRef.current =
@@ -7249,6 +7325,8 @@ export const BuilderProView: FC<{}> = props =>
             areaStartRef.current = null;
 
             SetBuilderProSelectionModeActive(false);
+
+            ClearBuilderProInspectorState();
 
             restoreLayerVisibility();
 
@@ -15934,6 +16012,24 @@ export const BuilderProView: FC<{}> = props =>
         selectedTraversableCount ===
         selectedIds.length;
 
+    const lockedItemIdSet =
+        new Set(
+            lockedItemIds
+        );
+
+    const selectedLockedCount =
+        selectedIds.filter(
+            itemId =>
+                lockedItemIdSet.has(
+                    itemId
+                )
+        ).length;
+
+    const allSelectedLocked =
+        selectedIds.length > 0 &&
+        selectedLockedCount ===
+        selectedIds.length;
+
     const renderOutlinerLayer = (
         layerId: number,
         layerName: string
@@ -16516,7 +16612,7 @@ export const BuilderProView: FC<{}> = props =>
                                                                 }`
                                                             }
                                                             title={
-                                                                `${ getOutlinerItemName(itemId) } #${ itemId }`
+                                                                `${ getOutlinerItemName(itemId) } #${ itemId }${ lockedItemIdSet.has(itemId) ? ' · Bloqueado' : '' }`
                                                             }
                                                             onClick={
                                                                 () =>
@@ -16532,6 +16628,10 @@ export const BuilderProView: FC<{}> = props =>
                                                             </span>
 
                                                             <small>
+                                                                { lockedItemIdSet.has(itemId) &&
+                                                                    <FaLock
+                                                                        title="Bloqueado para construcción" /> }
+                                                                { lockedItemIdSet.has(itemId) && ' ' }
                                                                 #{ itemId }
                                                             </small>
                                                         </button>
@@ -16559,7 +16659,7 @@ export const BuilderProView: FC<{}> = props =>
                                         }`
                                     }
                                     title={
-                                        `${ getOutlinerItemName(itemId) } #${ itemId }`
+                                        `${ getOutlinerItemName(itemId) } #${ itemId }${ lockedItemIdSet.has(itemId) ? ' · Bloqueado' : '' }`
                                     }
                                     onClick={
                                         () =>
@@ -16575,6 +16675,10 @@ export const BuilderProView: FC<{}> = props =>
                                     </span>
 
                                     <small>
+                                        { lockedItemIdSet.has(itemId) &&
+                                            <FaLock
+                                                title="Bloqueado para construcción" /> }
+                                        { lockedItemIdSet.has(itemId) && ' ' }
                                         #{ itemId }
                                     </small>
                                 </button>
@@ -16893,6 +16997,58 @@ export const BuilderProView: FC<{}> = props =>
 
                                 <div className="builder-pro-hint">
                                     Solo cambia tu vista. Ocultar limpia la selección; restaurar no modifica la visibilidad de las capas.
+                                </div>
+
+                                <div className="builder-pro-subtitle">
+                                    Bloqueo de construcción
+                                </div>
+
+                                <div className="builder-pro-grid-2">
+                                    <button
+                                        type="button"
+                                        className={
+                                            allSelectedLocked
+                                                ? 'is-selected'
+                                                : ''
+                                        }
+                                        disabled={
+                                            pending ||
+                                            itemLockPending ||
+                                            !selectedIds.length ||
+                                            allSelectedLocked
+                                        }
+                                        onClick={
+                                            () =>
+                                                setConstructionLockSelection(
+                                                    true
+                                                )
+                                        }>
+                                        Bloquear selección
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            pending ||
+                                            itemLockPending ||
+                                            !selectedIds.length ||
+                                            selectedLockedCount === 0
+                                        }
+                                        onClick={
+                                            () =>
+                                                setConstructionLockSelection(
+                                                    false
+                                                )
+                                        }>
+                                        Desbloquear selección
+                                    </button>
+                                </div>
+
+                                <div className="builder-pro-hint">
+                                    { selectedIds.length
+                                        ? `${ selectedLockedCount }/${ selectedIds.length } bloqueados. `
+                                        : '' }
+                                    Impide mover, girar, cambiar altura/estado de construcción, recoger, reemplazar y cambiar Atravesable. Usar, doble clic y WIRED siguen funcionando.
                                 </div>
 
                                 <div className="builder-pro-subtitle">

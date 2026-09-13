@@ -3,6 +3,7 @@ package com.retro.builderpro.handlers;
 import com.eu.habbo.messages.ServerMessage;
 import com.eu.habbo.messages.incoming.MessageHandler;
 import com.retro.builderpro.BuilderProGroupGuard;
+import com.retro.builderpro.BuilderProItemLockGuard;
 import com.retro.builderpro.BuilderProHistoryService;
 import com.retro.builderpro.BuilderProPackets;
 import com.retro.builderpro.BuilderProReferencePlacementService;
@@ -77,6 +78,25 @@ public class ReferencePlacementRequest
                     BuilderProReferencePlacementService.Result.failure(
                             31,
                             groupGuard.message
+                    )
+            );
+
+            return;
+        }
+
+        BuilderProItemLockGuard.Result itemLockGuard =
+                BuilderProItemLockGuard.validate(
+                        this.client.getHabbo(),
+                        itemIds
+                );
+
+        if(!itemLockGuard.success)
+        {
+            sendResult(
+                    requestId,
+                    BuilderProReferencePlacementService.Result.failure(
+                            33,
+                            itemLockGuard.message
                     )
             );
 

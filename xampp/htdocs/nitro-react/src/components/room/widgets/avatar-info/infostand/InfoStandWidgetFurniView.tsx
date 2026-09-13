@@ -1,8 +1,8 @@
-import { CrackableDataType, GroupInformationComposer, GroupInformationEvent, NowPlayingEvent, RoomControllerLevel, RoomObjectCategory, RoomObjectOperationType, RoomObjectVariable, RoomWidgetEnumItemExtradataParameter, RoomWidgetFurniInfoUsagePolicyEnum, SetObjectDataMessageComposer, SongInfoReceivedEvent, StringDataType } from '@nitrots/nitro-renderer';
-import { FC, useCallback, useEffect, useState } from 'react';
-import { AvatarInfoFurni, CreateLinkEvent, GetGroupInformation, GetNitroInstance, GetRoomEngine, LocalizeText, SendMessageComposer } from '../../../../../api';
+import { CrackableDataType, GroupInformationComposer, GroupInformationEvent, NowPlayingEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomObjectCategory, RoomObjectOperationType, RoomObjectVariable, RoomWidgetEnumItemExtradataParameter, RoomWidgetFurniInfoUsagePolicyEnum, SetObjectDataMessageComposer, SongInfoReceivedEvent, StringDataType } from '@nitrots/nitro-renderer';
+import { FC, useCallback, useEffect, useRef, useState } from 'react';
+import { AvatarInfoFurni, CreateLinkEvent, GetBuilderProInspectorItemState, GetGroupInformation, GetNitroInstance, GetRoomEngine, IsBuilderProSelectionModeActive, LocalizeText, RequestBuilderProItemLockChange, SendMessageComposer, SubscribeBuilderProInspectorState } from '../../../../../api';
 import { Base, Button, Column, Flex, LayoutBadgeImageView, LayoutLimitedEditionCompactPlateView, LayoutRarityLevelView, Text, UserProfileIconView } from '../../../../../common';
-import { useMessageEvent, useRoom, useSoundEvent } from '../../../../../hooks';
+import { useMessageEvent, useRoom, useRoomEngineEvent, useSoundEvent } from '../../../../../hooks';
 
 interface InfoStandWidgetFurniViewProps
 {
@@ -39,6 +39,130 @@ export const InfoStandWidgetFurniView: FC<InfoStandWidgetFurniViewProps> = props
     const [ songName, setSongName ] = useState<string>('');
     const [ songCreator, setSongCreator ] = useState<string>('');
 	const [itemLocation, setItemLocation] = useState<{ x: number; y: number; z: number; }>({ x: -1, y: -1, z: -1 });
+    const [ , setBuilderProRevision ] = useState(0);
+    const builderProSnapshotRef = useRef('');
+
+    useEffect(() =>
+    {
+        return SubscribeBuilderProInspectorState(() =>
+        {
+            setBuilderProRevision(
+                current => current + 1
+            );
+        });
+    }, []);
+
+    useRoomEngineEvent<RoomEngineObjectEvent>(
+        [
+            RoomEngineObjectEvent.CONTENT_UPDATED,
+            RoomEngineObjectEvent.PLACED
+        ],
+        event =>
+        {
+            if(!avatarInfo) return;
+
+            if(
+                event.objectId !== avatarInfo.id ||
+                event.category !== avatarInfo.category
+            )
+            {
+                return;
+            }
+
+            setBuilderProRevision(
+                current => current + 1
+            );
+        }
+    );
+
+    useEffect(() =>
+    {
+        if(
+            !avatarInfo ||
+            !roomSession ||
+            avatarInfo.isWallItem
+        )
+        {
+            return;
+        }
+
+        const refreshFromRealObject = () =>
+        {
+            if(!IsBuilderProSelectionModeActive())
+            {
+                return;
+            }
+
+            const roomObject =
+                GetRoomEngine().getRoomObject(
+                    roomSession.roomId,
+                    avatarInfo.id,
+                    RoomObjectCategory.FLOOR
+                );
+
+            if(!roomObject)
+            {
+                return;
+            }
+
+            const location =
+                roomObject.getLocation();
+
+            const direction =
+                roomObject.getDirection();
+
+            const typeId =
+                roomObject.model.getValue<number>(
+                    RoomObjectVariable.FURNITURE_TYPE_ID
+                );
+
+            const snapshot = [
+                location?.x ?? '',
+                location?.y ?? '',
+                location?.z ?? '',
+                direction?.x ?? '',
+                roomObject.getState(0),
+                typeId ?? ''
+            ].join('|');
+
+            if(
+                builderProSnapshotRef.current ===
+                snapshot
+            )
+            {
+                return;
+            }
+
+            builderProSnapshotRef.current =
+                snapshot;
+
+            setBuilderProRevision(
+                current => current + 1
+            );
+        };
+
+        refreshFromRealObject();
+
+        const timer =
+            window.setInterval(
+                refreshFromRealObject,
+                100
+            );
+
+        return () =>
+        {
+            window.clearInterval(
+                timer
+            );
+
+            builderProSnapshotRef.current =
+                '';
+        };
+    }, [
+        avatarInfo,
+        roomSession?.roomId
+    ]);
+
 
     useSoundEvent<NowPlayingEvent>(NowPlayingEvent.NPE_SONG_CHANGED, event =>
     {
@@ -332,6 +456,84 @@ export const InfoStandWidgetFurniView: FC<InfoStandWidgetFurniViewProps> = props
 
     if(!avatarInfo) return null;
 
+    const builderProActive =
+        IsBuilderProSelectionModeActive() &&
+        !avatarInfo.isWallItem;
+
+    const builderProRoomObject =
+        (
+            builderProActive &&
+            roomSession
+        )
+            ? GetRoomEngine().getRoomObject(
+                roomSession.roomId,
+                avatarInfo.id,
+                RoomObjectCategory.FLOOR
+            )
+            : null;
+
+    const builderProLocation =
+        builderProRoomObject?.getLocation();
+
+    const builderProDirection =
+        builderProRoomObject?.getDirection();
+
+    const builderProTypeId =
+        builderProRoomObject
+            ? builderProRoomObject.model.getValue<number>(
+                RoomObjectVariable.FURNITURE_TYPE_ID
+            )
+            : null;
+
+    const builderProRawState =
+        builderProRoomObject
+            ? Number(
+                builderProRoomObject.getState(0)
+            )
+            : Number.NaN;
+
+    const builderProState =
+        Number.isFinite(builderProRawState)
+            ? builderProRawState
+            : null;
+
+    const builderProRotation =
+        builderProDirection
+            ? (
+                (
+                    Math.round(
+                        builderProDirection.x / 45
+                    ) % 8
+                ) + 8
+            ) % 8
+            : null;
+
+    const builderProInspector =
+        GetBuilderProInspectorItemState(
+            avatarInfo.id
+        );
+
+    const formatBuilderProNumber = (
+        value: number
+    ): string =>
+    {
+        if(!Number.isFinite(value))
+        {
+            return '—';
+        }
+
+        const rounded =
+            Math.round(value * 100) /
+            100;
+
+        return Number.isInteger(rounded)
+            ? String(rounded)
+            : rounded
+                .toFixed(2)
+                .replace(/0+$/, '')
+                .replace(/\.$/, '');
+    };
+
     return (
         <Column gap={ 1 } alignItems="end">
             <Column className="nitro-infostand">
@@ -413,15 +615,140 @@ export const InfoStandWidgetFurniView: FC<InfoStandWidgetFurniViewProps> = props
                                     <Text variant="white" underline>{ groupName }</Text>
                                 </Flex>
                             </> }
-							<>
-								<hr className="m-0" />
-								<Text small wrap variant="white">
-								X = {itemLocation.x}  and  Y = {itemLocation.y}<br />
-								BuildHeight = {itemLocation.z < 0.01 ? 0 : itemLocation.z}<br />
-								{ canSeeFurniId && <Text wrap variant="white"> Room Furnishing ID: { avatarInfo.id }</Text> }
-							</Text>
-							</>
-							{itemLocation.x > -1}
+                        { builderProActive && builderProRoomObject && builderProLocation
+                            ? <>
+                                <hr className="m-0" />
+                                <Column gap={ 1 } className="builder-pro-infostand">
+                                    <Text
+                                        small
+                                        wrap
+                                        variant="white"
+                                        className="builder-pro-infostand-title">
+                                        Construcción
+                                    </Text>
+
+                                    <div className="builder-pro-infostand-grid">
+                                        <div className="builder-pro-infostand-field">
+                                            <span>ID</span>
+                                            <strong>#{ avatarInfo.id }</strong>
+                                        </div>
+
+                                        <div className="builder-pro-infostand-field">
+                                            <span>Base</span>
+                                            <strong>
+                                                { (builderProTypeId !== null && Number.isFinite(builderProTypeId))
+                                                    ? `#${ builderProTypeId }`
+                                                    : '—' }
+                                            </strong>
+                                        </div>
+
+                                        <div className="builder-pro-infostand-field">
+                                            <span>X</span>
+                                            <strong>
+                                                { formatBuilderProNumber(builderProLocation.x) }
+                                            </strong>
+                                        </div>
+
+                                        <div className="builder-pro-infostand-field">
+                                            <span>Y</span>
+                                            <strong>
+                                                { formatBuilderProNumber(builderProLocation.y) }
+                                            </strong>
+                                        </div>
+
+                                        <div className="builder-pro-infostand-field">
+                                            <span>Altura</span>
+                                            <strong>
+                                                { formatBuilderProNumber(builderProLocation.z) }
+                                            </strong>
+                                        </div>
+
+                                        <div className="builder-pro-infostand-field">
+                                            <span>Rotación</span>
+                                            <strong>
+                                                { builderProRotation === null
+                                                    ? '—'
+                                                    : builderProRotation }
+                                            </strong>
+                                        </div>
+
+                                        <div className="builder-pro-infostand-field">
+                                            <span>Estado</span>
+                                            <strong>
+                                                { builderProState === null
+                                                    ? '—'
+                                                    : builderProState }
+                                            </strong>
+                                        </div>
+
+                                        <div className="builder-pro-infostand-field">
+                                            <span>Atravesable</span>
+                                            <strong>
+                                                { builderProInspector.traversable
+                                                    ? 'Sí'
+                                                    : 'No' }
+                                            </strong>
+                                        </div>
+
+                                        <div className="builder-pro-infostand-field">
+                                            <span>Bloqueo</span>
+                                            <strong>
+                                                { builderProInspector.locked
+                                                    ? 'Bloqueado'
+                                                    : 'Libre' }
+                                            </strong>
+                                        </div>
+
+                                        <div className="builder-pro-infostand-field is-wide">
+                                            <span>Capa</span>
+                                            <strong>
+                                                { builderProInspector.layerName }
+                                            </strong>
+                                        </div>
+
+                                        <div className="builder-pro-infostand-field is-wide">
+                                            <span>Grupo</span>
+                                            <strong>
+                                                { builderProInspector.groupLocked
+                                                    ? `${ builderProInspector.groupName } (bloqueado)`
+                                                    : builderProInspector.groupName }
+                                            </strong>
+                                        </div>
+
+                                        <div className="builder-pro-infostand-field is-wide">
+                                            <span>Visibilidad</span>
+                                            <strong>
+                                                { builderProInspector.visibility }
+                                            </strong>
+                                        </div>
+                                    </div>
+
+                                    <Button
+                                        className="w-100"
+                                        onClick={
+                                            () =>
+                                                RequestBuilderProItemLockChange(
+                                                    [ avatarInfo.id ],
+                                                    !builderProInspector.locked
+                                                )
+                                        }>
+                                        { builderProInspector.locked
+                                            ? 'Desbloquear furni'
+                                            : 'Bloquear furni' }
+                                    </Button>
+                                </Column>
+                            </>
+                            : <>
+                                <hr className="m-0" />
+                                <Text small wrap variant="white">
+                                    X = {itemLocation.x}  and  Y = {itemLocation.y}<br />
+                                    BuildHeight = {itemLocation.z < 0.01 ? 0 : itemLocation.z}<br />
+                                    { canSeeFurniId &&
+                                        <Text wrap variant="white">
+                                            Room Furnishing ID: { avatarInfo.id }
+                                        </Text> }
+                                </Text>
+                            </> }
                         { godMode &&
                             <>
                                 <hr className="m-0" />
@@ -458,15 +785,15 @@ export const InfoStandWidgetFurniView: FC<InfoStandWidgetFurniViewProps> = props
                 </Column>
             </Column>
             <Flex gap={ 2 } justifyContent="end">
-                { canMove &&
+                { canMove && !builderProActive &&
                     <Button className="infostand-buttons px-2" onClick={ event => processButtonAction('move') }>
                         { LocalizeText('infostand.button.move') }
                     </Button> }
-                { canRotate &&
+                { canRotate && !builderProActive &&
                     <Button className="infostand-buttons px-2" onClick={ event => processButtonAction('rotate') }>
                         { LocalizeText('infostand.button.rotate') }
                     </Button> }
-                { (pickupMode !== PICKUP_MODE_NONE) &&
+                { !builderProActive && (pickupMode !== PICKUP_MODE_NONE) &&
                     <Button className="infostand-buttons px-2" onClick={ event => processButtonAction('pickup') }>
                         { LocalizeText((pickupMode === PICKUP_MODE_EJECT) ? 'infostand.button.eject' : 'infostand.button.pickup') }
                     </Button> }

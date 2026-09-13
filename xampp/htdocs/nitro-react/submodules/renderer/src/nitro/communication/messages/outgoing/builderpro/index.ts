@@ -16,4 +16,5 @@ export * from './BuilderProLinearRepeatComposer';
 export * from './BuilderProGridRepeatComposer';
 export * from './BuilderProRadialRepeatComposer';
 export * from './BuilderProFillRepeatComposer';
+export * from './BuilderProItemLockStateComposer';
 export * from './BuilderProBlueprintStateComposer';

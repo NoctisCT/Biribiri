@@ -535,4 +535,5 @@ export class OutgoingHeader
     public static BUILDER_PRO_GRID_REPEAT = 6331;
     public static BUILDER_PRO_RADIAL_REPEAT = 6333;
     public static BUILDER_PRO_FILL_REPEAT = 6335;
+    public static BUILDER_PRO_ITEM_LOCK_STATE = 6337;
 }

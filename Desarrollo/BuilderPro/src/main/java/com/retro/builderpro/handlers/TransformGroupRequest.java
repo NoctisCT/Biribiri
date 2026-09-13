@@ -4,6 +4,7 @@ import com.eu.habbo.messages.ServerMessage;
 import com.eu.habbo.messages.incoming.MessageHandler;
 import com.retro.builderpro.BuilderProHistoryService;
 import com.retro.builderpro.BuilderProGroupGuard;
+import com.retro.builderpro.BuilderProItemLockGuard;
 import com.retro.builderpro.BuilderProPackets;
 import com.retro.builderpro.GroupTransformService;
 
@@ -173,6 +174,25 @@ public class TransformGroupRequest
         boolean stateOperation =
                 operation == GroupTransformService.OP_STATE_PREVIOUS
                 || operation == GroupTransformService.OP_STATE_NEXT;
+
+        BuilderProItemLockGuard.Result itemLockGuard =
+                BuilderProItemLockGuard.validate(
+                        this.client.getHabbo(),
+                        itemIds
+                );
+
+        if(!itemLockGuard.success)
+        {
+            sendResult(
+                    requestId,
+                    GroupTransformService.Result.failure(
+                            35,
+                            itemLockGuard.message
+                    )
+            );
+
+            return;
+        }
 
         List<BuilderProHistoryService.ItemState> historyBefore =
                 BuilderProHistoryService.capture(

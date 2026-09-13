@@ -50,6 +50,50 @@
             padding: 0.1rem 0.25rem;
         }
 
+        .builder-pro-infostand {
+            width: 100%;
+        }
+
+        .builder-pro-infostand-title {
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .builder-pro-infostand-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 3px;
+        }
+
+        .builder-pro-infostand-field {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            padding: 3px 4px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.08);
+            line-height: 1.15;
+        }
+
+        .builder-pro-infostand-field span {
+            color: rgba(255, 255, 255, 0.62);
+            font-size: 9px;
+        }
+
+        .builder-pro-infostand-field strong {
+            min-width: 0;
+            overflow: hidden;
+            color: #ffffff;
+            font-size: 10px;
+            font-weight: 700;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .builder-pro-infostand-field.is-wide {
+            grid-column: 1 / -1;
+        }
+
         .body-image {
             display: flex;
             align-items: center;

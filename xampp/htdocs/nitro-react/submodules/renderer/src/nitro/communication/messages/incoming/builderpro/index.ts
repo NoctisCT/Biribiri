@@ -15,4 +15,5 @@ export * from './BuilderProLinearRepeatResultEvent';
 export * from './BuilderProGridRepeatResultEvent';
 export * from './BuilderProRadialRepeatResultEvent';
 export * from './BuilderProFillRepeatResultEvent';
+export * from './BuilderProItemLockStateEvent';
 export * from './BuilderProBlueprintStateEvent';

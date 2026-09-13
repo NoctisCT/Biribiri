@@ -3,6 +3,7 @@ package com.retro.builderpro;
 import com.eu.habbo.Emulator;
 import com.eu.habbo.habbohotel.rooms.Room;
 import com.eu.habbo.habbohotel.users.Habbo;
+import com.eu.habbo.habbohotel.users.HabboItem;
 import com.eu.habbo.messages.outgoing.rooms.users.RoomUserStatusComposer;
 import com.eu.habbo.plugin.EventHandler;
 import com.eu.habbo.plugin.EventListener;
@@ -12,6 +13,7 @@ import com.eu.habbo.plugin.events.furniture.FurnitureBuildheightEvent;
 import com.eu.habbo.plugin.events.furniture.FurnitureMovedEvent;
 import com.eu.habbo.plugin.events.furniture.FurniturePlacedEvent;
 import com.eu.habbo.plugin.events.furniture.FurniturePickedUpEvent;
+import com.eu.habbo.plugin.events.furniture.FurnitureRotatedEvent;
 import com.eu.habbo.plugin.events.rooms.RoomLoadedEvent;
 import com.eu.habbo.plugin.events.users.UserTakeStepEvent;
 import com.eu.habbo.plugin.events.users.UserCommandEvent;
@@ -34,6 +36,7 @@ import com.retro.builderpro.handlers.LinearRepeatRequest;
 import com.retro.builderpro.handlers.GridRepeatRequest;
 import com.retro.builderpro.handlers.RadialRepeatRequest;
 import com.retro.builderpro.handlers.FillRepeatRequest;
+import com.retro.builderpro.handlers.ItemLockStateRequest;
 
 public class BuilderProPlugin
         extends HabboPlugin
@@ -55,6 +58,7 @@ public class BuilderProPlugin
         BuilderProTraversalService.initialize();
         BuilderProBlueprintRepository.initialize();
         BuilderProLayerRepository.initialize();
+        BuilderProItemLockService.initialize();
 
         Emulator.getGameServer()
                 .getPacketManager()
@@ -189,6 +193,13 @@ public class BuilderProPlugin
                         FillRepeatRequest.class
                 );
 
+        Emulator.getGameServer()
+                .getPacketManager()
+                .registerHandler(
+                        BuilderProPackets.ITEM_LOCK_STATE_REQUEST,
+                        ItemLockStateRequest.class
+                );
+
         System.out.println(
                 "[BuilderPro] Backend MVP 0 cargado."
         );
@@ -201,6 +212,15 @@ public class BuilderProPlugin
         if(event == null
                 || event.furniture == null)
         {
+            return;
+        }
+
+        if(event.habbo != null
+                && isConstructionLocked(
+                        event.habbo,
+                        event.furniture))
+        {
+            event.setCancelled(true);
             return;
         }
 
@@ -229,6 +249,11 @@ public class BuilderProPlugin
                         );
 
                         BuilderProTraversalService.removeItem(
+                                roomId,
+                                itemId
+                        );
+
+                        BuilderProItemLockService.removeItem(
                                 roomId,
                                 itemId
                         );
@@ -272,6 +297,10 @@ public class BuilderProPlugin
 
         final Room room =
                 event.room;
+
+        BuilderProItemLockService.warmRoom(
+                room
+        );
 
         Emulator.getThreading().run(
                 () ->
@@ -361,6 +390,14 @@ public class BuilderProPlugin
             return;
         }
 
+        if(isConstructionLocked(
+                event.habbo,
+                event.furniture))
+        {
+            event.setCancelled(true);
+            return;
+        }
+
         int actorId =
                 event.habbo
                         .getHabboInfo()
@@ -392,6 +429,25 @@ public class BuilderProPlugin
                                 ),
                     50L
             );
+        }
+    }
+
+    @EventHandler
+    public void onFurnitureRotated(
+            FurnitureRotatedEvent event)
+    {
+        if(event == null
+                || event.habbo == null
+                || event.furniture == null)
+        {
+            return;
+        }
+
+        if(isConstructionLocked(
+                event.habbo,
+                event.furniture))
+        {
+            event.setCancelled(true);
         }
     }
 
@@ -493,7 +549,50 @@ public class BuilderProPlugin
         CopyGroupService.clearAll();
         BuilderProHistoryService.clearAll();
         BuilderProTraversalService.clearAll();
+        BuilderProItemLockService.clearAll();
         BuilderProContext.clear();
+    }
+
+    private static boolean isConstructionLocked(
+            Habbo actor,
+            HabboItem item)
+    {
+        if(actor == null
+                || item == null)
+        {
+            return false;
+        }
+
+        Room room =
+                actor.getHabboInfo()
+                        .getCurrentRoom();
+
+        if(room == null
+                || item.getRoomId() != room.getId())
+        {
+            return false;
+        }
+
+        try
+        {
+            return BuilderProItemLockService.isLocked(
+                    room,
+                    item.getId()
+            );
+        }
+        catch(Exception exception)
+        {
+            System.err.println(
+                    "[BuilderPro] No se pudo verificar un bloqueo nativo."
+            );
+            exception.printStackTrace();
+
+            /*
+             * Fallamos cerrado solo para construccion humana.
+             * WIRED/sistema llegan con actor null y no pasan por aqui.
+             */
+            return true;
+        }
     }
 
     @Override

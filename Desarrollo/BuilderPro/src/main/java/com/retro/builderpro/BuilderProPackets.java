@@ -61,4 +61,7 @@ public final class BuilderProPackets
 
     public static final int FILL_REPEAT_REQUEST = 6335;
     public static final int FILL_REPEAT_RESULT = 6336;
+
+    public static final int ITEM_LOCK_STATE_REQUEST = 6337;
+    public static final int ITEM_LOCK_STATE_RESULT = 6338;
 }

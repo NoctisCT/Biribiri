@@ -4,6 +4,7 @@ import com.eu.habbo.messages.ServerMessage;
 import com.eu.habbo.messages.incoming.MessageHandler;
 import com.retro.builderpro.BuilderProHistoryService;
 import com.retro.builderpro.BuilderProGroupGuard;
+import com.retro.builderpro.BuilderProItemLockGuard;
 import com.retro.builderpro.BuilderProPackets;
 import com.retro.builderpro.GroupLayoutService;
 
@@ -80,6 +81,25 @@ public class LayoutGroupRequest
                     GroupLayoutService.Result.failure(
                             42,
                             groupGuard.message
+                    )
+            );
+
+            return;
+        }
+
+        BuilderProItemLockGuard.Result itemLockGuard =
+                BuilderProItemLockGuard.validate(
+                        this.client.getHabbo(),
+                        itemIds
+                );
+
+        if(!itemLockGuard.success)
+        {
+            sendResult(
+                    requestId,
+                    GroupLayoutService.Result.failure(
+                            43,
+                            itemLockGuard.message
                     )
             );
 

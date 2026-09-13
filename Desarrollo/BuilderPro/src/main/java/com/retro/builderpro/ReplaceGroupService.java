@@ -92,6 +92,25 @@ public final class ReplaceGroupService
             return prepared.toFailureResult();
         }
 
+        BuilderProItemLockGuard.Result itemLockGuard =
+                BuilderProItemLockGuard.validate(
+                        actor,
+                        requestedIds
+                );
+
+        if(!itemLockGuard.success)
+        {
+            return Result.failure(
+                    42,
+                    itemLockGuard.message,
+                    prepared.needed,
+                    prepared.available,
+                    prepared.referenceId,
+                    prepared.referenceBaseItemId,
+                    prepared.referenceName
+            );
+        }
+
         SwapResult swap =
                 performSwap(
                         actor,
@@ -193,6 +212,24 @@ public final class ReplaceGroupService
                     2,
                     "El reemplazo ya no pertenece a esta sala.",
                     true
+            );
+        }
+
+        BuilderProItemLockGuard.Result itemLockGuard =
+                BuilderProItemLockGuard.validate(
+                        actor,
+                        sourceIds(
+                                record,
+                                !undo
+                        )
+                );
+
+        if(!itemLockGuard.success)
+        {
+            return HistoryApplyResult.failure(
+                    43,
+                    itemLockGuard.message,
+                    false
             );
         }
 

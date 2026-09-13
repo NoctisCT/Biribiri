@@ -424,6 +424,22 @@ public final class BuilderProHistoryService
             );
         }
 
+        BuilderProItemLockGuard.Result itemLockGuard =
+                BuilderProItemLockGuard.validate(
+                        actor,
+                        requestedIds
+                );
+
+        if(!itemLockGuard.success)
+        {
+            return Result.failure(
+                    78,
+                    itemLockGuard.message,
+                    false,
+                    false
+            );
+        }
+
         List<ItemState> states =
                 capture(
                         actor,
@@ -813,6 +829,27 @@ public final class BuilderProHistoryService
             {
                 ApplyResult pickupApply;
 
+                if(action == ACTION_REDO)
+                {
+                    BuilderProItemLockGuard.Result itemLockGuard =
+                            BuilderProItemLockGuard.validate(
+                                    actor,
+                                    itemIdsOf(
+                                            entry.after
+                                    )
+                            );
+
+                    if(!itemLockGuard.success)
+                    {
+                        return Result.failure(
+                                81,
+                                itemLockGuard.message,
+                                !history.undo.isEmpty(),
+                                !history.redo.isEmpty()
+                        );
+                    }
+                }
+
                 if(action == ACTION_UNDO)
                 {
                     pickupApply =
@@ -983,6 +1020,27 @@ public final class BuilderProHistoryService
                     ))
             {
                 ApplyResult placementApply;
+
+                if(action == ACTION_UNDO)
+                {
+                    BuilderProItemLockGuard.Result itemLockGuard =
+                            BuilderProItemLockGuard.validate(
+                                    actor,
+                                    itemIdsOf(
+                                            entry.after
+                                    )
+                            );
+
+                    if(!itemLockGuard.success)
+                    {
+                        return Result.failure(
+                                69,
+                                itemLockGuard.message,
+                                !history.undo.isEmpty(),
+                                !history.redo.isEmpty()
+                        );
+                    }
+                }
 
                 if(action == ACTION_UNDO)
                 {
@@ -1180,6 +1238,24 @@ public final class BuilderProHistoryService
                     action == ACTION_UNDO
                             ? entry.before
                             : entry.after;
+
+            BuilderProItemLockGuard.Result itemLockGuard =
+                    BuilderProItemLockGuard.validate(
+                            actor,
+                            itemIdsOf(
+                                    expected
+                            )
+                    );
+
+            if(!itemLockGuard.success)
+            {
+                return Result.failure(
+                        82,
+                        itemLockGuard.message,
+                        !history.undo.isEmpty(),
+                        !history.redo.isEmpty()
+                );
+            }
 
             ApplyResult apply =
                     apply(

@@ -193,6 +193,23 @@ public final class BuilderProTraversalService
                             unique
                     );
 
+            BuilderProItemLockGuard.Result itemLockGuard =
+                    BuilderProItemLockGuard.validate(
+                            actor,
+                            itemIds
+                    );
+
+            if(!itemLockGuard.success)
+            {
+                return Result.failure(
+                        11,
+                        itemLockGuard.message,
+                        loadRoomIds(
+                                room
+                        )
+                );
+            }
+
             for(Integer itemId :
                     itemIds)
             {
