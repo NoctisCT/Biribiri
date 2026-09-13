@@ -200,11 +200,26 @@ export const InfoStandWidgetFurniView: FC<InfoStandWidgetFurniViewProps> = props
         let furniIsSongDisk = false;
         let furniSongId = -1;
 		
-		const roomObject = GetRoomEngine().getRoomObject( roomSession.roomId, avatarInfo.id, avatarInfo.isWallItem ? RoomObjectCategory.WALL : RoomObjectCategory.FLOOR );
-		const location = roomObject.getLocation();
-		if (location) {
-			setItemLocation({ x: location.x, y: location.y, z: location.z, });
-		}
+        const roomObject =
+            GetRoomEngine().getRoomObject(
+                roomSession.roomId,
+                avatarInfo.id,
+                avatarInfo.isWallItem
+                    ? RoomObjectCategory.WALL
+                    : RoomObjectCategory.FLOOR
+            );
+
+        const location =
+            roomObject?.getLocation();
+
+        if(location)
+        {
+            setItemLocation({
+                x: location.x,
+                y: location.y,
+                z: location.z
+            });
+        }
 
         const isValidController = (avatarInfo.roomControllerLevel >= RoomControllerLevel.GUEST);
 

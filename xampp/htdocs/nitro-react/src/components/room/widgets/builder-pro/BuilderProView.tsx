@@ -484,6 +484,11 @@ export const BuilderProView: FC<{}> = props =>
     const duplicateRequestedRef = useRef(false);
     const mirrorDuplicateModeRef = useRef(false);
     const suppressPasteLayerAutoAssignRef = useRef(false);
+    const placedSelectionTokenRef = useRef(0);
+    const suppressPlacementSelectionEventsRef =
+        useRef(false);
+    const selectionVisualStabilizationTokenRef =
+        useRef(0);
     const clipboardPreviewRef = useRef<BuilderProClipboardPreview | null>(null);
     const pastePreviewAnchorRef = useRef<{ x: number; y: number } | null>(null);
     const pasteGhostIdsRef = useRef<number[]>([]);
@@ -803,7 +808,6 @@ export const BuilderProView: FC<{}> = props =>
     {
         const previous = selectedIdsRef.current;
 
-        const previousSet = new Set(previous);
         const nextSet = new Set(next);
 
         for(const id of previous)
@@ -816,10 +820,9 @@ export const BuilderProView: FC<{}> = props =>
 
         for(const id of next)
         {
-            if(!previousSet.has(id))
-            {
-                BuilderProSelectionVisualizer.show(id);
-            }
+            BuilderProSelectionVisualizer.show(
+                id
+            );
         }
 
         if(
@@ -843,8 +846,86 @@ export const BuilderProView: FC<{}> = props =>
         setSelectedIds(next);
     }, []);
 
+    const stabilizeSelectionVisuals =
+        useCallback((
+            itemIds: number[]
+        ) =>
+        {
+            const ids = [
+                ...itemIds
+            ];
+
+            if(!ids.length)
+            {
+                return;
+            }
+
+            selectionVisualStabilizationTokenRef.current++;
+
+            const token =
+                selectionVisualStabilizationTokenRef.current;
+
+            const delays = [
+                0,
+                25,
+                50,
+                100,
+                175,
+                275,
+                400,
+                600,
+                850,
+                1200
+            ];
+
+            for(const delay of delays)
+            {
+                window.setTimeout(
+                    () =>
+                    {
+                        if(
+                            !activeRef.current ||
+                            selectionVisualStabilizationTokenRef.current !==
+                                token
+                        )
+                        {
+                            return;
+                        }
+
+                        const current =
+                            selectedIdsRef.current;
+
+                        if(
+                            current.length !==
+                                ids.length ||
+                            ids.some(
+                                id =>
+                                    !current.includes(
+                                        id
+                                    )
+                            )
+                        )
+                        {
+                            return;
+                        }
+
+                        BuilderProSelectionVisualizer
+                            .refresh(
+                                ids
+                            );
+                    },
+                    delay
+                );
+            }
+        }, []);
+
     const clearSelection = useCallback(() =>
     {
+        placedSelectionTokenRef.current++;
+        selectionVisualStabilizationTokenRef.current++;
+        suppressPlacementSelectionEventsRef.current =
+            false;
+
         BuilderProSelectionVisualizer.clear(
             selectedIdsRef.current
         );
@@ -860,6 +941,172 @@ export const BuilderProView: FC<{}> = props =>
         selectedIdsRef.current = [];
         setSelectedIds([]);
     }, []);
+
+    const settlePlacedSelection =
+        useCallback((
+            itemIds: number[]
+        ) =>
+        {
+            const ids =
+                Array.from(
+                    new Set(
+                        itemIds.filter(
+                            id =>
+                                Number.isSafeInteger(id) &&
+                                id > 0
+                        )
+                    )
+                ).slice(
+                    0,
+                    MAX_SELECTION
+                );
+
+            if(!ids.length)
+            {
+                return;
+            }
+
+            placedSelectionTokenRef.current++;
+
+            const token =
+                placedSelectionTokenRef.current;
+
+            suppressPlacementSelectionEventsRef.current =
+                true;
+
+            const releaseSuppression = () =>
+            {
+                if(
+                    placedSelectionTokenRef.current !==
+                    token
+                )
+                {
+                    return;
+                }
+
+                suppressPlacementSelectionEventsRef.current =
+                    false;
+            };
+
+            const releaseAfterFrames = (
+                remaining: number
+            ) =>
+            {
+                if(
+                    placedSelectionTokenRef.current !==
+                    token
+                )
+                {
+                    return;
+                }
+
+                if(remaining <= 0)
+                {
+                    releaseSuppression();
+                    return;
+                }
+
+                window.requestAnimationFrame(
+                    () =>
+                        releaseAfterFrames(
+                            remaining - 1
+                        )
+                );
+            };
+
+            const settle = (
+                attempt: number
+            ) =>
+            {
+                if(
+                    !activeRef.current ||
+                    placedSelectionTokenRef.current !==
+                        token
+                )
+                {
+                    return;
+                }
+
+                const currentRoomSession =
+                    roomSessionRef.current;
+
+                const roomEngine =
+                    GetRoomEngine();
+
+                if(
+                    !currentRoomSession ||
+                    !roomEngine
+                )
+                {
+                    releaseSuppression();
+                    return;
+                }
+
+                const allPresent =
+                    ids.every(
+                        id =>
+                            !!roomEngine.getRoomObject(
+                                currentRoomSession.roomId,
+                                id,
+                                RoomObjectCategory.FLOOR
+                            )
+                    );
+
+                if(allPresent)
+                {
+                    applySelection(
+                        ids
+                    );
+
+                    stabilizeSelectionVisuals(
+                        ids
+                    );
+
+                    window.requestAnimationFrame(
+                        () =>
+                        {
+                            if(
+                                placedSelectionTokenRef.current !==
+                                token
+                            )
+                            {
+                                return;
+                            }
+
+                            releaseAfterFrames(
+                                4
+                            );
+                        }
+                    );
+
+                    return;
+                }
+
+                if(attempt >= 200)
+                {
+                    releaseSuppression();
+
+                    setStatus(
+                        'La estructura se colocó, pero la selección tardó demasiado en sincronizarse.'
+                    );
+
+                    return;
+                }
+
+                window.setTimeout(
+                    () =>
+                        settle(
+                            attempt + 1
+                        ),
+                    25
+                );
+            };
+
+            settle(0);
+        }, [
+            applySelection,
+            stabilizeSelectionVisuals
+        ]);
 
     const applyPreviewLocations = useCallback((
         locations: BuilderProDragLocation[],
@@ -4349,21 +4596,12 @@ export const BuilderProView: FC<{}> = props =>
 
                 if(placedIds.length)
                 {
-                    applySelection(
+                    settlePlacedSelection(
                         placedIds
                     );
 
                     setCanUndo(true);
                     setCanRedo(false);
-
-                    window.requestAnimationFrame(
-                        () =>
-                        {
-                            BuilderProSelectionVisualizer.refresh(
-                                placedIds
-                            );
-                        }
-                    );
                 }
             }
 
@@ -7516,6 +7754,7 @@ export const BuilderProView: FC<{}> = props =>
             RoomEngineObjectEvent.SELECTED,
             RoomEngineObjectEvent.ADDED,
             RoomEngineObjectEvent.REMOVED,
+            RoomEngineObjectEvent.CONTENT_UPDATED,
             RoomEngineObjectEvent.REQUEST_MOVE
         ],
         event =>
@@ -7537,6 +7776,44 @@ export const BuilderProView: FC<{}> = props =>
                 window.requestAnimationFrame(
                     applyLayerVisibility
                 );
+
+                if(
+                    selectedIdsRef.current.includes(
+                        event.objectId
+                    )
+                )
+                {
+                    window.requestAnimationFrame(
+                        () =>
+                            BuilderProSelectionVisualizer
+                                .show(
+                                    event.objectId
+                                )
+                    );
+                }
+
+                return;
+            }
+
+            if(
+                event.type ===
+                    RoomEngineObjectEvent.CONTENT_UPDATED
+            )
+            {
+                if(
+                    selectedIdsRef.current.includes(
+                        event.objectId
+                    )
+                )
+                {
+                    window.requestAnimationFrame(
+                        () =>
+                            BuilderProSelectionVisualizer
+                                .show(
+                                    event.objectId
+                                )
+                    );
+                }
 
                 return;
             }
@@ -8006,6 +8283,13 @@ export const BuilderProView: FC<{}> = props =>
             }
 
             if(event.type !== RoomEngineObjectEvent.SELECTED)
+            {
+                return;
+            }
+
+            if(
+                suppressPlacementSelectionEventsRef.current
+            )
             {
                 return;
             }
@@ -9368,6 +9652,170 @@ export const BuilderProView: FC<{}> = props =>
         pasteGhostIdsRef.current = [];
         pastePreviewAnchorRef.current = null;
     }, []);
+
+    const cancelCursorPlacement =
+        useCallback((
+            updateStatus: boolean = true
+        ): boolean =>
+        {
+            if(
+                pendingRef.current ||
+                blueprintPendingRef.current
+            )
+            {
+                return false;
+            }
+
+            const hadBlueprint =
+                blueprintPlaceModeRef.current;
+
+            const hadPaste =
+                pasteModeRef.current ||
+                duplicateModeRef.current ||
+                duplicateRequestedRef.current ||
+                mirrorDuplicateModeRef.current;
+
+            if(!hadBlueprint && !hadPaste)
+            {
+                return false;
+            }
+
+            clearPastePreview();
+
+            if(hadBlueprint)
+            {
+                blueprintPlaceModeRef.current =
+                    false;
+
+                blueprintPreviewRef.current =
+                    null;
+
+                setBlueprintPlaceMode(
+                    false
+                );
+            }
+
+            if(hadPaste)
+            {
+                pasteModeRef.current =
+                    false;
+
+                duplicateRequestedRef.current =
+                    false;
+
+                duplicateModeRef.current =
+                    false;
+
+                mirrorDuplicateModeRef.current =
+                    false;
+
+                setPasteMode(
+                    false
+                );
+
+                setDuplicateMode(
+                    false
+                );
+            }
+
+            if(updateStatus)
+            {
+                setStatus(
+                    'Colocación cancelada.'
+                );
+            }
+
+            return true;
+        }, [
+            clearPastePreview
+        ]);
+
+    useRoomEngineEvent<RoomEngineObjectEvent>(
+        RoomEngineObjectEvent.DESELECTED,
+        event =>
+        {
+            if(!activeRef.current)
+            {
+                return;
+            }
+
+            if(
+                event.objectId !== -1 ||
+                event.category !==
+                    RoomObjectCategory.MINIMUM
+            )
+            {
+                return;
+            }
+
+            cancelCursorPlacement();
+        }
+    );
+
+    useEffect(() =>
+    {
+        if(!active)
+        {
+            return;
+        }
+
+        const onPlacementEscape = (
+            event: globalThis.KeyboardEvent
+        ) =>
+        {
+            if(event.key !== 'Escape')
+            {
+                return;
+            }
+
+            const target =
+                event.target;
+
+            if(
+                target instanceof HTMLInputElement ||
+                target instanceof HTMLTextAreaElement ||
+                target instanceof HTMLSelectElement ||
+                (
+                    target instanceof HTMLElement &&
+                    target.isContentEditable
+                )
+            )
+            {
+                return;
+            }
+
+            if(!cancelCursorPlacement())
+            {
+                return;
+            }
+
+            if(event.cancelable)
+            {
+                event.preventDefault();
+            }
+
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+        };
+
+        window.addEventListener(
+            'keydown',
+            onPlacementEscape,
+            true
+        );
+
+        return () =>
+        {
+            window.removeEventListener(
+                'keydown',
+                onPlacementEscape,
+                true
+            );
+        };
+    }, [
+        active,
+        cancelCursorPlacement
+    ]);
 
     const syncPastePreview = useCallback(() =>
     {
@@ -13839,7 +14287,7 @@ export const BuilderProView: FC<{}> = props =>
                 const pastedIds =
                     parser.itemIds;
 
-                applySelection(
+                settlePlacedSelection(
                     pastedIds
                 );
 
@@ -13854,15 +14302,6 @@ export const BuilderProView: FC<{}> = props =>
                                 : `Duplicados ${ parser.placedCount } furnis. Mueve el cursor para seguir duplicando.`
                         )
                         : `Pegados ${ parser.placedCount } furnis.`
-                );
-
-                window.requestAnimationFrame(
-                    () =>
-                    {
-                        BuilderProSelectionVisualizer.refresh(
-                            pastedIds
-                        );
-                    }
                 );
 
                 return;

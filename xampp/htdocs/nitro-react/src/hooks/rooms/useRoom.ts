@@ -134,9 +134,40 @@ const useRoomState = () =>
 
         switch(event.type)
         {
-            case RoomEngineObjectEvent.SELECTED:
-                if((!IsBuilderProSelectionModeActive() || event.category === RoomObjectCategory.FLOOR) && !IsFurnitureSelectionDisabled(event)) updateEvent = new RoomWidgetUpdateRoomObjectEvent(RoomWidgetUpdateRoomObjectEvent.OBJECT_SELECTED, event.objectId, event.category, event.roomId);
+            case RoomEngineObjectEvent.SELECTED: {
+                const builderProActive =
+                    IsBuilderProSelectionModeActive();
+
+                const isBuilderProRealFloorItem =
+                    builderProActive &&
+                    event.category ===
+                        RoomObjectCategory.FLOOR &&
+                    event.objectId > 0 &&
+                    !!GetRoomEngine().getRoomObject(
+                        event.roomId,
+                        event.objectId,
+                        event.category
+                    );
+
+                if(
+                    (
+                        !builderProActive ||
+                        isBuilderProRealFloorItem
+                    ) &&
+                    !IsFurnitureSelectionDisabled(event)
+                )
+                {
+                    updateEvent =
+                        new RoomWidgetUpdateRoomObjectEvent(
+                            RoomWidgetUpdateRoomObjectEvent.OBJECT_SELECTED,
+                            event.objectId,
+                            event.category,
+                            event.roomId
+                        );
+                }
+
                 break;
+            }
             case RoomEngineObjectEvent.DESELECTED:
                 updateEvent = new RoomWidgetUpdateRoomObjectEvent(RoomWidgetUpdateRoomObjectEvent.OBJECT_DESELECTED, event.objectId, event.category, event.roomId);
                 break;
