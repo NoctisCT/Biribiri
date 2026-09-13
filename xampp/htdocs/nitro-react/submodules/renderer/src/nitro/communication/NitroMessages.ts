@@ -28,11 +28,11 @@ import { GetReactionProfileComposer, SaveReactionDisplayModeComposer, SaveReacti
 import { AvatarReactionComposer } from './messages/outgoing/reactions';
 import { EstadoBloqueoInventarioEvent, ResultadoConfigurarPatronEvent, ResultadoPatronInventarioEvent } from './messages/incoming/inventorylock';
 import { HoloGridWalkabilityEvent } from './messages/incoming/hologrid';
-import { BuilderProCopyGroupResultEvent, BuilderProPasteGroupResultEvent, BuilderProMoveGroupResultEvent, BuilderProTransformGroupResultEvent, BuilderProHistoryResultEvent, BuilderProOffsetGroupResultEvent, BuilderProLayoutGroupResultEvent, BuilderProGroupStateEvent, BuilderProTraversalStateEvent, BuilderProBlueprintStateEvent, BuilderProPickupGroupResultEvent, BuilderProLayerStateEvent, BuilderProMirrorDuplicateResultEvent, BuilderProReplaceGroupResultEvent, BuilderProLinearRepeatResultEvent, BuilderProGridRepeatResultEvent, BuilderProRadialRepeatResultEvent } from './messages/incoming/builderpro';
+import { BuilderProCopyGroupResultEvent, BuilderProPasteGroupResultEvent, BuilderProMoveGroupResultEvent, BuilderProTransformGroupResultEvent, BuilderProHistoryResultEvent, BuilderProOffsetGroupResultEvent, BuilderProLayoutGroupResultEvent, BuilderProGroupStateEvent, BuilderProTraversalStateEvent, BuilderProBlueprintStateEvent, BuilderProPickupGroupResultEvent, BuilderProLayerStateEvent, BuilderProMirrorDuplicateResultEvent, BuilderProReplaceGroupResultEvent, BuilderProLinearRepeatResultEvent, BuilderProGridRepeatResultEvent, BuilderProRadialRepeatResultEvent, BuilderProFillRepeatResultEvent } from './messages/incoming/builderpro';
 import { RpgEngineResultEvent } from './messages/incoming/rpgengine';
 import { CerrarSesionInventarioComposer, ConfigurarPatronInventarioComposer, ConsultarBloqueoInventarioComposer, VerificarPatronInventarioComposer } from './messages/outgoing/inventorylock';
 import { GetHoloGridWalkabilityComposer } from './messages/outgoing/hologrid';
-import { BuilderProCopyGroupComposer, BuilderProPasteGroupComposer, BuilderProMoveGroupComposer, BuilderProTransformGroupComposer, BuilderProHistoryComposer, BuilderProOffsetGroupComposer, BuilderProLayoutGroupComposer, BuilderProGroupStateComposer, BuilderProTraversalStateComposer, BuilderProBlueprintStateComposer, BuilderProPickupGroupComposer, BuilderProLayerStateComposer, BuilderProReferencePlacementComposer, BuilderProMirrorDuplicateComposer, BuilderProReplaceGroupComposer, BuilderProLinearRepeatComposer, BuilderProGridRepeatComposer, BuilderProRadialRepeatComposer } from './messages/outgoing/builderpro';
+import { BuilderProCopyGroupComposer, BuilderProPasteGroupComposer, BuilderProMoveGroupComposer, BuilderProTransformGroupComposer, BuilderProHistoryComposer, BuilderProOffsetGroupComposer, BuilderProLayoutGroupComposer, BuilderProGroupStateComposer, BuilderProTraversalStateComposer, BuilderProBlueprintStateComposer, BuilderProPickupGroupComposer, BuilderProLayerStateComposer, BuilderProReferencePlacementComposer, BuilderProMirrorDuplicateComposer, BuilderProReplaceGroupComposer, BuilderProLinearRepeatComposer, BuilderProGridRepeatComposer, BuilderProRadialRepeatComposer, BuilderProFillRepeatComposer } from './messages/outgoing/builderpro';
 import { RpgEngineCommandComposer } from './messages/outgoing/rpgengine';
 import { ObtenerRecordsSubastasComposer } from './messages/outgoing/subastas';
 import { RecordsSubastasEvent } from './messages/incoming/subastas';
@@ -139,6 +139,7 @@ export class NitroMessages implements IMessageConfiguration {
         this._events.set(IncomingHeader.BUILDER_PRO_LINEAR_REPEAT_RESULT, BuilderProLinearRepeatResultEvent);
         this._events.set(IncomingHeader.BUILDER_PRO_GRID_REPEAT_RESULT, BuilderProGridRepeatResultEvent);
         this._events.set(IncomingHeader.BUILDER_PRO_RADIAL_REPEAT_RESULT, BuilderProRadialRepeatResultEvent);
+        this._events.set(IncomingHeader.BUILDER_PRO_FILL_REPEAT_RESULT, BuilderProFillRepeatResultEvent);
         this._events.set(IncomingHeader.RPG_ENGINE_RESULT, RpgEngineResultEvent);
         this._events.set(IncomingHeader.ROOM_AD_ERROR, RoomAdErrorEvent);
 
@@ -766,6 +767,7 @@ export class NitroMessages implements IMessageConfiguration {
         this._composers.set(OutgoingHeader.BUILDER_PRO_LINEAR_REPEAT, BuilderProLinearRepeatComposer);
         this._composers.set(OutgoingHeader.BUILDER_PRO_GRID_REPEAT, BuilderProGridRepeatComposer);
         this._composers.set(OutgoingHeader.BUILDER_PRO_RADIAL_REPEAT, BuilderProRadialRepeatComposer);
+        this._composers.set(OutgoingHeader.BUILDER_PRO_FILL_REPEAT, BuilderProFillRepeatComposer);
         this._composers.set(OutgoingHeader.RPG_ENGINE_COMMAND, RpgEngineCommandComposer);
 
         // SUBASTAS

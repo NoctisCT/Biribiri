@@ -58,4 +58,7 @@ public final class BuilderProPackets
 
     public static final int RADIAL_REPEAT_REQUEST = 6333;
     public static final int RADIAL_REPEAT_RESULT = 6334;
+
+    public static final int FILL_REPEAT_REQUEST = 6335;
+    public static final int FILL_REPEAT_RESULT = 6336;
 }

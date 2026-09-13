@@ -15,4 +15,5 @@ export * from './BuilderProReplaceGroupComposer';
 export * from './BuilderProLinearRepeatComposer';
 export * from './BuilderProGridRepeatComposer';
 export * from './BuilderProRadialRepeatComposer';
+export * from './BuilderProFillRepeatComposer';
 export * from './BuilderProBlueprintStateComposer';

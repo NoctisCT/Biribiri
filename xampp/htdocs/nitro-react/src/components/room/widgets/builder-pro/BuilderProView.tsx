@@ -1,4 +1,4 @@
-import { BuilderProLayerStateComposer, BuilderProLayerStateEvent, BuilderProPickupGroupComposer, BuilderProPickupGroupResultEvent, RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProReferencePlacementComposer, BuilderProMirrorDuplicateComposer, BuilderProMirrorDuplicateResultEvent, BuilderProReplaceGroupComposer, BuilderProReplaceGroupResultEvent, BuilderProLinearRepeatComposer, BuilderProLinearRepeatResultEvent, BuilderProGridRepeatComposer, BuilderProGridRepeatResultEvent, BuilderProRadialRepeatComposer, BuilderProRadialRepeatResultEvent, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, BuilderProTraversalStateComposer, BuilderProTraversalStateEvent, BuilderProBlueprintStateComposer, BuilderProBlueprintStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomEngineObjectPlacedEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
+import { BuilderProLayerStateComposer, BuilderProLayerStateEvent, BuilderProPickupGroupComposer, BuilderProPickupGroupResultEvent, RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProReferencePlacementComposer, BuilderProMirrorDuplicateComposer, BuilderProMirrorDuplicateResultEvent, BuilderProReplaceGroupComposer, BuilderProReplaceGroupResultEvent, BuilderProLinearRepeatComposer, BuilderProLinearRepeatResultEvent, BuilderProGridRepeatComposer, BuilderProGridRepeatResultEvent, BuilderProRadialRepeatComposer, BuilderProRadialRepeatResultEvent, BuilderProFillRepeatComposer, BuilderProFillRepeatResultEvent, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, BuilderProTraversalStateComposer, BuilderProTraversalStateEvent, BuilderProBlueprintStateComposer, BuilderProBlueprintStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomEngineObjectPlacedEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { FaBoxOpen, FaClone, FaCopy, FaEllipsisH, FaEye, FaEyeSlash, FaLock, FaMinus, FaPaste, FaPlus, FaQuestion, FaRedo, FaSearch, FaUndo, FaWalking } from 'react-icons/fa';
 import { AddEventLinkTracker, BuilderProSelectionVisualizer, CanManipulateFurniture, CreateLinkEvent, GetRoomEngine, GetSessionDataManager, HasHabboClub, RemoveLinkEventTracker, SendMessageComposer, SetBuilderProSelectionModeActive } from '../../../../api';
@@ -75,6 +75,17 @@ const GRID_REPEAT_OP_EXECUTE = 1;
 const RADIAL_REPEAT_OP_PREVIEW = 0;
 const RADIAL_REPEAT_OP_EXECUTE = 1;
 
+const FILL_REPEAT_OP_PREVIEW = 0;
+const FILL_REPEAT_OP_EXECUTE = 1;
+
+const FILL_REPEAT_MODE_LINE = 1;
+const FILL_REPEAT_MODE_AREA = 2;
+
+const FILL_REPEAT_DIRECTION_LEFT = 1;
+const FILL_REPEAT_DIRECTION_RIGHT = 2;
+const FILL_REPEAT_DIRECTION_UP = 3;
+const FILL_REPEAT_DIRECTION_DOWN = 4;
+
 type BuilderProReplacementContext = {
     itemIds: number[];
     referenceId: number;
@@ -125,6 +136,22 @@ type BuilderProRadialRepeatContext = {
 };
 
 type BuilderProRadialRepeatPreviewEntry = {
+    baseItemId: number;
+    x: number;
+    y: number;
+    z: number;
+    rotation: number;
+    state: number;
+};
+
+type BuilderProFillRepeatContext = {
+    itemIds: number[];
+    mode: number;
+    direction: number;
+    spacing: number;
+};
+
+type BuilderProFillRepeatPreviewEntry = {
     baseItemId: number;
     x: number;
     y: number;
@@ -188,6 +215,7 @@ const BUILDER_PRO_PASTE_GHOST_ID_BASE = -1900000000;
 const BUILDER_PRO_LINEAR_REPEAT_GHOST_ID_BASE = -1800000000;
 const BUILDER_PRO_GRID_REPEAT_GHOST_ID_BASE = -1700000000;
 const BUILDER_PRO_RADIAL_REPEAT_GHOST_ID_BASE = -1600000000;
+const BUILDER_PRO_FILL_REPEAT_GHOST_ID_BASE = -1500000000;
 
 const normalizeBuilderProRotation = (
     value: number
@@ -412,6 +440,14 @@ export const BuilderProView: FC<{}> = props =>
         useState(true);
     const [ radialRepeatPreviewReady, setRadialRepeatPreviewReady ] =
         useState(false);
+    const [ fillRepeatMode, setFillRepeatMode ] =
+        useState(FILL_REPEAT_MODE_LINE);
+    const [ fillRepeatDirection, setFillRepeatDirection ] =
+        useState(FILL_REPEAT_DIRECTION_RIGHT);
+    const [ fillRepeatSpacing, setFillRepeatSpacing ] =
+        useState('0');
+    const [ fillRepeatPreviewReady, setFillRepeatPreviewReady ] =
+        useState(false);
     const [ highlightSelection, setHighlightSelection ] =
         useState(BuilderProSelectionVisualizer.enabled);
     const [ pivotId, setPivotId ] =
@@ -510,6 +546,30 @@ export const BuilderProView: FC<{}> = props =>
             []
         );
     const radialRepeatPreviewFrameRef =
+        useRef<number | null>(
+            null
+        );
+    const fillRepeatContextRef =
+        useRef<BuilderProFillRepeatContext | null>(
+            null
+        );
+    const pendingFillRepeatContextRef =
+        useRef<BuilderProFillRepeatContext | null>(
+            null
+        );
+    const pendingFillRepeatOperationRef =
+        useRef<number | null>(
+            null
+        );
+    const fillRepeatPreviewEntriesRef =
+        useRef<BuilderProFillRepeatPreviewEntry[]>(
+            []
+        );
+    const fillRepeatGhostIdsRef =
+        useRef<number[]>(
+            []
+        );
+    const fillRepeatPreviewFrameRef =
         useRef<number | null>(
             null
         );
@@ -9388,6 +9448,990 @@ export const BuilderProView: FC<{}> = props =>
     }, [ syncPastePreview ]);
 
 
+
+    const clearFillRepeatPreview =
+        useCallback(() =>
+        {
+            if(fillRepeatPreviewFrameRef.current !== null)
+            {
+                window.cancelAnimationFrame(
+                    fillRepeatPreviewFrameRef.current
+                );
+
+                fillRepeatPreviewFrameRef.current =
+                    null;
+            }
+
+            const currentRoomSession =
+                roomSessionRef.current;
+
+            const roomEngine =
+                GetRoomEngine();
+
+            if(currentRoomSession && roomEngine)
+            {
+                for(const ghostId of
+                    fillRepeatGhostIdsRef.current)
+                {
+                    roomEngine.removeRoomObjectFloor(
+                        currentRoomSession.roomId,
+                        ghostId
+                    );
+                }
+            }
+
+            fillRepeatGhostIdsRef.current = [];
+            fillRepeatPreviewEntriesRef.current = [];
+        }, []);
+
+    const syncFillRepeatPreview =
+        useCallback(() =>
+        {
+            const entries =
+                fillRepeatPreviewEntriesRef.current;
+
+            const currentRoomSession =
+                roomSessionRef.current;
+
+            const roomEngine =
+                GetRoomEngine();
+
+            if(
+                !entries.length ||
+                !currentRoomSession ||
+                !roomEngine
+            )
+            {
+                return;
+            }
+
+            const roomId =
+                currentRoomSession.roomId;
+
+            for(let index = 0;
+                    index < entries.length;
+                    index++)
+            {
+                const entry =
+                    entries[index];
+
+                const ghostId =
+                    BUILDER_PRO_FILL_REPEAT_GHOST_ID_BASE
+                        - index;
+
+                if(
+                    !fillRepeatGhostIdsRef.current
+                        .includes(
+                            ghostId
+                        )
+                )
+                {
+                    const queued =
+                        roomEngine.addFurnitureFloor(
+                            roomId,
+                            ghostId,
+                            entry.baseItemId,
+                            new Vector3d(
+                                entry.x,
+                                entry.y,
+                                entry.z
+                            ),
+                            new Vector3d(
+                                entry.rotation * 45
+                            ),
+                            entry.state,
+                            null,
+                            Number.NaN,
+                            -1,
+                            0,
+                            0,
+                            '',
+                            false,
+                            false
+                        );
+
+                    if(queued)
+                    {
+                        fillRepeatGhostIdsRef.current
+                            .push(
+                                ghostId
+                            );
+                    }
+                }
+
+                const roomObject =
+                    roomEngine.getRoomObject(
+                        roomId,
+                        ghostId,
+                        RoomObjectCategory.FLOOR
+                    ) as any;
+
+                if(!roomObject)
+                {
+                    continue;
+                }
+
+                roomObject.setLocation(
+                    new Vector3d(
+                        entry.x,
+                        entry.y,
+                        entry.z
+                    )
+                );
+
+                roomObject.setDirection(
+                    new Vector3d(
+                        entry.rotation * 45
+                    )
+                );
+
+                if(roomObject.model)
+                {
+                    roomObject.model.setValue(
+                        RoomObjectVariable
+                            .FURNITURE_ALPHA_MULTIPLIER,
+                        0.45
+                    );
+                }
+
+                const sprites =
+                    (
+                        roomObject.visualization as any
+                    )?.sprites;
+
+                if(Array.isArray(sprites))
+                {
+                    for(const sprite of sprites)
+                    {
+                        if(sprite)
+                        {
+                            sprite.clickHandling =
+                                false;
+                        }
+                    }
+                }
+            }
+        }, []);
+
+    const renderFillRepeatPreview =
+        useCallback((
+            entries: BuilderProFillRepeatPreviewEntry[]
+        ) =>
+        {
+            clearFillRepeatPreview();
+
+            fillRepeatPreviewEntriesRef.current =
+                entries.map(
+                    entry => ({
+                        ...entry
+                    })
+                );
+
+            syncFillRepeatPreview();
+
+            fillRepeatPreviewFrameRef.current =
+                window.requestAnimationFrame(
+                    () =>
+                    {
+                        fillRepeatPreviewFrameRef.current =
+                            null;
+
+                        syncFillRepeatPreview();
+
+                        window.requestAnimationFrame(
+                            () =>
+                                syncFillRepeatPreview()
+                        );
+                    }
+                );
+        }, [
+            clearFillRepeatPreview,
+            syncFillRepeatPreview
+        ]);
+
+    const resetFillRepeatPreview =
+        useCallback(() =>
+        {
+            clearFillRepeatPreview();
+
+            fillRepeatContextRef.current =
+                null;
+
+            pendingFillRepeatContextRef.current =
+                null;
+
+            setFillRepeatPreviewReady(
+                false
+            );
+        }, [
+            clearFillRepeatPreview
+        ]);
+
+    const finalizeFillRepeatVisuals =
+        useCallback((
+            repeatedIds: number[],
+            mode: number,
+            copies: number,
+            placedCount: number
+        ) =>
+        {
+            const settle = (
+                attempt: number
+            ) =>
+            {
+                if(!activeRef.current)
+                {
+                    suppressPasteLayerAutoAssignRef.current =
+                        false;
+
+                    return;
+                }
+
+                const currentRoomSession =
+                    roomSessionRef.current;
+
+                const roomEngine =
+                    GetRoomEngine();
+
+                if(
+                    !currentRoomSession ||
+                    !roomEngine
+                )
+                {
+                    suppressPasteLayerAutoAssignRef.current =
+                        false;
+
+                    return;
+                }
+
+                const presentIds =
+                    repeatedIds.filter(
+                        id =>
+                            !!roomEngine.getRoomObject(
+                                currentRoomSession.roomId,
+                                id,
+                                RoomObjectCategory.FLOOR
+                            )
+                    );
+
+                if(
+                    presentIds.length ===
+                        repeatedIds.length ||
+                    attempt >= 120
+                )
+                {
+                    suppressPasteLayerAutoAssignRef.current =
+                        false;
+
+                    applySelection(
+                        presentIds
+                    );
+
+                    setCanUndo(
+                        true
+                    );
+
+                    setCanRedo(
+                        false
+                    );
+
+                    setOutlinerRevision(
+                        current =>
+                            current + 1
+                    );
+
+                    requestLayerState(
+                        LAYER_OP_LIST
+                    );
+
+                    requestTraversalState(
+                        TRAVERSAL_OP_QUERY
+                    );
+
+                    const label =
+                        mode === FILL_REPEAT_MODE_AREA
+                            ? 'Área rellenada'
+                            : 'Relleno hasta límite creado';
+
+                    if(
+                        presentIds.length ===
+                        repeatedIds.length
+                    )
+                    {
+                        setStatus(
+                            `${ label }: ${ copies } módulos · ${ placedCount } furnis nuevos.`
+                        );
+                    }
+                    else
+                    {
+                        setStatus(
+                            `${ label } en servidor, pero Nitro solo sincronizó ${ presentIds.length }/${ repeatedIds.length } furnis.`
+                        );
+                    }
+
+                    window.requestAnimationFrame(
+                        () =>
+                        {
+                            BuilderProSelectionVisualizer
+                                .refresh(
+                                    presentIds
+                                );
+                        }
+                    );
+
+                    return;
+                }
+
+                window.requestAnimationFrame(
+                    () =>
+                        settle(
+                            attempt + 1
+                        )
+                );
+            };
+
+            settle(
+                0
+            );
+        }, [
+            applySelection,
+            requestLayerState,
+            requestTraversalState
+        ]);
+
+    const requestFillRepeat =
+        useCallback((
+            operation: number,
+            context: BuilderProFillRepeatContext
+        ) =>
+        {
+            if(!activeRef.current) return;
+            if(pendingRef.current) return;
+
+            if(
+                operation !== FILL_REPEAT_OP_PREVIEW &&
+                operation !== FILL_REPEAT_OP_EXECUTE
+            )
+            {
+                return;
+            }
+
+            if(
+                !context ||
+                !context.itemIds.length
+            )
+            {
+                setStatus(
+                    'Selecciona primero lo que quieres rellenar.'
+                );
+
+                return;
+            }
+
+            duplicateRequestedRef.current =
+                false;
+
+            mirrorDuplicateModeRef.current =
+                false;
+
+            duplicateModeRef.current =
+                false;
+
+            setDuplicateMode(
+                false
+            );
+
+            clearPastePreview();
+
+            pasteModeRef.current =
+                false;
+
+            setPasteMode(
+                false
+            );
+
+            blueprintPlaceModeRef.current =
+                false;
+
+            setBlueprintPlaceMode(
+                false
+            );
+
+            replacePickModeRef.current =
+                false;
+
+            setReplacePickMode(
+                false
+            );
+
+            if(operation === FILL_REPEAT_OP_PREVIEW)
+            {
+                resetFillRepeatPreview();
+            }
+            else
+            {
+                clearFillRepeatPreview();
+
+                setFillRepeatPreviewReady(
+                    false
+                );
+            }
+
+            requestIdRef.current++;
+
+            if(requestIdRef.current > 2000000000)
+            {
+                requestIdRef.current = 1;
+            }
+
+            const requestId =
+                requestIdRef.current;
+
+            pendingRef.current =
+                true;
+
+            pendingRequestIdRef.current =
+                requestId;
+
+            pendingStartedAtRef.current =
+                performance.now();
+
+            pendingFillRepeatOperationRef.current =
+                operation;
+
+            pendingFillRepeatContextRef.current = {
+                itemIds: [
+                    ...context.itemIds
+                ],
+                mode:
+                    context.mode,
+                direction:
+                    context.direction,
+                spacing:
+                    context.spacing
+            };
+
+            if(operation === FILL_REPEAT_OP_EXECUTE)
+            {
+                suppressPasteLayerAutoAssignRef.current =
+                    true;
+            }
+
+            setPending(
+                true
+            );
+
+            setStatus(
+                operation === FILL_REPEAT_OP_PREVIEW
+                    ? (
+                        context.mode === FILL_REPEAT_MODE_AREA
+                            ? 'Calculando relleno del área...'
+                            : 'Calculando relleno hasta el límite...'
+                    )
+                    : (
+                        context.mode === FILL_REPEAT_MODE_AREA
+                            ? 'Rellenando área...'
+                            : 'Rellenando hasta el límite...'
+                    )
+            );
+
+            try
+            {
+                SendMessageComposer(
+                    new BuilderProFillRepeatComposer(
+                        context.itemIds,
+                        operation,
+                        context.mode,
+                        context.direction,
+                        context.spacing,
+                        requestId
+                    )
+                );
+
+                if(pendingTimeoutRef.current !== null)
+                {
+                    window.clearTimeout(
+                        pendingTimeoutRef.current
+                    );
+                }
+
+                pendingTimeoutRef.current =
+                    window.setTimeout(
+                        () =>
+                        {
+                            pendingTimeoutRef.current =
+                                null;
+
+                            if(
+                                !pendingRef.current ||
+                                pendingRequestIdRef.current !==
+                                    requestId ||
+                                pendingFillRepeatOperationRef.current !==
+                                    operation
+                            )
+                            {
+                                return;
+                            }
+
+                            pendingRef.current =
+                                false;
+
+                            pendingRequestIdRef.current =
+                                null;
+
+                            pendingStartedAtRef.current =
+                                0;
+
+                            pendingFillRepeatOperationRef.current =
+                                null;
+
+                            pendingFillRepeatContextRef.current =
+                                null;
+
+                            suppressPasteLayerAutoAssignRef.current =
+                                false;
+
+                            setPending(
+                                false
+                            );
+
+                            setStatus(
+                                'Relleno sin confirmación del servidor.'
+                            );
+                        },
+                        MOVE_CONFIRM_TIMEOUT_MS
+                    );
+            }
+            catch(error)
+            {
+                console.error(
+                    `[BuilderProTrace] CLIENT FILL_REPEAT_SEND_ERROR #${ requestId }`,
+                    error
+                );
+
+                pendingRef.current =
+                    false;
+
+                pendingRequestIdRef.current =
+                    null;
+
+                pendingStartedAtRef.current =
+                    0;
+
+                pendingFillRepeatOperationRef.current =
+                    null;
+
+                pendingFillRepeatContextRef.current =
+                    null;
+
+                suppressPasteLayerAutoAssignRef.current =
+                    false;
+
+                setPending(
+                    false
+                );
+
+                setStatus(
+                    'No se pudo enviar el relleno al servidor.'
+                );
+            }
+        }, [
+            clearFillRepeatPreview,
+            clearPastePreview,
+            resetFillRepeatPreview
+        ]);
+
+    const clearOtherRepeatPreviewsForFill =
+        useCallback(() =>
+        {
+            const currentRoomSession =
+                roomSessionRef.current;
+
+            const roomEngine =
+                GetRoomEngine();
+
+            const clearGhostSet = (
+                ids: number[]
+            ) =>
+            {
+                if(currentRoomSession && roomEngine)
+                {
+                    for(const id of ids)
+                    {
+                        roomEngine.removeRoomObjectFloor(
+                            currentRoomSession.roomId,
+                            id
+                        );
+                    }
+                }
+            };
+
+            if(linearRepeatPreviewFrameRef.current !== null)
+            {
+                window.cancelAnimationFrame(
+                    linearRepeatPreviewFrameRef.current
+                );
+                linearRepeatPreviewFrameRef.current =
+                    null;
+            }
+
+            if(gridRepeatPreviewFrameRef.current !== null)
+            {
+                window.cancelAnimationFrame(
+                    gridRepeatPreviewFrameRef.current
+                );
+                gridRepeatPreviewFrameRef.current =
+                    null;
+            }
+
+            if(radialRepeatPreviewFrameRef.current !== null)
+            {
+                window.cancelAnimationFrame(
+                    radialRepeatPreviewFrameRef.current
+                );
+                radialRepeatPreviewFrameRef.current =
+                    null;
+            }
+
+            clearGhostSet(
+                linearRepeatGhostIdsRef.current
+            );
+
+            clearGhostSet(
+                gridRepeatGhostIdsRef.current
+            );
+
+            clearGhostSet(
+                radialRepeatGhostIdsRef.current
+            );
+
+            linearRepeatGhostIdsRef.current = [];
+            gridRepeatGhostIdsRef.current = [];
+            radialRepeatGhostIdsRef.current = [];
+
+            linearRepeatPreviewEntriesRef.current = [];
+            gridRepeatPreviewEntriesRef.current = [];
+            radialRepeatPreviewEntriesRef.current = [];
+
+            linearRepeatContextRef.current = null;
+            gridRepeatContextRef.current = null;
+            radialRepeatContextRef.current = null;
+
+            setLinearRepeatPreviewReady(false);
+            setGridRepeatPreviewReady(false);
+            setRadialRepeatPreviewReady(false);
+        }, []);
+
+    const startFillRepeatPreview =
+        useCallback((
+            mode: number,
+            direction: number
+        ) =>
+        {
+            if(!activeRef.current) return;
+            if(pendingRef.current) return;
+
+            const ids = [
+                ...selectedIdsRef.current
+            ];
+
+            if(!ids.length)
+            {
+                setStatus(
+                    'Selecciona al menos un furni.'
+                );
+
+                return;
+            }
+
+            const spacing =
+                Number.parseInt(
+                    fillRepeatSpacing,
+                    10
+                );
+
+            if(
+                !Number.isSafeInteger(spacing) ||
+                spacing < 0 ||
+                spacing > 50
+            )
+            {
+                setStatus(
+                    'La separación debe estar entre 0 y 50.'
+                );
+
+                return;
+            }
+
+            if(
+                mode !== FILL_REPEAT_MODE_LINE &&
+                mode !== FILL_REPEAT_MODE_AREA
+            )
+            {
+                return;
+            }
+
+            if(
+                mode === FILL_REPEAT_MODE_LINE &&
+                (
+                    direction < FILL_REPEAT_DIRECTION_LEFT ||
+                    direction > FILL_REPEAT_DIRECTION_DOWN
+                )
+            )
+            {
+                return;
+            }
+
+            clearOtherRepeatPreviewsForFill();
+
+            setFillRepeatMode(
+                mode
+            );
+
+            setFillRepeatDirection(
+                direction
+            );
+
+            requestFillRepeat(
+                FILL_REPEAT_OP_PREVIEW,
+                {
+                    itemIds: ids,
+                    mode,
+                    direction,
+                    spacing
+                }
+            );
+        }, [
+            fillRepeatSpacing,
+            clearOtherRepeatPreviewsForFill,
+            requestFillRepeat
+        ]);
+
+    const confirmFillRepeat =
+        useCallback(() =>
+        {
+            if(!activeRef.current) return;
+            if(pendingRef.current) return;
+
+            const context =
+                fillRepeatContextRef.current;
+
+            if(
+                !context ||
+                !fillRepeatPreviewReady
+            )
+            {
+                setStatus(
+                    'Genera primero una vista previa válida.'
+                );
+
+                return;
+            }
+
+            requestFillRepeat(
+                FILL_REPEAT_OP_EXECUTE,
+                context
+            );
+        }, [
+            fillRepeatPreviewReady,
+            requestFillRepeat
+        ]);
+
+    useMessageEvent<BuilderProFillRepeatResultEvent>(
+        BuilderProFillRepeatResultEvent,
+        event =>
+        {
+            const parser =
+                event.getParser();
+
+            if(!parser) return;
+
+            const requestId =
+                parser.requestId;
+
+            if(
+                pendingRequestIdRef.current !==
+                    requestId ||
+                !pendingRef.current
+            )
+            {
+                return;
+            }
+
+            const expectedOperation =
+                pendingFillRepeatOperationRef.current;
+
+            const context =
+                pendingFillRepeatContextRef.current;
+
+            if(
+                expectedOperation === null ||
+                parser.operation !==
+                    expectedOperation
+            )
+            {
+                return;
+            }
+
+            if(pendingTimeoutRef.current !== null)
+            {
+                window.clearTimeout(
+                    pendingTimeoutRef.current
+                );
+
+                pendingTimeoutRef.current =
+                    null;
+            }
+
+            pendingRef.current =
+                false;
+
+            pendingRequestIdRef.current =
+                null;
+
+            pendingStartedAtRef.current =
+                0;
+
+            pendingFillRepeatOperationRef.current =
+                null;
+
+            pendingFillRepeatContextRef.current =
+                null;
+
+            setPending(
+                false
+            );
+
+            if(!parser.success)
+            {
+                suppressPasteLayerAutoAssignRef.current =
+                    false;
+
+                if(expectedOperation ===
+                    FILL_REPEAT_OP_PREVIEW)
+                {
+                    resetFillRepeatPreview();
+                }
+
+                setStatus(
+                    `Error ${ parser.code }: ${ parser.message }`
+                );
+
+                return;
+            }
+
+            if(!context)
+            {
+                suppressPasteLayerAutoAssignRef.current =
+                    false;
+
+                resetFillRepeatPreview();
+
+                setStatus(
+                    'El contexto del relleno ya no está disponible.'
+                );
+
+                return;
+            }
+
+            if(expectedOperation ===
+                FILL_REPEAT_OP_PREVIEW)
+            {
+                const entries =
+                    parser.previewEntries;
+
+                if(
+                    entries.length < 1 ||
+                    parser.copies < 1
+                )
+                {
+                    resetFillRepeatPreview();
+
+                    setStatus(
+                        'El servidor no encontró posiciones nuevas para rellenar.'
+                    );
+
+                    return;
+                }
+
+                fillRepeatContextRef.current = {
+                    itemIds: [
+                        ...context.itemIds
+                    ],
+                    mode:
+                        context.mode,
+                    direction:
+                        context.direction,
+                    spacing:
+                        context.spacing
+                };
+
+                renderFillRepeatPreview(
+                    entries
+                );
+
+                setFillRepeatMode(
+                    context.mode
+                );
+
+                setFillRepeatDirection(
+                    context.direction
+                );
+
+                setFillRepeatPreviewReady(
+                    true
+                );
+
+                setStatus(
+                    context.mode === FILL_REPEAT_MODE_AREA
+                        ? `Vista previa: ${ parser.copies } módulos válidos · ${ entries.length } furnis nuevos.`
+                        : `Vista previa hasta límite: ${ parser.copies } módulos · ${ entries.length } furnis nuevos.`
+                );
+
+                return;
+            }
+
+            const repeatedIds =
+                parser.itemIds;
+
+            const copies =
+                parser.copies;
+
+            const placedCount =
+                parser.placedCount;
+
+            clearFillRepeatPreview();
+
+            fillRepeatContextRef.current =
+                null;
+
+            setFillRepeatPreviewReady(
+                false
+            );
+
+            finalizeFillRepeatVisuals(
+                repeatedIds,
+                context.mode,
+                copies,
+                placedCount
+            );
+        }
+    );
+
+    useEffect(() =>
+    {
+        if(active)
+        {
+            return;
+        }
+
+        resetFillRepeatPreview();
+    }, [
+        active,
+        resetFillRepeatPreview
+    ]);
+
+
     const clearLinearRepeatPreview = useCallback(() =>
     {
         if(linearRepeatPreviewFrameRef.current !== null)
@@ -9748,6 +10792,8 @@ export const BuilderProView: FC<{}> = props =>
         {
             if(!activeRef.current) return;
             if(pendingRef.current) return;
+
+            resetFillRepeatPreview();
 
             if(
                 operation !== LINEAR_REPEAT_OP_PREVIEW &&
@@ -10681,6 +11727,8 @@ export const BuilderProView: FC<{}> = props =>
         {
             if(!activeRef.current) return;
             if(pendingRef.current) return;
+
+            resetFillRepeatPreview();
 
             if(
                 operation !== GRID_REPEAT_OP_PREVIEW &&
@@ -11662,6 +12710,8 @@ export const BuilderProView: FC<{}> = props =>
         {
             if(!activeRef.current) return;
             if(pendingRef.current) return;
+
+            resetFillRepeatPreview();
 
             if(
                 operation !== RADIAL_REPEAT_OP_PREVIEW &&
@@ -17429,6 +18479,206 @@ export const BuilderProView: FC<{}> = props =>
                                 </div>
                             </div>
                         </details>
+
+
+                        <details className="builder-pro-section">
+                            <summary>Rellenar hasta límite / área</summary>
+
+                            <div className="builder-pro-section-body">
+                                <label className="builder-pro-field-row">
+                                    <span>Separación</span>
+
+                                    <input
+                                        className="builder-pro-small-input"
+                                        type="number"
+                                        min="0"
+                                        max="50"
+                                        step="1"
+                                        value={ fillRepeatSpacing }
+                                        disabled={ pending }
+                                        onChange={
+                                            event =>
+                                            {
+                                                resetFillRepeatPreview();
+
+                                                setFillRepeatSpacing(
+                                                    event.target.value
+                                                );
+                                            }
+                                        } />
+                                </label>
+
+                                <div className="builder-pro-subtitle">
+                                    Hasta límite
+                                </div>
+
+                                <div className="builder-pro-grid-2">
+                                    <button
+                                        type="button"
+                                        className={
+                                            fillRepeatPreviewReady &&
+                                            fillRepeatMode ===
+                                                FILL_REPEAT_MODE_LINE &&
+                                            fillRepeatDirection ===
+                                                FILL_REPEAT_DIRECTION_LEFT
+                                                ? 'btn btn-sm btn-primary'
+                                                : 'btn btn-sm btn-secondary'
+                                        }
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () =>
+                                                startFillRepeatPreview(
+                                                    FILL_REPEAT_MODE_LINE,
+                                                    FILL_REPEAT_DIRECTION_LEFT
+                                                )
+                                        }>
+                                        Izquierda
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className={
+                                            fillRepeatPreviewReady &&
+                                            fillRepeatMode ===
+                                                FILL_REPEAT_MODE_LINE &&
+                                            fillRepeatDirection ===
+                                                FILL_REPEAT_DIRECTION_RIGHT
+                                                ? 'btn btn-sm btn-primary'
+                                                : 'btn btn-sm btn-secondary'
+                                        }
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () =>
+                                                startFillRepeatPreview(
+                                                    FILL_REPEAT_MODE_LINE,
+                                                    FILL_REPEAT_DIRECTION_RIGHT
+                                                )
+                                        }>
+                                        Derecha
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className={
+                                            fillRepeatPreviewReady &&
+                                            fillRepeatMode ===
+                                                FILL_REPEAT_MODE_LINE &&
+                                            fillRepeatDirection ===
+                                                FILL_REPEAT_DIRECTION_UP
+                                                ? 'btn btn-sm btn-primary'
+                                                : 'btn btn-sm btn-secondary'
+                                        }
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () =>
+                                                startFillRepeatPreview(
+                                                    FILL_REPEAT_MODE_LINE,
+                                                    FILL_REPEAT_DIRECTION_UP
+                                                )
+                                        }>
+                                        Arriba
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className={
+                                            fillRepeatPreviewReady &&
+                                            fillRepeatMode ===
+                                                FILL_REPEAT_MODE_LINE &&
+                                            fillRepeatDirection ===
+                                                FILL_REPEAT_DIRECTION_DOWN
+                                                ? 'btn btn-sm btn-primary'
+                                                : 'btn btn-sm btn-secondary'
+                                        }
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () =>
+                                                startFillRepeatPreview(
+                                                    FILL_REPEAT_MODE_LINE,
+                                                    FILL_REPEAT_DIRECTION_DOWN
+                                                )
+                                        }>
+                                        Abajo
+                                    </button>
+                                </div>
+
+                                <div className="builder-pro-subtitle">
+                                    Área
+                                </div>
+
+                                <button
+                                    type="button"
+                                    className={
+                                        fillRepeatPreviewReady &&
+                                        fillRepeatMode ===
+                                            FILL_REPEAT_MODE_AREA
+                                            ? 'btn btn-sm btn-primary builder-pro-full'
+                                            : 'btn btn-sm btn-secondary builder-pro-full'
+                                    }
+                                    disabled={
+                                        pending ||
+                                        !selectedIds.length
+                                    }
+                                    onClick={
+                                        () =>
+                                            startFillRepeatPreview(
+                                                FILL_REPEAT_MODE_AREA,
+                                                0
+                                            )
+                                    }>
+                                    Rellenar área de la sala
+                                </button>
+
+                                {
+                                    fillRepeatPreviewReady &&
+                                    <div className="builder-pro-grid-2">
+                                        <button
+                                            type="button"
+                                            className="btn btn-sm btn-primary"
+                                            disabled={ pending }
+                                            onClick={
+                                                confirmFillRepeat
+                                            }>
+                                            Confirmar
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            className="btn btn-sm btn-secondary"
+                                            disabled={ pending }
+                                            onClick={
+                                                () =>
+                                                {
+                                                    resetFillRepeatPreview();
+
+                                                    setStatus(
+                                                        'Relleno cancelado.'
+                                                    );
+                                                }
+                                            }>
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                }
+
+                                <div className="builder-pro-hint">
+                                    Hasta límite repite el módulo hasta el primer borde, tile inválido u obstáculo. Área recorre toda la sala alineada al módulo y omite bloques que no caben o están ocupados. La operación final es atómica y usa unidades reales del inventario.
+                                </div>
+                            </div>
+                        </details>
+
 
                         <details className="builder-pro-section">
                             <summary>Rotación</summary>
