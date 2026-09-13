@@ -696,25 +696,19 @@ public final class ReplaceGroupService
     private static boolean isSafeReplaceItem(
             HabboItem item)
     {
-        if(item == null
-                || item.getBaseItem() == null
-                || item.getBaseItem().getType()
-                != FurnitureType.FLOOR)
-        {
-            return false;
-        }
-
-        return !(item instanceof InteractionStackHelper)
-                && !(item instanceof InteractionTileWalkMagic)
-                && !(item instanceof InteractionWired)
-                && !(item instanceof InteractionWiredHighscore)
-                && !(item instanceof InteractionTeleport)
-                && !(item instanceof InteractionJukeBox)
-                && !(item instanceof InteractionMoodLight)
-                && !(item instanceof InteractionRentableSpace)
-                && !(item instanceof InteractionMusicDisc)
-                && !(item instanceof InteractionClothing)
-                && !(item instanceof InteractionCrackable);
+        /*
+         * Replacement is an identity swap between real HabboItem instances.
+         * Do not maintain a hard-coded interaction denylist here: special
+         * furniture must follow the emulator's own placement/pickup rules.
+         *
+         * This intentionally keeps the only structural Builder Pro boundary:
+         * the replacement engine operates on FLOOR furniture because its
+         * atomic geometry/history model is X/Y/Z based.
+         */
+        return item != null
+                && item.getBaseItem() != null
+                && item.getBaseItem().getType()
+                == FurnitureType.FLOOR;
     }
 
     private static String defaultExtraData(
