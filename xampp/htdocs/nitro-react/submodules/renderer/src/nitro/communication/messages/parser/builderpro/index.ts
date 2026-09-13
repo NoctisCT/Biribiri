@@ -13,4 +13,5 @@ export * from './BuilderProMirrorDuplicateResultParser';
 export * from './BuilderProReplaceGroupResultParser';
 export * from './BuilderProLinearRepeatResultParser';
 export * from './BuilderProGridRepeatResultParser';
+export * from './BuilderProRadialRepeatResultParser';
 export * from './BuilderProBlueprintStateParser';

@@ -536,6 +536,7 @@ export class IncomingHeader {
     public static BUILDER_PRO_REPLACE_GROUP_RESULT = 6328;
     public static BUILDER_PRO_LINEAR_REPEAT_RESULT = 6330;
     public static BUILDER_PRO_GRID_REPEAT_RESULT = 6332;
+    public static BUILDER_PRO_RADIAL_REPEAT_RESULT = 6334;
 
 public static AIR_HOCKEY_CLOSE = 6006;
 public static AIR_HOCKEY_ERROR = 6007;

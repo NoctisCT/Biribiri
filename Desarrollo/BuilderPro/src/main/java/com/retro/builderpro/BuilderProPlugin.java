@@ -32,6 +32,7 @@ import com.retro.builderpro.handlers.MirrorDuplicateRequest;
 import com.retro.builderpro.handlers.ReplaceGroupRequest;
 import com.retro.builderpro.handlers.LinearRepeatRequest;
 import com.retro.builderpro.handlers.GridRepeatRequest;
+import com.retro.builderpro.handlers.RadialRepeatRequest;
 
 public class BuilderProPlugin
         extends HabboPlugin
@@ -171,6 +172,13 @@ public class BuilderProPlugin
                 .registerHandler(
                         BuilderProPackets.GRID_REPEAT_REQUEST,
                         GridRepeatRequest.class
+                );
+
+        Emulator.getGameServer()
+                .getPacketManager()
+                .registerHandler(
+                        BuilderProPackets.RADIAL_REPEAT_REQUEST,
+                        RadialRepeatRequest.class
                 );
 
         System.out.println(

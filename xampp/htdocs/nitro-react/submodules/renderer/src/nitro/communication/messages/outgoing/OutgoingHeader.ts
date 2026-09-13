@@ -533,4 +533,5 @@ export class OutgoingHeader
     public static BUILDER_PRO_REPLACE_GROUP = 6327;
     public static BUILDER_PRO_LINEAR_REPEAT = 6329;
     public static BUILDER_PRO_GRID_REPEAT = 6331;
+    public static BUILDER_PRO_RADIAL_REPEAT = 6333;
 }

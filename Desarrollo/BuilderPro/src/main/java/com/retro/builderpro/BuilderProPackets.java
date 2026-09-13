@@ -55,4 +55,7 @@ public final class BuilderProPackets
 
     public static final int GRID_REPEAT_REQUEST = 6331;
     public static final int GRID_REPEAT_RESULT = 6332;
+
+    public static final int RADIAL_REPEAT_REQUEST = 6333;
+    public static final int RADIAL_REPEAT_RESULT = 6334;
 }

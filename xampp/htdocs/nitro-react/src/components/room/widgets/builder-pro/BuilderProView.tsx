@@ -1,4 +1,4 @@
-import { BuilderProLayerStateComposer, BuilderProLayerStateEvent, BuilderProPickupGroupComposer, BuilderProPickupGroupResultEvent, RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProReferencePlacementComposer, BuilderProMirrorDuplicateComposer, BuilderProMirrorDuplicateResultEvent, BuilderProReplaceGroupComposer, BuilderProReplaceGroupResultEvent, BuilderProLinearRepeatComposer, BuilderProLinearRepeatResultEvent, BuilderProGridRepeatComposer, BuilderProGridRepeatResultEvent, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, BuilderProTraversalStateComposer, BuilderProTraversalStateEvent, BuilderProBlueprintStateComposer, BuilderProBlueprintStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomEngineObjectPlacedEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
+import { BuilderProLayerStateComposer, BuilderProLayerStateEvent, BuilderProPickupGroupComposer, BuilderProPickupGroupResultEvent, RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProReferencePlacementComposer, BuilderProMirrorDuplicateComposer, BuilderProMirrorDuplicateResultEvent, BuilderProReplaceGroupComposer, BuilderProReplaceGroupResultEvent, BuilderProLinearRepeatComposer, BuilderProLinearRepeatResultEvent, BuilderProGridRepeatComposer, BuilderProGridRepeatResultEvent, BuilderProRadialRepeatComposer, BuilderProRadialRepeatResultEvent, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, BuilderProTraversalStateComposer, BuilderProTraversalStateEvent, BuilderProBlueprintStateComposer, BuilderProBlueprintStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomEngineObjectPlacedEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { FaBoxOpen, FaClone, FaCopy, FaEllipsisH, FaEye, FaEyeSlash, FaLock, FaMinus, FaPaste, FaPlus, FaQuestion, FaRedo, FaSearch, FaUndo, FaWalking } from 'react-icons/fa';
 import { AddEventLinkTracker, BuilderProSelectionVisualizer, CanManipulateFurniture, CreateLinkEvent, GetRoomEngine, GetSessionDataManager, HasHabboClub, RemoveLinkEventTracker, SendMessageComposer, SetBuilderProSelectionModeActive } from '../../../../api';
@@ -72,6 +72,9 @@ const LINEAR_REPEAT_DIRECTION_DOWN = 4;
 const GRID_REPEAT_OP_PREVIEW = 0;
 const GRID_REPEAT_OP_EXECUTE = 1;
 
+const RADIAL_REPEAT_OP_PREVIEW = 0;
+const RADIAL_REPEAT_OP_EXECUTE = 1;
+
 type BuilderProReplacementContext = {
     itemIds: number[];
     referenceId: number;
@@ -104,6 +107,24 @@ type BuilderProGridRepeatContext = {
 };
 
 type BuilderProGridRepeatPreviewEntry = {
+    baseItemId: number;
+    x: number;
+    y: number;
+    z: number;
+    rotation: number;
+    state: number;
+};
+
+type BuilderProRadialRepeatContext = {
+    itemIds: number[];
+    copies: number;
+    totalAngle: number;
+    radius: number;
+    rotateWithPattern: boolean;
+    pivotId: number;
+};
+
+type BuilderProRadialRepeatPreviewEntry = {
     baseItemId: number;
     x: number;
     y: number;
@@ -166,6 +187,7 @@ type BuilderProClipboardPreview = {
 const BUILDER_PRO_PASTE_GHOST_ID_BASE = -1900000000;
 const BUILDER_PRO_LINEAR_REPEAT_GHOST_ID_BASE = -1800000000;
 const BUILDER_PRO_GRID_REPEAT_GHOST_ID_BASE = -1700000000;
+const BUILDER_PRO_RADIAL_REPEAT_GHOST_ID_BASE = -1600000000;
 
 const normalizeBuilderProRotation = (
     value: number
@@ -380,6 +402,16 @@ export const BuilderProView: FC<{}> = props =>
         useState('0');
     const [ gridRepeatPreviewReady, setGridRepeatPreviewReady ] =
         useState(false);
+    const [ radialRepeatCopies, setRadialRepeatCopies ] =
+        useState('8');
+    const [ radialRepeatAngle, setRadialRepeatAngle ] =
+        useState('360');
+    const [ radialRepeatRadius, setRadialRepeatRadius ] =
+        useState('4');
+    const [ radialRepeatRotateWithPattern, setRadialRepeatRotateWithPattern ] =
+        useState(true);
+    const [ radialRepeatPreviewReady, setRadialRepeatPreviewReady ] =
+        useState(false);
     const [ highlightSelection, setHighlightSelection ] =
         useState(BuilderProSelectionVisualizer.enabled);
     const [ pivotId, setPivotId ] =
@@ -454,6 +486,30 @@ export const BuilderProView: FC<{}> = props =>
             []
         );
     const gridRepeatPreviewFrameRef =
+        useRef<number | null>(
+            null
+        );
+    const radialRepeatContextRef =
+        useRef<BuilderProRadialRepeatContext | null>(
+            null
+        );
+    const pendingRadialRepeatContextRef =
+        useRef<BuilderProRadialRepeatContext | null>(
+            null
+        );
+    const pendingRadialRepeatOperationRef =
+        useRef<number | null>(
+            null
+        );
+    const radialRepeatPreviewEntriesRef =
+        useRef<BuilderProRadialRepeatPreviewEntry[]>(
+            []
+        );
+    const radialRepeatGhostIdsRef =
+        useRef<number[]>(
+            []
+        );
+    const radialRepeatPreviewFrameRef =
         useRef<number | null>(
             null
         );
@@ -11256,6 +11312,992 @@ export const BuilderProView: FC<{}> = props =>
     ]);
 
 
+    const clearRadialRepeatPreview = useCallback(() =>
+    {
+        if(radialRepeatPreviewFrameRef.current !== null)
+        {
+            window.cancelAnimationFrame(
+                radialRepeatPreviewFrameRef.current
+            );
+
+            radialRepeatPreviewFrameRef.current =
+                null;
+        }
+
+        const currentRoomSession =
+            roomSessionRef.current;
+
+        const roomEngine =
+            GetRoomEngine();
+
+        if(currentRoomSession && roomEngine)
+        {
+            for(const ghostId of
+                radialRepeatGhostIdsRef.current)
+            {
+                roomEngine.removeRoomObjectFloor(
+                    currentRoomSession.roomId,
+                    ghostId
+                );
+            }
+        }
+
+        radialRepeatGhostIdsRef.current = [];
+        radialRepeatPreviewEntriesRef.current = [];
+    }, []);
+
+    const syncRadialRepeatPreview = useCallback(() =>
+    {
+        const entries =
+            radialRepeatPreviewEntriesRef.current;
+
+        const currentRoomSession =
+            roomSessionRef.current;
+
+        const roomEngine =
+            GetRoomEngine();
+
+        if(
+            !entries.length ||
+            !currentRoomSession ||
+            !roomEngine
+        )
+        {
+            return;
+        }
+
+        const roomId =
+            currentRoomSession.roomId;
+
+        for(let index = 0;
+                index < entries.length;
+                index++)
+        {
+            const entry =
+                entries[index];
+
+            const ghostId =
+                BUILDER_PRO_RADIAL_REPEAT_GHOST_ID_BASE
+                    - index;
+
+            if(
+                !radialRepeatGhostIdsRef.current
+                    .includes(
+                        ghostId
+                    )
+            )
+            {
+                const queued =
+                    roomEngine.addFurnitureFloor(
+                        roomId,
+                        ghostId,
+                        entry.baseItemId,
+                        new Vector3d(
+                            entry.x,
+                            entry.y,
+                            entry.z
+                        ),
+                        new Vector3d(
+                            entry.rotation * 45
+                        ),
+                        entry.state,
+                        null,
+                        Number.NaN,
+                        -1,
+                        0,
+                        0,
+                        '',
+                        false,
+                        false
+                    );
+
+                if(queued)
+                {
+                    radialRepeatGhostIdsRef.current
+                        .push(
+                            ghostId
+                        );
+                }
+            }
+
+            const roomObject =
+                roomEngine.getRoomObject(
+                    roomId,
+                    ghostId,
+                    RoomObjectCategory.FLOOR
+                ) as any;
+
+            if(!roomObject)
+            {
+                continue;
+            }
+
+            roomObject.setLocation(
+                new Vector3d(
+                    entry.x,
+                    entry.y,
+                    entry.z
+                )
+            );
+
+            roomObject.setDirection(
+                new Vector3d(
+                    entry.rotation * 45
+                )
+            );
+
+            if(roomObject.model)
+            {
+                roomObject.model.setValue(
+                    RoomObjectVariable
+                        .FURNITURE_ALPHA_MULTIPLIER,
+                    0.45
+                );
+            }
+
+            const sprites =
+                (
+                    roomObject.visualization as any
+                )?.sprites;
+
+            if(Array.isArray(sprites))
+            {
+                for(const sprite of sprites)
+                {
+                    if(sprite)
+                    {
+                        sprite.clickHandling =
+                            false;
+                    }
+                }
+            }
+        }
+    }, []);
+
+    const renderRadialRepeatPreview =
+        useCallback((
+            entries: BuilderProRadialRepeatPreviewEntry[]
+        ) =>
+        {
+            clearRadialRepeatPreview();
+
+            radialRepeatPreviewEntriesRef.current =
+                entries.map(
+                    entry => ({
+                        ...entry
+                    })
+                );
+
+            syncRadialRepeatPreview();
+
+            radialRepeatPreviewFrameRef.current =
+                window.requestAnimationFrame(
+                    () =>
+                    {
+                        radialRepeatPreviewFrameRef.current =
+                            null;
+
+                        syncRadialRepeatPreview();
+
+                        window.requestAnimationFrame(
+                            () =>
+                                syncRadialRepeatPreview()
+                        );
+                    }
+                );
+        }, [
+            clearRadialRepeatPreview,
+            syncRadialRepeatPreview
+        ]);
+
+    const resetRadialRepeatPreview =
+        useCallback(() =>
+        {
+            clearRadialRepeatPreview();
+
+            radialRepeatContextRef.current =
+                null;
+
+            pendingRadialRepeatContextRef.current =
+                null;
+
+            setRadialRepeatPreviewReady(
+                false
+            );
+        }, [
+            clearRadialRepeatPreview
+        ]);
+
+    const finalizeRadialRepeatVisuals =
+        useCallback((
+            repeatedIds: number[],
+            copies: number,
+            placedCount: number
+        ) =>
+        {
+            const settle = (
+                attempt: number
+            ) =>
+            {
+                if(!activeRef.current)
+                {
+                    suppressPasteLayerAutoAssignRef.current =
+                        false;
+
+                    return;
+                }
+
+                const currentRoomSession =
+                    roomSessionRef.current;
+
+                const roomEngine =
+                    GetRoomEngine();
+
+                if(
+                    !currentRoomSession ||
+                    !roomEngine
+                )
+                {
+                    suppressPasteLayerAutoAssignRef.current =
+                        false;
+
+                    return;
+                }
+
+                const presentIds =
+                    repeatedIds.filter(
+                        id =>
+                            !!roomEngine.getRoomObject(
+                                currentRoomSession.roomId,
+                                id,
+                                RoomObjectCategory.FLOOR
+                            )
+                    );
+
+                if(
+                    presentIds.length ===
+                        repeatedIds.length ||
+                    attempt >= 45
+                )
+                {
+                    suppressPasteLayerAutoAssignRef.current =
+                        false;
+
+                    applySelection(
+                        presentIds
+                    );
+
+                    setCanUndo(
+                        true
+                    );
+
+                    setCanRedo(
+                        false
+                    );
+
+                    setOutlinerRevision(
+                        current =>
+                            current + 1
+                    );
+
+                    requestLayerState(
+                        LAYER_OP_LIST
+                    );
+
+                    requestTraversalState(
+                        TRAVERSAL_OP_QUERY
+                    );
+
+                    if(
+                        presentIds.length ===
+                        repeatedIds.length
+                    )
+                    {
+                        setStatus(
+                            `Patrón radial creado: ${ copies } copias · ${ placedCount } furnis nuevos.`
+                        );
+                    }
+                    else
+                    {
+                        setStatus(
+                            `Patrón radial creado en servidor, pero Nitro solo sincronizó ${ presentIds.length }/${ repeatedIds.length } furnis.`
+                        );
+                    }
+
+                    window.requestAnimationFrame(
+                        () =>
+                        {
+                            BuilderProSelectionVisualizer
+                                .refresh(
+                                    presentIds
+                                );
+                        }
+                    );
+
+                    return;
+                }
+
+                window.requestAnimationFrame(
+                    () =>
+                        settle(
+                            attempt + 1
+                        )
+                );
+            };
+
+            settle(
+                0
+            );
+        }, [
+            applySelection,
+            requestLayerState,
+            requestTraversalState
+        ]);
+
+    const requestRadialRepeat =
+        useCallback((
+            operation: number,
+            context: BuilderProRadialRepeatContext
+        ) =>
+        {
+            if(!activeRef.current) return;
+            if(pendingRef.current) return;
+
+            if(
+                operation !== RADIAL_REPEAT_OP_PREVIEW &&
+                operation !== RADIAL_REPEAT_OP_EXECUTE
+            )
+            {
+                return;
+            }
+
+            if(
+                !context ||
+                !context.itemIds.length
+            )
+            {
+                setStatus(
+                    'Selecciona primero lo que quieres repetir.'
+                );
+
+                return;
+            }
+
+            duplicateRequestedRef.current =
+                false;
+
+            mirrorDuplicateModeRef.current =
+                false;
+
+            duplicateModeRef.current =
+                false;
+
+            setDuplicateMode(
+                false
+            );
+
+            clearPastePreview();
+
+            pasteModeRef.current =
+                false;
+
+            setPasteMode(
+                false
+            );
+
+            blueprintPlaceModeRef.current =
+                false;
+
+            setBlueprintPlaceMode(
+                false
+            );
+
+            replacePickModeRef.current =
+                false;
+
+            setReplacePickMode(
+                false
+            );
+
+            if(operation === RADIAL_REPEAT_OP_PREVIEW)
+            {
+                resetRadialRepeatPreview();
+            }
+            else
+            {
+                clearRadialRepeatPreview();
+
+                setRadialRepeatPreviewReady(
+                    false
+                );
+            }
+
+            requestIdRef.current++;
+
+            if(requestIdRef.current > 2000000000)
+            {
+                requestIdRef.current = 1;
+            }
+
+            const requestId =
+                requestIdRef.current;
+
+            pendingRef.current =
+                true;
+
+            pendingRequestIdRef.current =
+                requestId;
+
+            pendingStartedAtRef.current =
+                performance.now();
+
+            pendingRadialRepeatOperationRef.current =
+                operation;
+
+            pendingRadialRepeatContextRef.current = {
+                itemIds: [
+                    ...context.itemIds
+                ],
+                copies:
+                    context.copies,
+                totalAngle:
+                    context.totalAngle,
+                radius:
+                    context.radius,
+                rotateWithPattern:
+                    context.rotateWithPattern,
+                pivotId:
+                    context.pivotId
+            };
+
+            if(operation === RADIAL_REPEAT_OP_EXECUTE)
+            {
+                suppressPasteLayerAutoAssignRef.current =
+                    true;
+            }
+
+            setPending(
+                true
+            );
+
+            setStatus(
+                operation === RADIAL_REPEAT_OP_PREVIEW
+                    ? 'Preparando vista previa del patrón radial...'
+                    : 'Creando patrón radial...'
+            );
+
+            try
+            {
+                SendMessageComposer(
+                    new BuilderProRadialRepeatComposer(
+                        context.itemIds,
+                        operation,
+                        context.copies,
+                        context.totalAngle,
+                        context.radius,
+                        context.rotateWithPattern,
+                        context.pivotId,
+                        requestId
+                    )
+                );
+
+                if(pendingTimeoutRef.current !== null)
+                {
+                    window.clearTimeout(
+                        pendingTimeoutRef.current
+                    );
+                }
+
+                pendingTimeoutRef.current =
+                    window.setTimeout(
+                        () =>
+                        {
+                            pendingTimeoutRef.current =
+                                null;
+
+                            if(
+                                !pendingRef.current ||
+                                pendingRequestIdRef.current !==
+                                    requestId ||
+                                pendingRadialRepeatOperationRef.current !==
+                                    operation
+                            )
+                            {
+                                return;
+                            }
+
+                            pendingRef.current =
+                                false;
+
+                            pendingRequestIdRef.current =
+                                null;
+
+                            pendingStartedAtRef.current =
+                                0;
+
+                            pendingRadialRepeatOperationRef.current =
+                                null;
+
+                            pendingRadialRepeatContextRef.current =
+                                null;
+
+                            suppressPasteLayerAutoAssignRef.current =
+                                false;
+
+                            setPending(
+                                false
+                            );
+
+                            setStatus(
+                                'Patrón radial sin confirmación del servidor.'
+                            );
+                        },
+                        MOVE_CONFIRM_TIMEOUT_MS
+                    );
+            }
+            catch(error)
+            {
+                console.error(
+                    `[BuilderProTrace] CLIENT RADIAL_REPEAT_SEND_ERROR #${ requestId }`,
+                    error
+                );
+
+                pendingRef.current =
+                    false;
+
+                pendingRequestIdRef.current =
+                    null;
+
+                pendingStartedAtRef.current =
+                    0;
+
+                pendingRadialRepeatOperationRef.current =
+                    null;
+
+                pendingRadialRepeatContextRef.current =
+                    null;
+
+                suppressPasteLayerAutoAssignRef.current =
+                    false;
+
+                setPending(
+                    false
+                );
+
+                setStatus(
+                    'No se pudo enviar el patrón radial al servidor.'
+                );
+            }
+        }, [
+            clearRadialRepeatPreview,
+            clearPastePreview,
+            resetRadialRepeatPreview
+        ]);
+
+    const startRadialRepeatPreview =
+        useCallback(() =>
+        {
+            if(!activeRef.current) return;
+            if(pendingRef.current) return;
+
+            const ids = [
+                ...selectedIdsRef.current
+            ];
+
+            if(!ids.length)
+            {
+                setStatus(
+                    'Selecciona al menos un furni.'
+                );
+
+                return;
+            }
+
+            const copies =
+                Number.parseInt(
+                    radialRepeatCopies,
+                    10
+                );
+
+            const totalAngle =
+                Number.parseInt(
+                    radialRepeatAngle,
+                    10
+                );
+
+            const radius =
+                Number.parseInt(
+                    radialRepeatRadius,
+                    10
+                );
+
+            if(
+                !Number.isSafeInteger(copies) ||
+                copies < 1 ||
+                copies > 100
+            )
+            {
+                setStatus(
+                    'Las copias deben estar entre 1 y 100.'
+                );
+
+                return;
+            }
+
+            if(
+                !Number.isSafeInteger(totalAngle) ||
+                totalAngle < 1 ||
+                totalAngle > 360
+            )
+            {
+                setStatus(
+                    'El ángulo total debe estar entre 1° y 360°.'
+                );
+
+                return;
+            }
+
+            if(
+                !Number.isSafeInteger(radius) ||
+                radius < 1 ||
+                radius > 100
+            )
+            {
+                setStatus(
+                    'El radio debe estar entre 1 y 100 casillas.'
+                );
+
+                return;
+            }
+
+            const total =
+                ids.length *
+                copies;
+
+            if(total > MAX_SELECTION)
+            {
+                setStatus(
+                    `El patrón radial generaría ${ total } furnis; el límite actual es ${ MAX_SELECTION }.`
+                );
+
+                return;
+            }
+
+            const currentPivotId =
+                pivotIdRef.current ?? 0;
+
+            if(
+                currentPivotId !== 0 &&
+                !ids.includes(
+                    currentPivotId
+                )
+            )
+            {
+                setStatus(
+                    'El pivote debe pertenecer a la selección.'
+                );
+
+                return;
+            }
+
+            requestRadialRepeat(
+                RADIAL_REPEAT_OP_PREVIEW,
+                {
+                    itemIds: ids,
+                    copies,
+                    totalAngle,
+                    radius,
+                    rotateWithPattern:
+                        radialRepeatRotateWithPattern,
+                    pivotId:
+                        currentPivotId
+                }
+            );
+        }, [
+            radialRepeatCopies,
+            radialRepeatAngle,
+            radialRepeatRadius,
+            radialRepeatRotateWithPattern,
+            pivotId,
+            requestRadialRepeat
+        ]);
+
+    const confirmRadialRepeat =
+        useCallback(() =>
+        {
+            if(!activeRef.current) return;
+            if(pendingRef.current) return;
+
+            const context =
+                radialRepeatContextRef.current;
+
+            if(
+                !context ||
+                !radialRepeatPreviewReady
+            )
+            {
+                setStatus(
+                    'Genera primero una vista previa válida.'
+                );
+
+                return;
+            }
+
+            requestRadialRepeat(
+                RADIAL_REPEAT_OP_EXECUTE,
+                context
+            );
+        }, [
+            radialRepeatPreviewReady,
+            requestRadialRepeat
+        ]);
+
+    useMessageEvent<BuilderProRadialRepeatResultEvent>(
+        BuilderProRadialRepeatResultEvent,
+        event =>
+        {
+            const parser =
+                event.getParser();
+
+            if(!parser) return;
+
+            const requestId =
+                parser.requestId;
+
+            if(
+                pendingRequestIdRef.current !==
+                    requestId ||
+                !pendingRef.current
+            )
+            {
+                return;
+            }
+
+            const expectedOperation =
+                pendingRadialRepeatOperationRef.current;
+
+            const context =
+                pendingRadialRepeatContextRef.current;
+
+            if(
+                expectedOperation === null ||
+                parser.operation !==
+                    expectedOperation
+            )
+            {
+                return;
+            }
+
+            if(pendingTimeoutRef.current !== null)
+            {
+                window.clearTimeout(
+                    pendingTimeoutRef.current
+                );
+
+                pendingTimeoutRef.current =
+                    null;
+            }
+
+            pendingRef.current =
+                false;
+
+            pendingRequestIdRef.current =
+                null;
+
+            pendingStartedAtRef.current =
+                0;
+
+            pendingRadialRepeatOperationRef.current =
+                null;
+
+            pendingRadialRepeatContextRef.current =
+                null;
+
+            setPending(
+                false
+            );
+
+            if(!parser.success)
+            {
+                suppressPasteLayerAutoAssignRef.current =
+                    false;
+
+                if(
+                    expectedOperation ===
+                    RADIAL_REPEAT_OP_PREVIEW
+                )
+                {
+                    resetRadialRepeatPreview();
+                }
+
+                setStatus(
+                    `Error ${ parser.code }: ${ parser.message }`
+                );
+
+                return;
+            }
+
+            if(
+                expectedOperation ===
+                RADIAL_REPEAT_OP_PREVIEW
+            )
+            {
+                if(!context)
+                {
+                    resetRadialRepeatPreview();
+
+                    setStatus(
+                        'La vista previa perdió su contexto.'
+                    );
+
+                    return;
+                }
+
+                const entries =
+                    parser.previewEntries;
+
+                const expectedCount =
+                    context.itemIds.length *
+                    context.copies;
+
+                if(
+                    parser.copies !==
+                        context.copies ||
+                    parser.totalAngle !==
+                        context.totalAngle ||
+                    parser.radius !==
+                        context.radius ||
+                    parser.rotateWithPattern !==
+                        context.rotateWithPattern ||
+                    parser.pivotId !==
+                        context.pivotId ||
+                    entries.length !==
+                        expectedCount
+                )
+                {
+                    resetRadialRepeatPreview();
+
+                    setStatus(
+                        'La vista previa no coincide con el patrón radial solicitado.'
+                    );
+
+                    return;
+                }
+
+                radialRepeatContextRef.current = {
+                    itemIds: [
+                        ...context.itemIds
+                    ],
+                    copies:
+                        context.copies,
+                    totalAngle:
+                        context.totalAngle,
+                    radius:
+                        context.radius,
+                    rotateWithPattern:
+                        context.rotateWithPattern,
+                    pivotId:
+                        context.pivotId
+                };
+
+                setRadialRepeatPreviewReady(
+                    true
+                );
+
+                renderRadialRepeatPreview(
+                    entries
+                );
+
+                setStatus(
+                    `Vista previa radial: ${ context.copies } copias · ${ context.totalAngle }° · radio ${ context.radius } · ${ entries.length } furnis.`
+                );
+
+                return;
+            }
+
+            resetRadialRepeatPreview();
+
+            finalizeRadialRepeatVisuals(
+                parser.itemIds,
+                parser.copies,
+                parser.placedCount
+            );
+        }
+    );
+
+    useEffect(() =>
+    {
+        if(active) return;
+
+        resetRadialRepeatPreview();
+
+        pendingRadialRepeatOperationRef.current =
+            null;
+
+        pendingRadialRepeatContextRef.current =
+            null;
+    }, [
+        active,
+        resetRadialRepeatPreview
+    ]);
+
+    useEffect(() =>
+    {
+        return () =>
+        {
+            clearRadialRepeatPreview();
+        };
+    }, [
+        clearRadialRepeatPreview
+    ]);
+
+    useEffect(() =>
+    {
+        const context =
+            radialRepeatContextRef.current;
+
+        if(!context)
+        {
+            return;
+        }
+
+        if(
+            context.itemIds.length !==
+                selectedIds.length ||
+            context.itemIds.some(
+                (id, index) =>
+                    id !== selectedIds[index]
+            ) ||
+            context.pivotId !==
+                (pivotId ?? 0)
+        )
+        {
+            resetRadialRepeatPreview();
+        }
+    }, [
+        selectedIds,
+        pivotId,
+        resetRadialRepeatPreview
+    ]);
+
+    useEffect(() =>
+    {
+        if(!pending) return;
+
+        if(
+            pendingRadialRepeatOperationRef.current !==
+            null
+        )
+        {
+            return;
+        }
+
+        resetRadialRepeatPreview();
+    }, [
+        pending,
+        resetRadialRepeatPreview
+    ]);
+
     useMessageEvent<BuilderProCopyGroupResultEvent>(
         BuilderProCopyGroupResultEvent,
         event =>
@@ -16233,6 +17275,157 @@ export const BuilderProView: FC<{}> = props =>
 
                                 <div className="builder-pro-hint">
                                     Filas × columnas cuenta también el módulo original: 3 × 3 son 9 módulos, por lo que se crean 8 copias. Se expande hacia la derecha y abajo. Las separaciones 0 dejan los módulos pegados.
+                                </div>
+                            </div>
+                        </details>
+
+
+                        <details className="builder-pro-section">
+                            <summary>Patrón radial</summary>
+
+                            <div className="builder-pro-section-body">
+                                <div className="builder-pro-grid-2">
+                                    <label className="builder-pro-field-row">
+                                        <span>Copias</span>
+
+                                        <input
+                                            className="builder-pro-small-input"
+                                            type="number"
+                                            min="1"
+                                            max="100"
+                                            step="1"
+                                            value={ radialRepeatCopies }
+                                            disabled={ pending }
+                                            onChange={
+                                                event =>
+                                                {
+                                                    resetRadialRepeatPreview();
+                                                    setRadialRepeatCopies(
+                                                        event.target.value
+                                                    );
+                                                }
+                                            } />
+                                    </label>
+
+                                    <label className="builder-pro-field-row">
+                                        <span>Ángulo total</span>
+
+                                        <input
+                                            className="builder-pro-small-input"
+                                            type="number"
+                                            min="1"
+                                            max="360"
+                                            step="1"
+                                            value={ radialRepeatAngle }
+                                            disabled={ pending }
+                                            onChange={
+                                                event =>
+                                                {
+                                                    resetRadialRepeatPreview();
+                                                    setRadialRepeatAngle(
+                                                        event.target.value
+                                                    );
+                                                }
+                                            } />
+                                    </label>
+                                </div>
+
+                                <label className="builder-pro-field-row">
+                                    <span>Radio</span>
+
+                                    <input
+                                        className="builder-pro-small-input"
+                                        type="number"
+                                        min="1"
+                                        max="100"
+                                        step="1"
+                                        value={ radialRepeatRadius }
+                                        disabled={ pending }
+                                        onChange={
+                                            event =>
+                                            {
+                                                resetRadialRepeatPreview();
+                                                setRadialRepeatRadius(
+                                                    event.target.value
+                                                );
+                                            }
+                                        } />
+                                </label>
+
+                                <label className="builder-pro-field-row">
+                                    <span>Orientar siguiendo el círculo</span>
+
+                                    <input
+                                        type="checkbox"
+                                        checked={ radialRepeatRotateWithPattern }
+                                        disabled={ pending }
+                                        onChange={
+                                            event =>
+                                            {
+                                                resetRadialRepeatPreview();
+                                                setRadialRepeatRotateWithPattern(
+                                                    event.target.checked
+                                                );
+                                            }
+                                        } />
+                                </label>
+
+                                <div className="builder-pro-hint">
+                                    { pivotId !== null
+                                        ? `Centro: pivote #${ pivotId }`
+                                        : 'Centro: centro de la selección' }
+                                </div>
+
+                                {
+                                    !radialRepeatPreviewReady &&
+                                    <button
+                                        type="button"
+                                        className="builder-pro-full"
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            startRadialRepeatPreview
+                                        }>
+                                        Vista previa
+                                    </button>
+                                }
+
+                                {
+                                    radialRepeatPreviewReady &&
+                                    <div className="builder-pro-grid-2">
+                                        <button
+                                            type="button"
+                                            className="btn btn-sm btn-primary"
+                                            disabled={ pending }
+                                            onClick={
+                                                confirmRadialRepeat
+                                            }>
+                                            Confirmar
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            className="btn btn-sm btn-secondary"
+                                            disabled={ pending }
+                                            onClick={
+                                                () =>
+                                                {
+                                                    resetRadialRepeatPreview();
+
+                                                    setStatus(
+                                                        'Patrón radial cancelado.'
+                                                    );
+                                                }
+                                            }>
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                }
+
+                                <div className="builder-pro-hint">
+                                    Empieza arriba y avanza en sentido horario. A 360° reparte las copias uniformemente; en un arco menor incluye sus extremos. La geometría interna del módulo se conserva. “Orientar” gira cada furni al paso Habbo compatible más cercano.
                                 </div>
                             </div>
                         </details>
