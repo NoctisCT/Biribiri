@@ -1,164 +1,167 @@
 # Builder Pro - Roadmap
 
-## P0 - Cerrar Transform Core
+**Estado:** v1 completada.
+**Última actualización:** 2026-09-14.
 
-`ORIENT`, `ROTATE_STRUCTURE`, altura Z, pivote manual y pivote autom?tico ya
-est?n implementados.
+Este archivo deja de ser una lista de pendientes de implementación y pasa a
+ser el registro de cierre del roadmap de Builder Pro v1.
 
-Antes de cerrar definitivamente el bloque de transformaciones, completar la
-matriz final de regresi?n:
+## P0–P9 — Núcleo original
 
-- smoke exhaustivo de Z;
-- smoke de rotaci?n estructural;
-- pivote autom?tico y manual;
-- colisiones externas durante rotaci?n;
-- pilas con alturas forzadas;
-- rollback en rechazo;
-- selecci?n rectangular + transformaciones;
-- Alt + drag despu?s de transformaciones;
-- eliminar edge cases visuales del resaltado.
+**Estado: CERRADO**
 
-Cuando pase esta matriz, Transform Core puede considerarse cerrado.
+El roadmap original quedó completado:
 
-## P1 - Copy / Duplicate / Paste
+- núcleo de transformaciones;
+- Copy / Duplicate / Paste;
+- Undo / Redo atómico;
+- precisión X/Y/Z y offsets;
+- organización de estructuras;
+- grupos persistentes y bloqueo;
+- Blueprints;
+- selección avanzada;
+- previews y UX;
+- limpieza técnica inicial.
 
-Implementar representaci?n r?gida relativa de una selecci?n.
+Las antiguas entradas que figuraban como no completadas ya no representan
+el estado actual del proyecto.
 
-Snapshot m?nimo por furni:
+## P10–P12 — Expansión de herramientas
 
-- base item;
-- offset X;
-- offset Y;
-- offset Z;
-- orientaci?n;
-- datos extra necesarios.
+**Estado: CERRADO**
 
-El servidor debe validar el inventario completo antes de colocar nada.
+La v1 amplió el núcleo con herramientas y persistencia adicionales:
 
-Sin inventario suficiente:
+- repetición lineal;
+- cuadrícula;
+- patrón radial;
+- reemplazo por referencia;
+- capas;
+- capa de trabajo;
+- Atravesable;
+- bloqueo persistente de furnis;
+- espejo y espejo duplicado;
+- colocación por referencia;
+- mejoras de selección y Outliner;
+- previews transitorios unificados.
 
-- abortar;
-- indicar d?ficit exacto;
-- cero colocaciones parciales.
+## P13 — Fill Area + historial/protocolo
 
-## P2 - Undo / Redo at?mico
+**Estado: CERRADO**
 
-Crear historial de operaciones Builder Pro.
+Incluye:
 
-Una transformaci?n grupal equivale a una sola entrada de historial.
+- Fill lineal/hasta límite;
+- relleno de sala;
+- relleno de área seleccionada;
+- preview visual;
+- sincronización de resultados;
+- Undo/Redo compatible;
+- correcciones de ownership del historial;
+- protocolo final de Fill;
+- parsers preparados para cargas grandes.
 
-Objetivo:
+## P14 — Backup seguro de salas
 
-`operaci?n -> snapshot before -> snapshot after`
+**Estado: CERRADO**
 
-Undo y redo deben usar las mismas garant?as de rollback que las operaciones
-normales.
+Incluye:
 
-## P3 - Precisi?n
+- un Backup por sala;
+- PIN independiente;
+- PBKDF2-HMAC-SHA256;
+- bloqueo temporal por intentos fallidos;
+- furnis del propietario únicamente;
+- restauración exacta de items;
+- protección de furnis ajenos;
+- recuperación de salas eliminadas;
+- restauración de layout personalizado;
+- rollback;
+- integración Nitro.
 
-A?adir:
+## P15 — Producción, límites y QA
 
-- X exacta;
-- Y exacta;
-- Z exacta;
-- offset X/Y/Z;
-- mover N casillas;
-- subir/bajar cantidad arbitraria.
+**Estado: CERRADO**
 
-La UI no debe obligar a repetir clics cuando el usuario ya conoce el valor.
+### P15.1 — Límites y rendimiento
 
-## P4 - Align / Distribute
+- límite de sala elevado a 4000;
+- Builder Pro sincronizado a 4000;
+- altura máxima elevada a 100.0;
+- rate limit por cantidad real de furnis;
+- operaciones pequeñas sin cooldown artificial;
+- actualizaciones visuales masivas en chunks.
 
-Align:
+### P15.2 — Seguridad, ownership y atomicidad
 
-- izquierda;
-- derecha;
-- arriba;
-- abajo;
-- centro X;
-- centro Y;
-- opcionalmente Z.
+- auditoría de permisos;
+- auditoría de ownership;
+- packet bounds;
+- rollback;
+- aislamiento de Undo/Redo por sala;
+- presupuesto de historial;
+- invariantes de Backup.
 
-Distribute:
+### P15.3 — Stress y rendimiento
 
-- horizontal;
-- vertical;
-- distribuci?n uniforme.
+- modelos 100/250/500/1000/2500;
+- eliminación de validaciones globales O(n²) en rutas críticas;
+- persistencia normal asíncrona;
+- mejoras de Move/Transform/Layout/Offset;
+- Fill validado con cargas grandes.
 
-Definir claramente qu? furni act?a como referencia y c?mo se conserva Z.
+### P15.4 — UI y polish
 
-## P5 - Grupos y bloqueo
+- tooltip personalizado único;
+- eliminación del `title` duplicado;
+- textos corregidos;
+- feedback compartido;
+- ayuda `?` actualizada con atajos actuales.
 
-Permitir guardar una selecci?n como grupo l?gico.
+### P15.5 — Finalización
 
-Funciones:
+- máximo global de 4000 furnis;
+- parsers Nitro sincronizados;
+- presupuesto de historial de 160000 `ItemState`;
+- limpieza de trazas temporales;
+- builds finales;
+- auditoría completa;
+- commit y push de producción.
 
-- crear grupo;
-- seleccionar grupo;
-- renombrar;
-- desagrupar;
-- bloquear;
-- desbloquear.
+Commit de cierre P15:
 
-El bloqueo debe impedir modificaciones accidentales desde Builder Pro.
+`7f80de95561d967cc8b6c1b9569e0455a13e89e4`
 
-## P6 - Blueprints
+## Builder Pro v1
 
-Guardar una construcci?n como plantilla reutilizable.
+**COMPLETADO**
 
-Debe almacenar geometr?a relativa, no IDs de items de sala.
+La v1 queda cerrada con:
 
-Al colocar un blueprint:
+- servidor autoritativo;
+- operaciones atómicas;
+- límite de 4000 furnis;
+- herramientas de selección, movimiento, transformación y organización;
+- Copy/Paste/Duplicate;
+- Repeat y Fill;
+- Replace;
+- grupos y capas;
+- Atravesable y locks;
+- Blueprints;
+- Undo/Redo;
+- Backup seguro de sala;
+- UI y protocolo Nitro completos.
 
-- comprobar inventario;
-- comprobar sala;
-- comprobar colisiones;
-- comprobar l?mites;
-- aplicar todo o nada.
+## Post-v1 opcional
 
-## P7 - Selecci?n avanzada
-
-A?adir:
-
-- seleccionar todo;
-- invertir selecci?n;
-- filtros;
-- selecci?n por tipo;
-- dimensiones de selecci?n;
-- informaci?n del bounding box;
-- mejor feedback de cantidad y estado.
-
-## P8 - Preview y UX profesional
-
-A?adir:
-
-- preview de destino m?s claro;
-- preview de rotaci?n;
-- preview de bounding box;
-- Esc para cancelar;
-- indicador de operaci?n pendiente;
-- mejor feedback de errores;
-- controles compactos para workflows frecuentes.
-
-## P9 - Limpieza t?cnica
-
-Cuando Builder Pro est? estable:
-
-- retirar o reducir requestId trace de desarrollo;
-- consolidar helpers duplicados;
-- revisar protocolo;
-- ampliar tests;
-- documentar c?digos de error;
-- revisar rendimiento con selecciones de 100 furnis.
-
-## Futuro fuera del MVP
-
-Evaluar posteriormente:
+Estas ideas no bloquean ni reabren Builder Pro v1:
 
 - wall furni;
-- compatibilidad con sistemas especiales;
-- permisos avanzados;
-- colaboraci?n multiusuario;
-- blueprints compartibles;
+- Blueprints compartibles;
 - import/export;
-- herramientas de construcci?n adicionales.
+- colaboración multiusuario más avanzada;
+- optimización adicional de Undo/Recoger para operaciones muy grandes;
+- nuevas herramientas de construcción que no formen parte del alcance actual.
+
+Cualquier ampliación futura debe abrirse como una nueva fase posterior a v1,
+no como deuda pendiente de P15.

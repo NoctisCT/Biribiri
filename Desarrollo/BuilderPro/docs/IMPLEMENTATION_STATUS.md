@@ -1,105 +1,182 @@
 # Builder Pro - Implementation Status
 
-?ltima actualizaci?n: 2026-09-09
+**Última actualización:** 2026-09-14
+**Versión:** v1
+**Estado general:** **COMPLETADO / PRODUCCIÓN**
 
-| ?rea | Estado | Notas |
+## Resumen
+
+| Área | Estado | Notas |
 | --- | --- | --- |
-| UI base Builder Pro | HECHO | Panel Nitro operativo |
-| Multiselecci?n | HECHO | Clic normal additive/toggle |
-| Selecci?n rectangular | HECHO | Captura sobre canvas |
-| Movimiento grupal X/Y | HECHO | Backend autoritativo |
-| Pasos X/Y | HECHO | Configurables |
-| Teclado / flechas | HECHO | ACK-chain + 200 ms |
-| Watchdog movimiento | HECHO | Recupera UI ante p?rdida de ACK |
-| Alt + drag | HECHO | Preview local + env?o ?nico al soltar |
-| Preview de movimiento | HECHO | No spamea MOVE_GROUP |
-| Colisiones 3D | HECHO | Volumen de construcci?n |
-| Preservar pilas imposibles | HECHO | X/Y/Z relativo intacto |
-| Altura Z grupal | HECHO | 0.1 / 0.5 / 1 |
-| Ocultar resaltado | HECHO | La selecci?n permanece activa |
-| Rotar estructura | HECHO | Operaci?n independiente |
-| Pivote autom?tico | HECHO | Primer furni ordenado |
-| Pivote manual | HECHO | Selecci?n expl?cita |
-| Indicador de pivote | HECHO | ?mbar |
-| Girar furnis localmente | HECHO | Giro nativo Nitro/Holo; diagonales y X/Y/Z preservados |
-| RequestId trace | HECHO DEV | Pendiente limpieza futura |
-| Copy / Paste | PENDIENTE | Debe consumir inventario real |
-| Duplicar | PENDIENTE | Misma regla de inventario |
-| Undo / Redo | PENDIENTE | Operaciones at?micas |
-| Align | PENDIENTE | X/Y/Z seg?n modo |
-| Distribute | PENDIENTE | Espaciado uniforme |
-| Grupos persistentes | PENDIENTE | Agrupar/desagrupar |
-| Lock de grupos | PENDIENTE | Evitar modificaciones accidentales |
-| Blueprints | PENDIENTE | Guardar estructuras reutilizables |
-| Editor X/Y/Z exacto | PENDIENTE | Inputs num?ricos |
-| Offset num?rico | PENDIENTE | Transformaciones precisas |
-| Select all | PENDIENTE | Selecci?n r?pida |
-| Invert selection | PENDIENTE | Complemento de selecci?n |
-| Filtros de selecci?n | PENDIENTE | Tipo/categor?a/etc. |
-| Dimensiones selecci?n | PENDIENTE | Bounding box |
-| Preview rotaci?n profesional | PENDIENTE | Mejor feedback visual |
-| Esc cancelar preview | PENDIENTE | Restauraci?n inmediata |
-| Wall furni | FUERA MVP | Builder Pro actual es floor furni |
+| UI Builder Pro | HECHO | Tool rail, flyouts, paneles, Outliner y feedback |
+| Selección múltiple | HECHO | Hasta 4000 furnis |
+| Selección rectangular | HECHO | Área sobre canvas |
+| Selección avanzada | HECHO | Inversión, ámbitos y grupos/capas |
+| Movimiento X/Y | HECHO | Backend autoritativo |
+| Movimiento continuo | HECHO | Flechas mantenidas |
+| Alt + drag | HECHO | Preview local |
+| Offset X/Y/Z | HECHO | Valores numéricos |
+| Igualar altura | HECHO | Referencia visible |
+| Colocar encima | HECHO | Referencia visible |
+| Altura Z | HECHO | Operación grupal |
+| Orientación nativa | HECHO | Conserva X/Y/Z |
+| Rotación estructural | HECHO | Pivote automático/manual |
+| Espejo | HECHO | Transformación |
+| Espejo + duplicado | HECHO | Consume inventario |
+| Organizar fila | HECHO | Izquierda/derecha |
+| Organizar columna | HECHO | Arriba/abajo |
+| Apilar | HECHO | Altura máxima global 100.0 |
+| Copy | HECHO | Snapshot relativo |
+| Paste | HECHO | Inventario real, todo-o-nada |
+| Duplicate | HECHO | Basado en Copy/Paste |
+| Replace | HECHO | Referencia + rollback |
+| Repeat lineal | HECHO | Preview + execute |
+| Grid Repeat | HECHO | Preview + execute |
+| Radial Repeat | HECHO | Preview + execute |
+| Relleno hasta límite | HECHO | Hasta 4000 furnis |
+| Relleno de sala | HECHO | Validación espacial |
+| Relleno de área | HECHO | Área seleccionada |
+| Grupos persistentes | HECHO | CRUD |
+| Grupos bloqueados | HECHO | Unidad lógica |
+| Capas | HECHO | CRUD + asignación |
+| Capa de trabajo | HECHO | Aislar/atenuar |
+| Atravesable | HECHO | Persistente |
+| Bloqueo de furnis | HECHO | Persistente |
+| Blueprints | HECHO | Hasta 4000 furnis |
+| Preview Blueprint | HECHO | Ghost placement |
+| Undo / Redo | HECHO | Usuario + sala |
+| Pickup con Undo | HECHO | Ownership validado |
+| Backup de sala | HECHO | Un Backup por sala |
+| PIN de Backup | HECHO | PBKDF2-HMAC-SHA256 |
+| Recuperar sala eliminada | HECHO | Nuevo room ID |
+| Layout personalizado en Backup | HECHO | Restaurable |
+| Protección de furnis ajenos | HECHO | Nunca se modifican |
+| Escape cancelar | HECHO | Política unificada |
+| Ayuda `?` | HECHO | Atajos actuales |
+| Tooltip propio | HECHO | Sin tooltip nativo duplicado |
+| Rate limit por volumen | HECHO | Sin penalizar operaciones pequeñas |
+| Chunks visuales | HECHO | Move/Transform/Layout/Offset |
+| Parser de cargas masivas | HECHO | Hasta 4000 furnis |
+| Historial acotado | HECHO | 50 entradas / 160000 ItemState |
+| Build backend | PASS | P15 final |
+| Build Nitro | PASS | P15 final |
+| Auditoría estática P15 | PASS | Seguridad/ownership/atomicidad |
+| Stress P15 | PASS | Escenarios masivos |
+| Wall furni | FUERA v1 | Posible ampliación futura |
 
-## Invariantes
+## Límites actuales
 
-### MOVE
+| Concepto | Valor |
+| --- | ---: |
+| `Room.MAXIMUM_FURNI` | **4000** |
+| `MAX_SELECTION` | **4000** |
+| Blueprint máximo | **4000** |
+| Repeat/Fill máximo | **4000** |
+| Parsers Nitro de furnis | **4000** |
+| Altura máxima | **100.0** |
+| Historial máximo | **50 entradas** |
+| Presupuesto historial | **160000 ItemState** |
 
-`MOVE` conserva exactamente Z y las diferencias X/Y/Z internas.
+## Invariantes principales
 
-### HEIGHT
+### Movimiento
 
-`HEIGHT` modifica Z de forma uniforme y conserva X/Y.
+La estructura conserva sus diferencias internas X/Y/Z.
 
-### ORIENT
+Las colisiones externas se validan antes de confirmar el movimiento.
 
-`ORIENT` conserva exactamente X/Y/Z y cambia ?nicamente la direcci?n.
+### Transformación
 
-Est? implementado y validado manualmente.
+`ORIENT` conserva X/Y/Z.
 
-Nitro calcula para cada furni su siguiente direcci?n permitida usando la
-sem?ntica nativa de giro. El servidor recibe la orientaci?n destino exacta y
-la aplica dentro de la operaci?n grupal autoritativa.
+`ROTATE_STRUCTURE` transforma físicamente X/Y alrededor del pivote.
 
-### ROTATE_STRUCTURE
+Las operaciones grupales revierten ante fallo.
 
-`ROTATE_STRUCTURE` modifica X/Y alrededor de un pivote y cambia la orientaci?n
-para acompa?ar la rotaci?n de la estructura.
+### Copy / Paste / Repeat / Blueprint
 
-Es una operaci?n distinta de `ORIENT`.
+Nunca pueden inventar furnis.
 
-## Copy / Paste
+Antes de crear una estructura se valida:
 
-Nunca puede inventar furnis.
+1. inventario;
+2. capacidad de sala;
+3. geometría;
+4. colisiones;
+5. operación completa.
 
-Antes de colocar una copia:
+La colocación es todo-o-nada.
 
-1. el servidor calcula todos los furnis necesarios;
-2. valida el inventario real del usuario;
-3. si falta cualquier cantidad, aborta;
-4. devuelve el d?ficit exacto;
-5. no coloca ninguna parte de la estructura.
+### Replace
 
-Ejemplo conceptual:
+Solo reemplaza furnis que cumplen las reglas de propiedad e inventario.
 
-`Faltan 2 Wired Trigger y 1 Divider.`
+Mantiene metadata compatible y dispone de rollback.
 
-La operaci?n debe ser todo-o-nada.
+### Undo / Redo
 
-## Undo / Redo
+La clave de historial combina usuario y sala.
 
-El historial futuro debe trabajar sobre operaciones l?gicas completas, no sobre
-cada furni individual.
+El historial no puede aplicarse a otra sala.
 
-Tipos previstos:
+La restauración de un Backup invalida el historial activo.
 
-- MOVE
-- HEIGHT
-- ORIENT
-- ROTATE_STRUCTURE
-- DUPLICATE
-- ALIGN
-- DISTRIBUTE
+### Backup
 
-Cada entrada debe contener snapshot anterior y posterior suficientes para
-rollback at?mico.
+El Backup contiene exclusivamente furnis propiedad del propietario de la sala.
+
+Un furni ajeno:
+
+- no se guarda;
+- no se mueve;
+- no se elimina;
+- no se restaura;
+- puede bloquear una restauración si ocupa un destino necesario.
+
+No se fabrica un furni vendido, eliminado o que ya no pertenece al usuario.
+
+## Seguridad del Backup
+
+- PIN de 6–12 dígitos;
+- salt por Backup;
+- PBKDF2-HMAC-SHA256;
+- iteraciones de derivación elevadas;
+- comparación constante;
+- 5 fallos → bloqueo temporal de 15 minutos;
+- PIN no persistido en el cliente.
+
+## Rendimiento
+
+P15 eliminó cuellos de botella importantes:
+
+- validación espacial para Fill;
+- validación espacial para Organizar;
+- updates visuales diferidos por chunks;
+- persistencia normal asíncrona;
+- rate limit por cantidad real;
+- parsers Nitro sincronizados con el límite de sala.
+
+Prueba real de Fill con varios cientos de furnis completó la colocación sin
+bloqueo grave de sala.
+
+Undo/Recoger sobre operaciones grandes todavía puede optimizarse más en una
+fase post-v1, pero funciona correctamente y no bloquea el cierre funcional.
+
+## Atajos
+
+| Atajo | Acción |
+| --- | --- |
+| Flechas | Mover |
+| Mantener flecha | Movimiento continuo |
+| Alt + arrastrar | Mover con preview |
+| Ctrl + clic | Recoger |
+| Shift + clic | Girar |
+| Escape | Cancelar modo/preview |
+
+## Cierre
+
+P15 quedó cerrado en:
+
+`7f80de95561d967cc8b6c1b9569e0455a13e89e4`
+
+Builder Pro v1 se considera oficialmente terminado.
