@@ -2422,6 +2422,17 @@ export class RoomEngine extends NitroManager implements IRoomEngine, IRoomCreato
 
     private handleRoomDragging(canvas: IRoomRenderingCanvas, x: number, y: number, type: string, altKey: boolean, ctrlKey: boolean, shiftKey: boolean): boolean
     {
+        const builderProRoomDraggingLocked =
+            !!(globalThis as any).__builderProRoomDraggingLocked;
+
+        if(builderProRoomDraggingLocked)
+        {
+            this._activeRoomIsDragged = false;
+            this._activeRoomWasDragged = false;
+
+            return false;
+        }
+
         let offsetX = (x - this._activeRoomActiveCanvasMouseX);
         let offsetY = (y - this._activeRoomActiveCanvasMouseY);
 

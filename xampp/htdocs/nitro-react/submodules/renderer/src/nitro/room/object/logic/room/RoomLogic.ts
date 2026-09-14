@@ -46,7 +46,12 @@ export class RoomLogic extends RoomObjectLogicBase
 
     public getEventTypes(): string[]
     {
-        const types = [RoomObjectMouseEvent.MOUSE_MOVE, RoomObjectMouseEvent.CLICK];
+        const types = [
+            RoomObjectMouseEvent.MOUSE_MOVE,
+            RoomObjectMouseEvent.MOUSE_DOWN,
+            RoomObjectMouseEvent.MOUSE_UP,
+            RoomObjectMouseEvent.CLICK
+        ];
 
         return this.mergeTypes(super.getEventTypes(), types);
     }
@@ -411,12 +416,16 @@ export class RoomLogic extends RoomObjectLogicBase
         let eventType: string = null;
 
         if((event.type === MouseEventType.MOUSE_MOVE) || (event.type === MouseEventType.ROLL_OVER)) eventType = RoomObjectMouseEvent.MOUSE_MOVE;
-        else if((event.type === MouseEventType.MOUSE_CLICK)) eventType = RoomObjectMouseEvent.CLICK;
+        else if(event.type === MouseEventType.MOUSE_DOWN) eventType = RoomObjectMouseEvent.MOUSE_DOWN;
+        else if(event.type === MouseEventType.MOUSE_UP) eventType = RoomObjectMouseEvent.MOUSE_UP;
+        else if(event.type === MouseEventType.MOUSE_CLICK) eventType = RoomObjectMouseEvent.CLICK;
 
         switch(event.type)
         {
             case MouseEventType.MOUSE_MOVE:
             case MouseEventType.ROLL_OVER:
+            case MouseEventType.MOUSE_DOWN:
+            case MouseEventType.MOUSE_UP:
             case MouseEventType.MOUSE_CLICK: {
                 let newEvent: RoomObjectEvent = null;
 

@@ -73,6 +73,26 @@ public class FillRepeatRequest
             );
         }
 
+        int areaMinX = 0;
+        int areaMinY = 0;
+        int areaMaxX = 0;
+        int areaMaxY = 0;
+
+        if(mode == FillRepeatService.MODE_TILE_AREA)
+        {
+            areaMinX =
+                    this.packet.readInt().intValue();
+
+            areaMinY =
+                    this.packet.readInt().intValue();
+
+            areaMaxX =
+                    this.packet.readInt().intValue();
+
+            areaMaxY =
+                    this.packet.readInt().intValue();
+        }
+
         BuilderProGroupGuard.Result groupGuard =
                 BuilderProGroupGuard.validate(
                         this.client.getHabbo(),
@@ -105,42 +125,12 @@ public class FillRepeatRequest
                         mode,
                         direction,
                         spacing,
-                        requestId
+                        requestId,
+                        areaMinX,
+                        areaMinY,
+                        areaMaxX,
+                        areaMaxY
                 );
-
-        if(result.success
-                && operation
-                == FillRepeatService.OP_EXECUTE)
-        {
-            List<BuilderProHistoryService.ItemState> placedStates =
-                    BuilderProHistoryService.capture(
-                            this.client.getHabbo(),
-                            result.itemIds
-                    );
-
-            if(placedStates != null
-                    && placedStates.size()
-                    == result.itemIds.size())
-            {
-                if(!BuilderProHistoryService.recordPlacementWithMetadata(
-                        this.client.getHabbo(),
-                        placedStates,
-                        mode == FillRepeatService.MODE_AREA
-                                ? "Rellenar area"
-                                : "Rellenar hasta limite"))
-                {
-                    BuilderProHistoryService.invalidate(
-                            this.client.getHabbo()
-                    );
-                }
-            }
-            else
-            {
-                BuilderProHistoryService.invalidate(
-                        this.client.getHabbo()
-                );
-            }
-        }
 
         sendResult(
                 requestId,
@@ -194,6 +184,18 @@ public class FillRepeatRequest
         {
             response.appendInt(itemId.intValue());
         }
+
+        response.appendBoolean(
+                BuilderProHistoryService.canUndo(
+                        this.client.getHabbo()
+                )
+        );
+
+        response.appendBoolean(
+                BuilderProHistoryService.canRedo(
+                        this.client.getHabbo()
+                )
+        );
 
         this.client.sendResponse(response);
     }

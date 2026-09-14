@@ -35,3 +35,4 @@ export * from './RoomToObjectOwnAvatarMoveEvent';
 export * from './RoomZoomEvent';
 export * from './RoomEngineTileClickEvent';
 export * from './RoomEngineTileHoverEvent';
+export * from './RoomEngineTilePointerEvent';

@@ -40,6 +40,7 @@ public final class FillRepeatService
 
     public static final int MODE_LINE = 1;
     public static final int MODE_AREA = 2;
+    public static final int MODE_TILE_AREA = 3;
 
     public static final int DIRECTION_LEFT = 1;
     public static final int DIRECTION_RIGHT = 2;
@@ -64,7 +65,11 @@ public final class FillRepeatService
             int mode,
             int direction,
             int spacing,
-            int requestId)
+            int requestId,
+            int areaMinX,
+            int areaMinY,
+            int areaMaxX,
+            int areaMaxY)
     {
         int copies = 0;
 
@@ -110,7 +115,8 @@ public final class FillRepeatService
         }
 
         if(mode != MODE_LINE
-                && mode != MODE_AREA)
+                && mode != MODE_AREA
+                && mode != MODE_TILE_AREA)
         {
             return Result.failure(
                     5,
@@ -138,6 +144,26 @@ public final class FillRepeatService
                     "La separacion no es valida.",
                     copies
             );
+        }
+
+        if(mode == MODE_TILE_AREA)
+        {
+            RoomLayout layout =
+                    room.getLayout();
+
+            if(areaMinX > areaMaxX
+                    || areaMinY > areaMaxY
+                    || areaMinX < 0
+                    || areaMinY < 0
+                    || areaMaxX >= layout.getMapSizeX()
+                    || areaMaxY >= layout.getMapSizeY())
+            {
+                return Result.failure(
+                        32,
+                        "Los limites del area no son validos.",
+                        copies
+                );
+            }
         }
 
         if(requestedIds == null
@@ -421,8 +447,12 @@ public final class FillRepeatService
                 );
             }
         }
-        else
+        else if(mode == MODE_AREA)
         {
+            /*
+             * Fill de sala ORIGINAL: se conserva exactamente su lattice
+             * anclado a la posición actual del módulo.
+             */
             RoomLayout layout =
                     room.getLayout();
 
@@ -487,6 +517,62 @@ public final class FillRepeatService
                                     offsetY
                             )
                     );
+                }
+            }
+        }
+        else
+        {
+            /*
+             * Fill Area: el rectángulo trazado define el origen del patrón.
+             * El bounding box completo del módulo debe quedar dentro del área;
+             * después se reutiliza canPlanModule para mapa, alturas, unidades,
+             * colisiones y el resto de reglas existentes.
+             */
+            int maximumStartX =
+                    areaMaxX
+                            - structureWidth
+                            + 1;
+
+            int maximumStartY =
+                    areaMaxY
+                            - structureHeight
+                            + 1;
+
+            if(maximumStartX >= areaMinX
+                    && maximumStartY >= areaMinY)
+            {
+                for(int targetY = areaMinY;
+                        targetY <= maximumStartY;
+                        targetY += stepY)
+                {
+                    for(int targetX = areaMinX;
+                            targetX <= maximumStartX;
+                            targetX += stepX)
+                    {
+                        int offsetX =
+                                targetX
+                                        - minimumX;
+
+                        int offsetY =
+                                targetY
+                                        - minimumY;
+
+                        if(!canPlanModule(
+                                room,
+                                sources,
+                                offsetX,
+                                offsetY))
+                        {
+                            continue;
+                        }
+
+                        offsets.add(
+                                new Offset(
+                                        offsetX,
+                                        offsetY
+                                )
+                        );
+                    }
                 }
             }
         }
@@ -1044,6 +1130,70 @@ public final class FillRepeatService
 
                 target.item.setFromGift(
                         false
+                );
+            }
+
+            /*
+             * P13.5: el historial de Fill se registra aquí, mientras
+             * todavía conservamos los HabboItem reales ya colocados.
+             * FillRepeatRequest no debe reconstruir este estado por IDs.
+             */
+            List<HabboItem> historyItems =
+                    new ArrayList<HabboItem>(
+                            placed.size()
+                    );
+
+            for(Target placedTarget : placed)
+            {
+                historyItems.add(
+                        placedTarget.item
+                );
+            }
+
+            String historyLabel =
+                    mode == MODE_TILE_AREA
+                            ? "Rellenar area"
+                            : (
+                                mode == MODE_AREA
+                                        ? "Rellenar sala"
+                                        : "Rellenar hasta limite"
+                            );
+
+            if(!BuilderProHistoryService
+                    .recordFillPlacementItemsWithMetadata(
+                            actor,
+                            historyItems,
+                            historyLabel
+                    ))
+            {
+                System.out.println(
+                        "[BuilderProTrace] HISTORY_FILL_RECORD_FAILED #"
+                                + requestId
+                );
+
+                if(metadataApplied)
+                {
+                    cleanupPlacementMetadata(
+                            actor,
+                            room,
+                            targets
+                    );
+                }
+
+                restoreTargetExtraData(
+                        targets
+                );
+
+                rollbackPlaced(
+                        room,
+                        placed,
+                        affectedTiles
+                );
+
+                return Result.failure(
+                        32,
+                        "El relleno se revirtio porque no pudo registrarse Undo.",
+                        copies
                 );
             }
 

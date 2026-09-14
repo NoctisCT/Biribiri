@@ -7,7 +7,7 @@ export interface GridVisualStyle
     lineWidth: number;
 }
 
-export type GridTileKind = 'movement' | 'path' | 'target' | 'selected' | 'blocked';
+export type GridTileKind = 'movement' | 'path' | 'target' | 'selected' | 'blocked' | 'builder-area';
 
 export interface GridTile extends GridPoint
 {
@@ -68,7 +68,8 @@ export class GridEngine
         path: new Map(),
         target: new Map(),
         selected: new Map(),
-        blocked: new Map()
+        blocked: new Map(),
+        'builder-area': new Map()
     };
 
     private static _tileStyles: Record<GridTileKind, GridTileVisualStyle> = {
@@ -106,6 +107,13 @@ export class GridEngine
             lineColor: 0x111418,
             lineAlpha: 0.9,
             lineWidth: 1
+        },
+        'builder-area': {
+            fillColor: 0x377CA8,
+            fillAlpha: 0.34,
+            lineColor: 0x8AC9EE,
+            lineAlpha: 1,
+            lineWidth: 2
         }
     };
 
@@ -136,7 +144,7 @@ export class GridEngine
 
     public static get tiles(): GridTile[]
     {
-        const order: GridTileKind[] = [ 'movement', 'blocked', 'path', 'target', 'selected' ];
+        const order: GridTileKind[] = [ 'movement', 'blocked', 'path', 'target', 'selected', 'builder-area' ];
         const result: GridTile[] = [];
 
         for(const kind of order)

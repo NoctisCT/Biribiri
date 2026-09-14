@@ -1,4 +1,4 @@
-import { BuilderProLayerStateComposer, BuilderProLayerStateEvent, BuilderProPickupGroupComposer, BuilderProPickupGroupResultEvent, RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProReferencePlacementComposer, BuilderProMirrorDuplicateComposer, BuilderProMirrorDuplicateResultEvent, BuilderProReplaceGroupComposer, BuilderProReplaceGroupResultEvent, BuilderProLinearRepeatComposer, BuilderProLinearRepeatResultEvent, BuilderProGridRepeatComposer, BuilderProGridRepeatResultEvent, BuilderProRadialRepeatComposer, BuilderProRadialRepeatResultEvent, BuilderProFillRepeatComposer, BuilderProFillRepeatResultEvent, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, BuilderProTraversalStateComposer, BuilderProTraversalStateEvent, BuilderProBlueprintStateComposer, BuilderProBlueprintStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomEngineObjectPlacedEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, ILinkEventTracker} from '@nitrots/nitro-renderer';
+import { BuilderProLayerStateComposer, BuilderProLayerStateEvent, BuilderProPickupGroupComposer, BuilderProPickupGroupResultEvent, RoomEngineTileHoverEvent, RoomEngineTileClickEvent, BuilderProHistoryResultEvent, BuilderProHistoryComposer, BuilderProOffsetGroupResultEvent, BuilderProOffsetGroupComposer, BuilderProReferencePlacementComposer, BuilderProMirrorDuplicateComposer, BuilderProMirrorDuplicateResultEvent, BuilderProReplaceGroupComposer, BuilderProReplaceGroupResultEvent, BuilderProLinearRepeatComposer, BuilderProLinearRepeatResultEvent, BuilderProGridRepeatComposer, BuilderProGridRepeatResultEvent, BuilderProRadialRepeatComposer, BuilderProRadialRepeatResultEvent, BuilderProFillRepeatComposer, BuilderProFillRepeatResultEvent, BuilderProLayoutGroupResultEvent, BuilderProLayoutGroupComposer, BuilderProPasteGroupResultEvent, BuilderProPasteGroupComposer, BuilderProCopyGroupComposer, BuilderProCopyGroupResultEvent, BuilderProMoveGroupComposer, BuilderProMoveGroupResultEvent, BuilderProTransformGroupComposer, BuilderProTransformGroupResultEvent, BuilderProGroupStateComposer, BuilderProGroupStateEvent, BuilderProTraversalStateComposer, BuilderProTraversalStateEvent, BuilderProBlueprintStateComposer, BuilderProBlueprintStateEvent, RoomControllerLevel, RoomEngineObjectEvent, RoomEngineObjectPlacedEvent, RoomObjectCategory, Vector3d, RoomObjectVariable, GridEngine, RoomEngineTilePointerEvent, ILinkEventTracker} from '@nitrots/nitro-renderer';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { FaBoxOpen, FaClone, FaCopy, FaEllipsisH, FaEye, FaEyeSlash, FaLock, FaMinus, FaPaste, FaPlus, FaQuestion, FaRedo, FaSearch, FaUndo, FaWalking } from 'react-icons/fa';
 import { AddEventLinkTracker, BuilderProSelectionVisualizer, CanManipulateFurniture, ClearBuilderProInspectorState, CreateLinkEvent, GetRoomEngine, GetSessionDataManager, HasHabboClub, RemoveLinkEventTracker, SendMessageComposer, SetBuilderProInspectorState, SetBuilderProSelectionModeActive } from '../../../../api';
@@ -103,11 +103,64 @@ const FILL_REPEAT_OP_EXECUTE = 1;
 
 const FILL_REPEAT_MODE_LINE = 1;
 const FILL_REPEAT_MODE_AREA = 2;
+const FILL_REPEAT_MODE_TILE_AREA = 3;
 
 const FILL_REPEAT_DIRECTION_LEFT = 1;
 const FILL_REPEAT_DIRECTION_RIGHT = 2;
 const FILL_REPEAT_DIRECTION_UP = 3;
 const FILL_REPEAT_DIRECTION_DOWN = 4;
+
+type BuilderProTilePoint = {
+    x: number;
+    y: number;
+    z: number;
+};
+
+type BuilderProTileArea = {
+    start: BuilderProTilePoint;
+    end: BuilderProTilePoint;
+    minX: number;
+    minY: number;
+    maxX: number;
+    maxY: number;
+};
+
+const createBuilderProTileArea = (
+    start: BuilderProTilePoint,
+    end: BuilderProTilePoint
+): BuilderProTileArea => ({
+    start,
+    end,
+    minX: Math.min(start.x, end.x),
+    minY: Math.min(start.y, end.y),
+    maxX: Math.max(start.x, end.x),
+    maxY: Math.max(start.y, end.y)
+});
+
+const getBuilderProTileAreaTiles = (
+    area: BuilderProTileArea
+): Array<{ x: number; y: number }> =>
+{
+    const tiles: Array<{ x: number; y: number }> = [];
+
+    for(let x = area.minX; x <= area.maxX; x++)
+    {
+        for(let y = area.minY; y <= area.maxY; y++)
+        {
+            tiles.push({ x, y });
+        }
+    }
+
+    return tiles;
+};
+
+const setBuilderProRoomDraggingLocked = (
+    locked: boolean
+): void =>
+{
+    (globalThis as any).__builderProRoomDraggingLocked =
+        locked;
+};
 
 type BuilderProReplacementContext = {
     itemIds: number[];
@@ -172,6 +225,7 @@ type BuilderProFillRepeatContext = {
     mode: number;
     direction: number;
     spacing: number;
+    area: BuilderProTileArea | null;
 };
 
 type BuilderProFillRepeatPreviewEntry = {
@@ -472,6 +526,8 @@ export const BuilderProView: FC<{}> = props =>
         useState('0');
     const [ fillRepeatPreviewReady, setFillRepeatPreviewReady ] =
         useState(false);
+    const [ fillAreaPickMode, setFillAreaPickMode ] =
+        useState(false);
     const [ highlightSelection, setHighlightSelection ] =
         useState(BuilderProSelectionVisualizer.enabled);
     const [ pivotId, setPivotId ] =
@@ -483,12 +539,6 @@ export const BuilderProView: FC<{}> = props =>
     const [ replacePickMode, setReplacePickMode ] =
         useState(false);
     const [ areaMode, setAreaMode ] = useState(false);
-    const [ selectionBox, setSelectionBox ] = useState<{
-        left: number;
-        top: number;
-        width: number;
-        height: number;
-    } | null>(null);
 
     const {
         lockedItemIds,
@@ -611,6 +661,22 @@ export const BuilderProView: FC<{}> = props =>
     const fillRepeatPreviewFrameRef =
         useRef<number | null>(
             null
+        );
+    const fillAreaPickModeRef =
+        useRef(false);
+    const fillAreaDraftContextRef =
+        useRef<{
+            itemIds: number[];
+            spacing: number;
+        } | null>(null);
+    const fillAreaOverlayActiveRef =
+        useRef(false);
+    const requestFillRepeatRef =
+        useRef<(
+            operation: number,
+            context: BuilderProFillRepeatContext
+        ) => void>(
+            () => undefined
         );
     const heldArrowRef = useRef<string | null>(null);
     const keyboardBlockedRef = useRef(false);
@@ -739,11 +805,10 @@ export const BuilderProView: FC<{}> = props =>
     const quickShiftRef = useRef(false);
     const quickCtrlRef = useRef(false);
     const areaStartRef = useRef<{
-        canvas: HTMLCanvasElement;
-        startClientX: number;
-        startClientY: number;
-        startCanvasX: number;
-        startCanvasY: number;
+        startTile: BuilderProTilePoint;
+        currentTile: BuilderProTilePoint;
+        dragging: boolean;
+        purpose: 'selection' | 'fill';
     } | null>(null);
     const selectedIdsRef = useRef<number[]>([]);
     const roomSessionRef = useRef(roomSession);
@@ -1363,11 +1428,16 @@ export const BuilderProView: FC<{}> = props =>
                     areaModeRef.current =
                         false;
 
-                    areaStartRef.current =
-                        null;
+                    areaStartRef.current = null;
+
+                    GridEngine.clearTiles('builder-area');
+
+                    suppressAreaClickRef.current = false;
+
+                    setBuilderProRoomDraggingLocked(areaModeRef.current);
 
                     setAreaMode(false);
-                    setSelectionBox(null);
+
                 }
 
                 setStatus(
@@ -5771,6 +5841,9 @@ export const BuilderProView: FC<{}> = props =>
         pendingRef.current = false;
         areaModeRef.current = false;
         areaStartRef.current = null;
+        GridEngine.clearTiles('builder-area');
+        suppressAreaClickRef.current = false;
+        setBuilderProRoomDraggingLocked(areaModeRef.current);
         pointerDownRef.current = null;
         dragRef.current = null;
         suppressDragClickRef.current = false;
@@ -5836,7 +5909,7 @@ export const BuilderProView: FC<{}> = props =>
         setActive(false);
         setPending(false);
         setAreaMode(false);
-        setSelectionBox(null);
+
         setReferencePickOperation(
             REFERENCE_OP_NONE
         );
@@ -5900,6 +5973,9 @@ export const BuilderProView: FC<{}> = props =>
         pendingRef.current = false;
         areaModeRef.current = false;
         areaStartRef.current = null;
+        GridEngine.clearTiles('builder-area');
+        suppressAreaClickRef.current = false;
+        setBuilderProRoomDraggingLocked(areaModeRef.current);
         replacePickModeRef.current = false;
         replacementContextRef.current = null;
         replacementSourceIdsRef.current =
@@ -5916,7 +5992,7 @@ export const BuilderProView: FC<{}> = props =>
         setActive(true);
         setPending(false);
         setAreaMode(false);
-        setSelectionBox(null);
+
         setReferencePickOperation(
             REFERENCE_OP_NONE
         );
@@ -6685,11 +6761,13 @@ export const BuilderProView: FC<{}> = props =>
             {
                 areaModeRef.current =
                     false;
-                areaStartRef.current =
-                    null;
+                areaStartRef.current = null;
+                GridEngine.clearTiles('builder-area');
+                suppressAreaClickRef.current = false;
+                setBuilderProRoomDraggingLocked(areaModeRef.current);
 
                 setAreaMode(false);
-                setSelectionBox(null);
+
             }
 
             replacementContextRef.current =
@@ -6934,11 +7012,16 @@ export const BuilderProView: FC<{}> = props =>
                 areaModeRef.current =
                     false;
 
-                areaStartRef.current =
-                    null;
+                areaStartRef.current = null;
+
+                GridEngine.clearTiles('builder-area');
+
+                suppressAreaClickRef.current = false;
+
+                setBuilderProRoomDraggingLocked(areaModeRef.current);
 
                 setAreaMode(false);
-                setSelectionBox(null);
+
             }
 
             referencePickOperationRef.current =
@@ -6964,27 +7047,57 @@ export const BuilderProView: FC<{}> = props =>
         if(pendingRef.current) return;
         if(dragRef.current) return;
 
-        const next = !areaModeRef.current;
+        if(fillAreaPickModeRef.current)
+        {
+            fillAreaPickModeRef.current =
+                false;
 
-        areaModeRef.current = next;
-        areaStartRef.current = null;
+            fillAreaDraftContextRef.current =
+                null;
+
+            fillAreaOverlayActiveRef.current =
+                false;
+
+            setFillAreaPickMode(
+                false
+            );
+
+            GridEngine.clearTiles(
+                'builder-area'
+            );
+        }
+
+        const next =
+            !areaModeRef.current;
+
+        areaModeRef.current =
+            next;
+
+        areaStartRef.current =
+            null;
+
+        GridEngine.clearTiles(
+            'builder-area'
+        );
+
+        suppressAreaClickRef.current =
+            false;
+
+        setBuilderProRoomDraggingLocked(
+            next
+        );
 
         setAreaMode(next);
-        setSelectionBox(null);
 
         setStatus(
             next
-                ? 'Selección por área activa. Arrastra sobre la sala.'
+                ? 'Selección por área activa. Arrastra sobre las casillas de la sala.'
                 : 'Selección por clic activa.'
         );
     }, []);
 
     const selectObjectsInArea = useCallback((
-        canvas: HTMLCanvasElement,
-        startCanvasX: number,
-        startCanvasY: number,
-        endClientX: number,
-        endClientY: number
+        area: BuilderProTileArea
     ) =>
     {
         const currentRoomSession =
@@ -6992,56 +7105,10 @@ export const BuilderProView: FC<{}> = props =>
 
         if(!currentRoomSession) return;
 
-        const canvasRect =
-            canvas.getBoundingClientRect();
-
-        if(
-            canvasRect.width <= 0 ||
-            canvasRect.height <= 0
-        )
-        {
-            return;
-        }
-
-        const scaleX =
-            canvas.width / canvasRect.width;
-
-        const scaleY =
-            canvas.height / canvasRect.height;
-
-        const endCanvasX =
-            (endClientX - canvasRect.left) *
-            scaleX;
-
-        const endCanvasY =
-            (endClientY - canvasRect.top) *
-            scaleY;
-
-        const minX = Math.min(
-            startCanvasX,
-            endCanvasX
-        );
-
-        const maxX = Math.max(
-            startCanvasX,
-            endCanvasX
-        );
-
-        const minY = Math.min(
-            startCanvasY,
-            endCanvasY
-        );
-
-        const maxY = Math.max(
-            startCanvasY,
-            endCanvasY
-        );
-
         const roomEngine =
             GetRoomEngine();
 
         if(!roomEngine) return;
-
 
         const assignedLayerByItem =
             new Map<number, number>();
@@ -7060,133 +7127,82 @@ export const BuilderProView: FC<{}> = props =>
         const isInScope =
             (itemId: number): boolean =>
             {
-                if(
-                    layerScopeId ===
-                    LAYER_SCOPE_ALL
-                )
-                {
-                    return true;
-                }
+                if(layerScopeId === LAYER_SCOPE_ALL) return true;
 
                 return (
-                    assignedLayerByItem.get(
-                        itemId
-                    ) || 0
+                    assignedLayerByItem.get(itemId) || 0
                 ) === layerScopeId;
             };
 
         const initialIds =
             layerScopeId === LAYER_SCOPE_ALL
                 ? [ ...selectedIdsRef.current ]
-                : selectedIdsRef.current.filter(
-                    itemId =>
-                        isInScope(
-                            itemId
-                        )
-                );
+                : selectedIdsRef.current.filter(isInScope);
 
         const next: number[] = [];
-        const nextSet =
-            new Set<number>();
-
-        const handledLockedGroups =
-            new Set<number>();
+        const nextSet = new Set<number>();
+        const handledLockedGroups = new Set<number>();
 
         let added = 0;
         let limitReached = false;
 
-        const appendCandidate =
-            (
-                itemId: number,
-                countAsAdded = true
-            ) =>
+        const appendCandidate = (
+            itemId: number,
+            countAsAdded = true
+        ) =>
+        {
+            if(nextSet.has(itemId)) return;
+
+            const lockedGroup =
+                savedGroupsRef.current.find(
+                    group =>
+                        group.locked &&
+                        group.itemIds.includes(itemId)
+                );
+
+            if(lockedGroup)
             {
-                if(nextSet.has(itemId))
-                {
-                    return;
-                }
+                if(handledLockedGroups.has(lockedGroup.id)) return;
 
-                const lockedGroup =
-                    savedGroupsRef.current.find(
-                        group =>
-                            group.locked &&
-                            group.itemIds.includes(
-                                itemId
-                            )
-                    );
+                handledLockedGroups.add(lockedGroup.id);
 
-                if(lockedGroup)
-                {
-                    if(
-                        handledLockedGroups.has(
-                            lockedGroup.id
-                        )
-                    )
-                    {
-                        return;
-                    }
+                const available =
+                    getAvailableGroupItemIds(lockedGroup);
 
-                    handledLockedGroups.add(
-                        lockedGroup.id
-                    );
+                const missing =
+                    available.filter(id => !nextSet.has(id));
 
-                    const available =
-                        getAvailableGroupItemIds(
-                            lockedGroup
-                        );
-
-                    const missing =
-                        available.filter(
-                            id =>
-                                !nextSet.has(id)
-                        );
-
-                    if(
-                        next.length +
-                        missing.length >
-                        MAX_SELECTION
-                    )
-                    {
-                        limitReached = true;
-                        return;
-                    }
-
-                    for(const id of missing)
-                    {
-                        next.push(id);
-                        nextSet.add(id);
-                    }
-
-                    if(countAsAdded)
-                    {
-                        added +=
-                            missing.length;
-                    }
-
-                    return;
-                }
-
-                if(next.length >= MAX_SELECTION)
+                if(next.length + missing.length > MAX_SELECTION)
                 {
                     limitReached = true;
                     return;
                 }
 
-                next.push(itemId);
-                nextSet.add(itemId);
-
-                if(countAsAdded)
+                for(const id of missing)
                 {
-                    added++;
+                    next.push(id);
+                    nextSet.add(id);
                 }
-            };
+
+                if(countAsAdded) added += missing.length;
+                return;
+            }
+
+            if(next.length >= MAX_SELECTION)
+            {
+                limitReached = true;
+                return;
+            }
+
+            next.push(itemId);
+            nextSet.add(itemId);
+
+            if(countAsAdded) added++;
+        };
 
         for(const itemId of initialIds)
         {
-            appendCandidate(
-                itemId,
-                false
-            );
+            appendCandidate(itemId, false);
         }
 
         const count =
@@ -7195,11 +7211,7 @@ export const BuilderProView: FC<{}> = props =>
                 RoomObjectCategory.FLOOR
             );
 
-        for(
-            let index = 0;
-            index < count;
-            index++
-        )
+        for(let index = 0; index < count; index++)
         {
             if(next.length >= MAX_SELECTION)
             {
@@ -7214,29 +7226,10 @@ export const BuilderProView: FC<{}> = props =>
                     RoomObjectCategory.FLOOR
                 );
 
-            if(!roomObject)
-            {
-                continue;
-            }
-
-            if(!isInScope(roomObject.id))
-            {
-                continue;
-            }
-
-            if(
-                !isItemLocallyVisible(
-                    roomObject.id
-                )
-            )
-            {
-                continue;
-            }
-
-            if(nextSet.has(roomObject.id))
-            {
-                continue;
-            }
+            if(!roomObject) continue;
+            if(!isInScope(roomObject.id)) continue;
+            if(!isItemLocallyVisible(roomObject.id)) continue;
+            if(nextSet.has(roomObject.id)) continue;
 
             if(!CanManipulateFurniture(
                 currentRoomSession,
@@ -7247,42 +7240,53 @@ export const BuilderProView: FC<{}> = props =>
                 continue;
             }
 
-            const bounds =
-                roomEngine
-                    .getRoomObjectBoundingRectangle(
-                        currentRoomSession.roomId,
-                        roomObject.id,
-                        RoomObjectCategory.FLOOR,
-                        1
-                    );
+            const location = roomObject.getLocation();
+            const direction = roomObject.getDirection();
 
-            if(!bounds)
+            if(!location || !direction || !roomObject.model) continue;
+
+            let sizeX =
+                roomObject.model.getValue<number>(
+                    RoomObjectVariable.FURNITURE_SIZE_X
+                );
+
+            let sizeY =
+                roomObject.model.getValue<number>(
+                    RoomObjectVariable.FURNITURE_SIZE_Y
+                );
+
+            if(!Number.isFinite(sizeX) || sizeX < 1) sizeX = 1;
+            if(!Number.isFinite(sizeY) || sizeY < 1) sizeY = 1;
+
+            sizeX = Math.max(1, Math.round(sizeX));
+            sizeY = Math.max(1, Math.round(sizeY));
+
+            const rotation =
+                normalizeBuilderProRotation(
+                    direction.x / 45
+                );
+
+            if(rotation === 2 || rotation === 6)
             {
-                continue;
+                const swap = sizeX;
+                sizeX = sizeY;
+                sizeY = swap;
             }
 
-            const boundsRight =
-                bounds.x +
-                bounds.width;
-
-            const boundsBottom =
-                bounds.y +
-                bounds.height;
+            const objectMinX = Math.round(location.x);
+            const objectMinY = Math.round(location.y);
+            const objectMaxX = objectMinX + sizeX - 1;
+            const objectMaxY = objectMinY + sizeY - 1;
 
             const intersects =
-                bounds.x <= maxX &&
-                boundsRight >= minX &&
-                bounds.y <= maxY &&
-                boundsBottom >= minY;
+                objectMinX <= area.maxX &&
+                objectMaxX >= area.minX &&
+                objectMinY <= area.maxY &&
+                objectMaxY >= area.minY;
 
-            if(!intersects)
-            {
-                continue;
-            }
+            if(!intersects) continue;
 
-            appendCandidate(
-                roomObject.id
-            );
+            appendCandidate(roomObject.id);
         }
 
         applySelection(next);
@@ -7295,23 +7299,24 @@ export const BuilderProView: FC<{}> = props =>
                         ? 'Sin capa'
                         : (
                             savedLayersRef.current.find(
-                                layer =>
-                                    layer.id === layerScopeId
+                                layer => layer.id === layerScopeId
                             )?.name || 'Capa'
                         )
                 );
 
+        const areaLabel =
+            `${ area.minX },${ area.minY } → ${ area.maxX },${ area.maxY }`;
+
         if(limitReached)
         {
             setStatus(
-                `Área · ${ scopeLabel }: ${ added } añadidos. Límite ${ MAX_SELECTION } alcanzado sin partir grupos bloqueados.`
+                `Área ${ areaLabel } · ${ scopeLabel }: ${ added } añadidos. Límite ${ MAX_SELECTION } alcanzado sin partir grupos bloqueados.`
             );
-
             return;
         }
 
         setStatus(
-            `Área · ${ scopeLabel }: ${ added } añadidos. ${ next.length } seleccionados.`
+            `Área ${ areaLabel } · ${ scopeLabel }: ${ added } añadidos. ${ next.length } seleccionados.`
         );
     }, [
         applySelection,
@@ -7320,343 +7325,318 @@ export const BuilderProView: FC<{}> = props =>
         layerScopeId
     ]);
 
-    useEffect(() =>
-    {
-        if(!active) return;
-
-        const stopNativeEvent = (
-            event: globalThis.MouseEvent
-        ) =>
-        {
-            if(event.cancelable)
-            {
-                event.preventDefault();
-            }
-
-            event.stopPropagation();
-            event.stopImmediatePropagation();
-        };
-
-        const onMouseDown = (
-            event: globalThis.MouseEvent
-        ) =>
+    useRoomEngineEvent<RoomEngineTilePointerEvent>(
+        [
+            RoomEngineTilePointerEvent.TILE_POINTER_DOWN,
+            RoomEngineTilePointerEvent.TILE_POINTER_MOVE,
+            RoomEngineTilePointerEvent.TILE_POINTER_UP
+        ],
+        event =>
         {
             if(!activeRef.current) return;
-            if(pasteModeRef.current) return;
-            if(pendingRef.current) return;
-            if(event.button !== 0) return;
 
-            const altDrag =
-                event.altKey &&
-                !event.ctrlKey &&
-                !event.metaKey &&
-                !event.shiftKey;
-
-            /*
-             * El arrastre de area puede comenzar:
-             *
-             * - por Alt+arrastrar, siempre;
-             * - sin Alt cuando el usuario ha pulsado
-             *   el boton Seleccionar area.
-             */
-            if(
-                !altDrag &&
-                !areaModeRef.current
-            )
-            {
-                return;
-            }
-
-            if(
-                !(event.target instanceof
-                    HTMLCanvasElement)
-            )
-            {
-                return;
-            }
-
-            const canvas =
-                event.target;
-
-            const rect =
-                canvas.getBoundingClientRect();
-
-            if(
-                rect.width <= 0 ||
-                rect.height <= 0
-            )
-            {
-                return;
-            }
-
-            const scaleX =
-                canvas.width / rect.width;
-
-            const scaleY =
-                canvas.height / rect.height;
-
-            const startCanvasX =
-                (event.clientX - rect.left) *
-                scaleX;
-
-            const startCanvasY =
-                (event.clientY - rect.top) *
-                scaleY;
-
-            /*
-             * REGLA DE PRIORIDAD:
-             *
-             * Alt + arrastrar iniciado sobre un
-             * furni YA seleccionado pertenece al
-             * movimiento del grupo.
-             *
-             * Solo discriminamos asi cuando Alt
-             * es el gesto utilizado. El modo
-             * manual de Area sigue disponible
-             * para tactil/movil.
-             */
-            if(altDrag)
-            {
-                const currentRoomSession =
-                    roomSessionRef.current;
-
-                const roomEngine =
-                    GetRoomEngine();
-
-                if(currentRoomSession && roomEngine)
-                {
-                    for(const id of selectedIdsRef.current)
-                    {
-                        const bounds =
-                            roomEngine
-                                .getRoomObjectBoundingRectangle(
-                                    currentRoomSession.roomId,
-                                    id,
-                                    RoomObjectCategory.FLOOR,
-                                    1
-                                );
-
-                        if(!bounds)
-                        {
-                            continue;
-                        }
-
-                        const right =
-                            bounds.x +
-                            bounds.width;
-
-                        const bottom =
-                            bounds.y +
-                            bounds.height;
-
-                        if(
-                            startCanvasX >= bounds.x &&
-                            startCanvasX <= right &&
-                            startCanvasY >= bounds.y &&
-                            startCanvasY <= bottom
-                        )
-                        {
-                            return;
-                        }
-                    }
-                }
-            }
-
-            areaStartRef.current = {
-                canvas,
-                startClientX: event.clientX,
-                startClientY: event.clientY,
-                startCanvasX,
-                startCanvasY
+            const tile: BuilderProTilePoint = {
+                x: event.tileX,
+                y: event.tileY,
+                z: event.tileZ
             };
 
-            suppressAreaClickRef.current = false;
-        };
-
-        const onMouseMove = (
-            event: globalThis.MouseEvent
-        ) =>
-        {
-            const start =
-                areaStartRef.current;
-
-            if(!start) return;
-
-            /*
-             * Si Nitro ya ha convertido el gesto
-             * en movimiento de grupo, abandonamos
-             * inmediatamente la seleccion de area.
-             */
-            if(dragRef.current)
+            if(
+                event.type ===
+                    RoomEngineTilePointerEvent.TILE_POINTER_DOWN
+            )
             {
-                areaStartRef.current = null;
-                suppressAreaClickRef.current = false;
-                setSelectionBox(null);
-                return;
-            }
+                if(pasteModeRef.current) return;
+                if(pendingRef.current) return;
+                if(dragRef.current) return;
 
-            const dragWidth = Math.abs(
-                event.clientX -
-                start.startClientX
-            );
+                const altDrag =
+                    event.altKey &&
+                    !event.ctrlKey &&
+                    !event.shiftKey;
 
-            const dragHeight = Math.abs(
-                event.clientY -
-                start.startClientY
-            );
+                const fillAreaDrag =
+                    fillAreaPickModeRef.current;
 
-            if(!suppressAreaClickRef.current)
-            {
                 if(
-                    dragWidth < 4 &&
-                    dragHeight < 4
+                    !altDrag &&
+                    !areaModeRef.current &&
+                    !fillAreaDrag
                 )
                 {
                     return;
                 }
 
-                suppressAreaClickRef.current = true;
+                areaStartRef.current = {
+                    startTile: { ...tile },
+                    currentTile: { ...tile },
+                    dragging: false,
+                    purpose:
+                        fillAreaDrag
+                            ? 'fill'
+                            : 'selection'
+                };
+
+                if(fillAreaDrag)
+                {
+                    fillAreaOverlayActiveRef.current =
+                        true;
+                }
+
+                setBuilderProRoomDraggingLocked(
+                    true
+                );
+
+                GridEngine.setTiles(
+                    'builder-area',
+                    [ tile ]
+                );
+
+                return;
             }
 
-            const left = Math.min(
-                start.startClientX,
-                event.clientX
+            const start =
+                areaStartRef.current;
+
+            if(!start) return;
+
+            if(
+                event.type ===
+                    RoomEngineTilePointerEvent.TILE_POINTER_MOVE
+            )
+            {
+                /*
+                 * HoloGrid solo necesita repintar al CAMBIAR de casilla.
+                 * Antes reconstruíamos el área en cada mousemove dentro
+                 * del mismo tile.
+                 */
+                if(
+                    tile.x === start.currentTile.x &&
+                    tile.y === start.currentTile.y
+                )
+                {
+                    return;
+                }
+
+                start.currentTile = {
+                    ...tile
+                };
+
+                if(
+                    tile.x !== start.startTile.x ||
+                    tile.y !== start.startTile.y
+                )
+                {
+                    start.dragging = true;
+                }
+
+                const area =
+                    createBuilderProTileArea(
+                        start.startTile,
+                        start.currentTile
+                    );
+
+                GridEngine.setTiles(
+                    'builder-area',
+                    getBuilderProTileAreaTiles(
+                        area
+                    )
+                );
+
+                const width =
+                    area.maxX - area.minX + 1;
+
+                const height =
+                    area.maxY - area.minY + 1;
+
+                setStatus(
+                    start.purpose === 'fill'
+                        ? `Rellenar área: ${ area.minX },${ area.minY } → ${ area.maxX },${ area.maxY } · ${ width }×${ height } casillas.`
+                        : `Área: ${ area.minX },${ area.minY } → ${ area.maxX },${ area.maxY } · ${ width }×${ height } casillas.`
+                );
+
+                return;
+            }
+
+            if(
+                event.type !==
+                    RoomEngineTilePointerEvent.TILE_POINTER_UP
+            )
+            {
+                return;
+            }
+
+            start.currentTile = {
+                ...tile
+            };
+
+            const wasAreaDrag =
+                start.dragging ||
+                tile.x !== start.startTile.x ||
+                tile.y !== start.startTile.y;
+
+            const area =
+                createBuilderProTileArea(
+                    start.startTile,
+                    start.currentTile
+                );
+
+            const purpose =
+                start.purpose;
+
+            areaStartRef.current =
+                null;
+
+            if(purpose === 'fill')
+            {
+                const draft =
+                    fillAreaDraftContextRef.current;
+
+                fillAreaPickModeRef.current =
+                    false;
+
+                fillAreaDraftContextRef.current =
+                    null;
+
+                setFillAreaPickMode(
+                    false
+                );
+
+                setBuilderProRoomDraggingLocked(
+                    areaModeRef.current
+                );
+
+                suppressAreaClickRef.current =
+                    true;
+
+                if(!draft)
+                {
+                    fillAreaOverlayActiveRef.current =
+                        false;
+
+                    GridEngine.clearTiles(
+                        'builder-area'
+                    );
+
+                    setStatus(
+                        'No se pudo recuperar el módulo de Fill Area.'
+                    );
+
+                    return;
+                }
+
+                requestFillRepeatRef.current(
+                    FILL_REPEAT_OP_PREVIEW,
+                    {
+                        itemIds: [
+                            ...draft.itemIds
+                        ],
+                        mode:
+                            FILL_REPEAT_MODE_TILE_AREA,
+                        direction:
+                            0,
+                        spacing:
+                            draft.spacing,
+                        area
+                    }
+                );
+
+                return;
+            }
+
+            GridEngine.clearTiles(
+                'builder-area'
             );
 
-            const top = Math.min(
-                start.startClientY,
-                event.clientY
+            setBuilderProRoomDraggingLocked(
+                areaModeRef.current
             );
 
-            setSelectionBox({
-                left,
-                top,
-                width: dragWidth,
-                height: dragHeight
-            });
+            if(!wasAreaDrag)
+            {
+                return;
+            }
 
-            stopNativeEvent(event);
-        };
+            suppressAreaClickRef.current =
+                true;
 
-        const onMouseUp = (
-            event: globalThis.MouseEvent
-        ) =>
+            selectObjectsInArea(
+                area
+            );
+        }
+    );
+
+    useEffect(() =>
+    {
+        if(!active) return;
+
+        /*
+         * Si se suelta fuera de un plano de suelo no llega TILE_POINTER_UP.
+         * Cancelamos la sesión compartida sin mover la cámara ni dejar
+         * Builder Pro bloqueado.
+         */
+        const onWindowMouseUp = () =>
         {
             const start =
                 areaStartRef.current;
 
             if(!start) return;
 
-            if(dragRef.current)
+            areaStartRef.current =
+                null;
+
+            if(start.purpose === 'fill')
             {
-                areaStartRef.current = null;
-                suppressAreaClickRef.current = false;
-                setSelectionBox(null);
-                return;
+                fillAreaPickModeRef.current =
+                    false;
+
+                fillAreaDraftContextRef.current =
+                    null;
+
+                fillAreaOverlayActiveRef.current =
+                    false;
+
+                setFillAreaPickMode(
+                    false
+                );
             }
 
-            areaStartRef.current = null;
+            GridEngine.clearTiles(
+                'builder-area'
+            );
 
-            const wasAreaDrag =
-                suppressAreaClickRef.current;
+            suppressAreaClickRef.current =
+                false;
 
-            if(!wasAreaDrag)
-            {
-                setSelectionBox(null);
-                return;
-            }
+            setBuilderProRoomDraggingLocked(
+                areaModeRef.current
+            );
 
-            stopNativeEvent(event);
-            setSelectionBox(null);
-
-            selectObjectsInArea(
-                start.canvas,
-                start.startCanvasX,
-                start.startCanvasY,
-                event.clientX,
-                event.clientY
+            setStatus(
+                start.purpose === 'fill'
+                    ? 'Fill Area cancelado. Selecciona de nuevo Rellenar área.'
+                    : (
+                        areaModeRef.current
+                            ? 'Selección por área activa. Arrastra sobre las casillas de la sala.'
+                            : 'Selección por clic activa.'
+                    )
             );
         };
 
-        const onClick = (
-            event: globalThis.MouseEvent
-        ) =>
-        {
-            if(!suppressAreaClickRef.current)
-            {
-                return;
-            }
-
-            if(
-                !(event.target instanceof
-                    HTMLCanvasElement)
-            )
-            {
-                return;
-            }
-
-            suppressAreaClickRef.current = false;
-            stopNativeEvent(event);
-        };
-
-        window.addEventListener(
-            'mousedown',
-            onMouseDown,
-            true
-        );
-
-        window.addEventListener(
-            'mousemove',
-            onMouseMove,
-            true
-        );
-
         window.addEventListener(
             'mouseup',
-            onMouseUp,
-            true
-        );
-
-        window.addEventListener(
-            'click',
-            onClick,
-            true
+            onWindowMouseUp
         );
 
         return () =>
         {
             window.removeEventListener(
-                'mousedown',
-                onMouseDown,
-                true
-            );
-
-            window.removeEventListener(
-                'mousemove',
-                onMouseMove,
-                true
-            );
-
-            window.removeEventListener(
                 'mouseup',
-                onMouseUp,
-                true
+                onWindowMouseUp
             );
-
-            window.removeEventListener(
-                'click',
-                onClick,
-                true
-            );
-
-            areaStartRef.current = null;
-            suppressAreaClickRef.current = false;
-            setSelectionBox(null);
         };
-    }, [
-        active,
-        selectObjectsInArea
-    ]);
+    }, [ active ]);
+
 
     useEffect(() =>
     {
@@ -7664,6 +7644,9 @@ export const BuilderProView: FC<{}> = props =>
         pendingRef.current = false;
         areaModeRef.current = false;
         areaStartRef.current = null;
+        GridEngine.clearTiles('builder-area');
+        suppressAreaClickRef.current = false;
+        setBuilderProRoomDraggingLocked(areaModeRef.current);
 
         SetBuilderProSelectionModeActive(false);
 
@@ -7685,7 +7668,7 @@ export const BuilderProView: FC<{}> = props =>
         setActive(false);
         setPending(false);
         setAreaMode(false);
-        setSelectionBox(null);
+
         setStatus('');
     }, [
         roomSession?.roomId,
@@ -7708,7 +7691,12 @@ export const BuilderProView: FC<{}> = props =>
             activeRef.current = false;
             pendingRef.current = false;
             areaModeRef.current = false;
+            setBuilderProRoomDraggingLocked(false);
+            GridEngine.clearTiles('builder-area');
             areaStartRef.current = null;
+            GridEngine.clearTiles('builder-area');
+            suppressAreaClickRef.current = false;
+            setBuilderProRoomDraggingLocked(areaModeRef.current);
 
             SetBuilderProSelectionModeActive(false);
 
@@ -10034,7 +10022,9 @@ export const BuilderProView: FC<{}> = props =>
             syncFillRepeatPreview
         ]);
     const resetFillRepeatPreview =
-        useCallback(() =>
+        useCallback((
+            preserveTileArea: boolean = false
+        ) =>
         {
             clearFillRepeatPreview();
 
@@ -10047,9 +10037,23 @@ export const BuilderProView: FC<{}> = props =>
             setFillRepeatPreviewReady(
                 false
             );
+
+            if(
+                !preserveTileArea &&
+                fillAreaOverlayActiveRef.current
+            )
+            {
+                fillAreaOverlayActiveRef.current =
+                    false;
+
+                GridEngine.clearTiles(
+                    'builder-area'
+                );
+            }
         }, [
             clearFillRepeatPreview
         ]);
+
 
     const finalizeFillRepeatVisuals =
         useCallback((
@@ -10111,13 +10115,6 @@ export const BuilderProView: FC<{}> = props =>
                         presentIds
                     );
 
-                    setCanUndo(
-                        true
-                    );
-
-                    setCanRedo(
-                        false
-                    );
 
                     scheduleOutlinerRevision();
 
@@ -10130,9 +10127,13 @@ export const BuilderProView: FC<{}> = props =>
                     );
 
                     const label =
-                        mode === FILL_REPEAT_MODE_AREA
+                        mode === FILL_REPEAT_MODE_TILE_AREA
                             ? 'Área rellenada'
-                            : 'Relleno hasta límite creado';
+                            : (
+                                mode === FILL_REPEAT_MODE_AREA
+                                    ? 'Sala rellenada'
+                                    : 'Relleno hasta límite creado'
+                            );
 
                     if(
                         presentIds.length ===
@@ -10247,7 +10248,10 @@ export const BuilderProView: FC<{}> = props =>
 
             if(operation === FILL_REPEAT_OP_PREVIEW)
             {
-                resetFillRepeatPreview();
+                resetFillRepeatPreview(
+                    context.mode ===
+                        FILL_REPEAT_MODE_TILE_AREA
+                );
             }
             else
             {
@@ -10289,7 +10293,19 @@ export const BuilderProView: FC<{}> = props =>
                 direction:
                     context.direction,
                 spacing:
-                    context.spacing
+                    context.spacing,
+                area:
+                    context.area
+                        ? {
+                            ...context.area,
+                            start: {
+                                ...context.area.start
+                            },
+                            end: {
+                                ...context.area.end
+                            }
+                        }
+                        : null
             };
 
             if(operation === FILL_REPEAT_OP_EXECUTE)
@@ -10302,17 +10318,33 @@ export const BuilderProView: FC<{}> = props =>
                 true
             );
 
+            const isRoomFill =
+                context.mode ===
+                    FILL_REPEAT_MODE_AREA;
+
+            const isTileAreaFill =
+                context.mode ===
+                    FILL_REPEAT_MODE_TILE_AREA;
+
             setStatus(
                 operation === FILL_REPEAT_OP_PREVIEW
                     ? (
-                        context.mode === FILL_REPEAT_MODE_AREA
-                            ? 'Calculando relleno del área...'
-                            : 'Calculando relleno hasta el límite...'
+                        isTileAreaFill
+                            ? 'Calculando Fill Area...'
+                            : (
+                                isRoomFill
+                                    ? 'Calculando relleno de sala...'
+                                    : 'Calculando relleno hasta el límite...'
+                            )
                     )
                     : (
-                        context.mode === FILL_REPEAT_MODE_AREA
-                            ? 'Rellenando área...'
-                            : 'Rellenando hasta el límite...'
+                        isTileAreaFill
+                            ? 'Rellenando área seleccionada...'
+                            : (
+                                isRoomFill
+                                    ? 'Rellenando sala...'
+                                    : 'Rellenando hasta el límite...'
+                            )
                     )
             );
 
@@ -10325,7 +10357,11 @@ export const BuilderProView: FC<{}> = props =>
                         context.mode,
                         context.direction,
                         context.spacing,
-                        requestId
+                        requestId,
+                        context.area?.minX ?? 0,
+                        context.area?.minY ?? 0,
+                        context.area?.maxX ?? 0,
+                        context.area?.maxY ?? 0
                     )
                 );
 
@@ -10376,6 +10412,19 @@ export const BuilderProView: FC<{}> = props =>
                                 false
                             );
 
+                            if(
+                                context.mode ===
+                                    FILL_REPEAT_MODE_TILE_AREA
+                            )
+                            {
+                                fillAreaOverlayActiveRef.current =
+                                    false;
+
+                                GridEngine.clearTiles(
+                                    'builder-area'
+                                );
+                            }
+
                             setStatus(
                                 'Relleno sin confirmación del servidor.'
                             );
@@ -10412,6 +10461,19 @@ export const BuilderProView: FC<{}> = props =>
                     false
                 );
 
+                if(
+                    context.mode ===
+                        FILL_REPEAT_MODE_TILE_AREA
+                )
+                {
+                    fillAreaOverlayActiveRef.current =
+                        false;
+
+                    GridEngine.clearTiles(
+                        'builder-area'
+                    );
+                }
+
                 setStatus(
                     'No se pudo enviar el relleno al servidor.'
                 );
@@ -10421,6 +10483,9 @@ export const BuilderProView: FC<{}> = props =>
             clearPastePreview,
             resetFillRepeatPreview
         ]);
+
+    requestFillRepeatRef.current =
+        requestFillRepeat;
 
     const clearOtherRepeatPreviewsForFill =
         useCallback(() =>
@@ -10579,13 +10644,114 @@ export const BuilderProView: FC<{}> = props =>
                     itemIds: ids,
                     mode,
                     direction,
-                    spacing
+                    spacing,
+                    area: null
                 }
             );
         }, [
             fillRepeatSpacing,
             clearOtherRepeatPreviewsForFill,
             requestFillRepeat
+        ]);
+
+    const startFillAreaPick =
+        useCallback(() =>
+        {
+            if(!activeRef.current) return;
+            if(pendingRef.current) return;
+            if(dragRef.current) return;
+
+            const ids = [
+                ...selectedIdsRef.current
+            ];
+
+            if(!ids.length)
+            {
+                setStatus(
+                    'Selecciona al menos un furni.'
+                );
+
+                return;
+            }
+
+            const spacing =
+                Number.parseInt(
+                    fillRepeatSpacing,
+                    10
+                );
+
+            if(
+                !Number.isSafeInteger(spacing) ||
+                spacing < 0 ||
+                spacing > 50
+            )
+            {
+                setStatus(
+                    'La separación debe estar entre 0 y 50.'
+                );
+
+                return;
+            }
+
+            clearOtherRepeatPreviewsForFill();
+            resetFillRepeatPreview();
+
+            if(areaModeRef.current)
+            {
+                areaModeRef.current =
+                    false;
+
+                setAreaMode(
+                    false
+                );
+            }
+
+            areaStartRef.current =
+                null;
+
+            GridEngine.clearTiles(
+                'builder-area'
+            );
+
+            fillAreaOverlayActiveRef.current =
+                false;
+
+            fillAreaDraftContextRef.current = {
+                itemIds: [
+                    ...ids
+                ],
+                spacing
+            };
+
+            fillAreaPickModeRef.current =
+                true;
+
+            setFillAreaPickMode(
+                true
+            );
+
+            setFillRepeatMode(
+                FILL_REPEAT_MODE_TILE_AREA
+            );
+
+            setFillRepeatDirection(
+                0
+            );
+
+            suppressAreaClickRef.current =
+                false;
+
+            setBuilderProRoomDraggingLocked(
+                true
+            );
+
+            setStatus(
+                'Rellenar área: arrastra sobre las casillas que quieres rellenar. Esc para cancelar.'
+            );
+        }, [
+            fillRepeatSpacing,
+            clearOtherRepeatPreviewsForFill,
+            resetFillRepeatPreview
         ]);
 
     const confirmFillRepeat =
@@ -10683,6 +10849,9 @@ export const BuilderProView: FC<{}> = props =>
                 false
             );
 
+            setCanUndo(parser.canUndo);
+            setCanRedo(parser.canRedo);
+
             if(!parser.success)
             {
                 suppressPasteLayerAutoAssignRef.current =
@@ -10744,7 +10913,19 @@ export const BuilderProView: FC<{}> = props =>
                     direction:
                         context.direction,
                     spacing:
-                        context.spacing
+                        context.spacing,
+                    area:
+                        context.area
+                            ? {
+                                ...context.area,
+                                start: {
+                                    ...context.area.start
+                                },
+                                end: {
+                                    ...context.area.end
+                                }
+                            }
+                            : null
                 };
 
                 renderFillRepeatPreview(
@@ -10764,13 +10945,42 @@ export const BuilderProView: FC<{}> = props =>
                 );
 
                 setStatus(
-                    context.mode === FILL_REPEAT_MODE_AREA
-                        ? `Vista previa: ${ parser.copies } módulos válidos · ${ entries.length } furnis nuevos.`
-                        : `Vista previa hasta límite: ${ parser.copies } módulos · ${ entries.length } furnis nuevos.`
+                    context.mode === FILL_REPEAT_MODE_TILE_AREA
+                        ? `Vista previa Fill Area: ${ parser.copies } módulos válidos · ${ entries.length } furnis nuevos.`
+                        : (
+                            context.mode === FILL_REPEAT_MODE_AREA
+                                ? `Vista previa de sala: ${ parser.copies } módulos válidos · ${ entries.length } furnis nuevos.`
+                                : `Vista previa hasta límite: ${ parser.copies } módulos · ${ entries.length } furnis nuevos.`
+                        )
                 );
 
                 return;
             }
+
+            /*
+             * P13_5_FILL_EXECUTE_UNDO_READY
+             *
+             * El servidor ya ha confirmado OP_EXECUTE en este punto.
+             * La disponibilidad de Undo no debe depender de que Nitro haya
+             * terminado de materializar visualmente todos los RoomObjects.
+             *
+             * Esto cubre tanto Fill Sala como Fill Area porque ambos usan
+             * el mismo flujo FillRepeat.
+             */
+            setCanUndo(
+                true
+            );
+
+            setCanRedo(
+                false
+            );
+
+            /*
+             * El servidor ya confirmó el EXECUTE. Undo no debe depender
+             * de que Nitro termine de sincronizar visualmente los furnis.
+             */
+            setCanUndo(true);
+            setCanRedo(false);
 
             const repeatedIds =
                 parser.itemIds;
@@ -10789,6 +10999,19 @@ export const BuilderProView: FC<{}> = props =>
             setFillRepeatPreviewReady(
                 false
             );
+
+            if(
+                context.mode ===
+                    FILL_REPEAT_MODE_TILE_AREA
+            )
+            {
+                fillAreaOverlayActiveRef.current =
+                    false;
+
+                GridEngine.clearTiles(
+                    'builder-area'
+                );
+            }
 
             finalizeFillRepeatVisuals(
                 repeatedIds,
@@ -10812,6 +11035,32 @@ export const BuilderProView: FC<{}> = props =>
         resetFillRepeatPreview
     ]);
 
+
+    useEffect(() =>
+    {
+        if(active) return;
+
+        fillAreaPickModeRef.current =
+            false;
+
+        fillAreaDraftContextRef.current =
+            null;
+
+        fillAreaOverlayActiveRef.current =
+            false;
+
+        setFillAreaPickMode(
+            false
+        );
+
+        GridEngine.clearTiles(
+            'builder-area'
+        );
+
+        setBuilderProRoomDraggingLocked(
+            false
+        );
+    }, [ active ]);
 
     const clearLinearRepeatPreview = useCallback(() =>
     {
@@ -12426,33 +12675,61 @@ export const BuilderProView: FC<{}> = props =>
     invalidateRepeatPreviewsForRoomMutationRef.current =
         () =>
         {
-            const hadPreview =
-                !!fillRepeatContextRef.current ||
-                !!linearRepeatContextRef.current ||
-                !!gridRepeatContextRef.current ||
-                !!radialRepeatContextRef.current;
+            /*
+             * Las mutaciones externas invalidan previews preparados.
+             *
+             * Durante EXECUTE, el propio servidor empieza a emitir
+             * ADDED / CONTENT_UPDATED antes del ResultEvent. Esas
+             * mutaciones pertenecen a la operación en curso y no
+             * deben borrar su pending context.
+             */
+            const invalidateFill =
+                !!fillRepeatContextRef.current &&
+                pendingFillRepeatOperationRef.current !==
+                    FILL_REPEAT_OP_EXECUTE;
 
-            if(!hadPreview)
+            const invalidateLinear =
+                !!linearRepeatContextRef.current &&
+                pendingLinearRepeatOperationRef.current !==
+                    LINEAR_REPEAT_OP_EXECUTE;
+
+            const invalidateGrid =
+                !!gridRepeatContextRef.current &&
+                pendingGridRepeatOperationRef.current !==
+                    GRID_REPEAT_OP_EXECUTE;
+
+            const invalidateRadial =
+                !!radialRepeatContextRef.current &&
+                pendingRadialRepeatOperationRef.current !==
+                    RADIAL_REPEAT_OP_EXECUTE;
+
+            const hadInvalidatablePreview =
+                invalidateFill ||
+                invalidateLinear ||
+                invalidateGrid ||
+                invalidateRadial;
+
+            if(!hadInvalidatablePreview)
             {
                 return;
             }
 
-            if(fillRepeatContextRef.current)
+            if(invalidateFill)
             {
                 resetFillRepeatPreview();
             }
 
-            if(linearRepeatContextRef.current)
+            if(invalidateLinear)
             {
                 resetLinearRepeatPreview();
             }
 
-            if(gridRepeatContextRef.current)
+            if(invalidateGrid)
             {
                 resetGridRepeatPreview();
             }
 
-            if(radialRepeatContextRef.current)
+            if(invalidateRadial)
             {
                 resetRadialRepeatPreview();
             }
@@ -13354,23 +13631,60 @@ export const BuilderProView: FC<{}> = props =>
                 return true;
             }
 
+            if(fillAreaPickModeRef.current)
+            {
+                fillAreaPickModeRef.current =
+                    false;
+
+                fillAreaDraftContextRef.current =
+                    null;
+
+                fillAreaOverlayActiveRef.current =
+                    false;
+
+                areaStartRef.current =
+                    null;
+
+                GridEngine.clearTiles(
+                    'builder-area'
+                );
+
+                suppressAreaClickRef.current =
+                    false;
+
+                setFillAreaPickMode(
+                    false
+                );
+
+                setBuilderProRoomDraggingLocked(
+                    areaModeRef.current
+                );
+
+                setStatus(
+                    'Fill Area cancelado.'
+                );
+
+                return true;
+            }
+
             if(areaModeRef.current)
             {
                 areaModeRef.current =
                     false;
 
-                areaStartRef.current =
-                    null;
+                areaStartRef.current = null;
+
+                GridEngine.clearTiles('builder-area');
+
+                suppressAreaClickRef.current = false;
+
+                setBuilderProRoomDraggingLocked(areaModeRef.current);
 
                 suppressAreaClickRef.current =
                     false;
 
                 setAreaMode(
                     false
-                );
-
-                setSelectionBox(
-                    null
                 );
 
                 setStatus(
@@ -13639,6 +13953,15 @@ export const BuilderProView: FC<{}> = props =>
         event =>
         {
             if(!activeRef.current) return;
+
+            if(suppressAreaClickRef.current)
+            {
+                suppressAreaClickRef.current =
+                    false;
+
+                event.consume();
+                return;
+            }
 
             if(blueprintPlaceModeRef.current)
             {
@@ -18956,28 +19279,54 @@ export const BuilderProView: FC<{}> = props =>
                                     Área
                                 </div>
 
-                                <button
-                                    type="button"
-                                    className={
-                                        fillRepeatPreviewReady &&
-                                        fillRepeatMode ===
-                                            FILL_REPEAT_MODE_AREA
-                                            ? 'btn btn-sm btn-primary builder-pro-full'
-                                            : 'btn btn-sm btn-secondary builder-pro-full'
-                                    }
-                                    disabled={
-                                        pending ||
-                                        !selectedIds.length
-                                    }
-                                    onClick={
-                                        () =>
-                                            startFillRepeatPreview(
-                                                FILL_REPEAT_MODE_AREA,
-                                                0
+                                <div className="builder-pro-grid-2">
+                                    <button
+                                        type="button"
+                                        className={
+                                            fillRepeatPreviewReady &&
+                                            fillRepeatMode ===
+                                                FILL_REPEAT_MODE_AREA
+                                                ? 'btn btn-sm btn-primary'
+                                                : 'btn btn-sm btn-secondary'
+                                        }
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            () =>
+                                                startFillRepeatPreview(
+                                                    FILL_REPEAT_MODE_AREA,
+                                                    0
+                                                )
+                                        }>
+                                        Rellenar sala
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className={
+                                            (
+                                                fillAreaPickMode ||
+                                                (
+                                                    fillRepeatPreviewReady &&
+                                                    fillRepeatMode ===
+                                                        FILL_REPEAT_MODE_TILE_AREA
+                                                )
                                             )
-                                    }>
-                                    Rellenar área de la sala
-                                </button>
+                                                ? 'btn btn-sm btn-primary'
+                                                : 'btn btn-sm btn-secondary'
+                                        }
+                                        disabled={
+                                            pending ||
+                                            !selectedIds.length
+                                        }
+                                        onClick={
+                                            startFillAreaPick
+                                        }>
+                                        Rellenar área
+                                    </button>
+                                </div>
 
                                 {
                                     fillRepeatPreviewReady &&
@@ -19012,7 +19361,7 @@ export const BuilderProView: FC<{}> = props =>
                                 }
 
                                 <div className="builder-pro-hint">
-                                    Hasta límite repite el módulo hasta el primer borde, tile inválido u obstáculo. Área recorre toda la sala alineada al módulo y omite bloques que no caben o están ocupados. La operación final es atómica y usa unidades reales del inventario.
+                                    Hasta límite repite el módulo hasta el primer borde, tile inválido u obstáculo. Rellenar sala conserva el comportamiento actual sobre toda la sala. Rellenar área permite trazar casillas concretas y solo crea módulos que caben completamente dentro de esos límites. La operación final es atómica y usa unidades reales del inventario.
                                 </div>
                             </div>
                         </details>
@@ -19588,10 +19937,6 @@ export const BuilderProView: FC<{}> = props =>
                         </details>
                     </BuilderProOutlinerPanel>
                 </> }
-            { selectionBox &&
-                <div
-                    className="builder-pro-selection-box"
-                    style={ selectionBox } /> }
         </>
     );
 }

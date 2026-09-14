@@ -1,6 +1,6 @@
 import { IFurnitureStackingHeightMap, ILegacyWallGeometry, IObjectData, IRoomCanvasMouseListener, IRoomEngineServices, IRoomGeometry, IRoomObject, IRoomObjectController, IRoomObjectEventManager, ISelectedRoomObjectData, IVector3D, MouseEventType, NitroConfiguration, NitroLogger, RoomObjectCategory, RoomObjectOperationType, RoomObjectPlacementSource, RoomObjectType, RoomObjectUserType, RoomObjectVariable, Vector3d } from '../../api';
 import { Disposable } from '../../core';
-import { RoomEngineDimmerStateEvent, RoomEngineObjectEvent, RoomEngineObjectPlacedEvent, RoomEngineObjectPlacedOnUserEvent, RoomEngineObjectPlaySoundEvent, RoomEngineRoomAdEvent, RoomEngineSamplePlaybackEvent, RoomEngineTriggerWidgetEvent, RoomEngineUseProductEvent, RoomObjectBadgeAssetEvent, RoomObjectDataRequestEvent, RoomObjectDimmerStateUpdateEvent, RoomObjectEvent, RoomObjectFloorHoleEvent, RoomObjectFurnitureActionEvent, RoomObjectHSLColorEnabledEvent, RoomObjectHSLColorEnableEvent, RoomObjectMouseEvent, RoomObjectMoveEvent, RoomObjectPlaySoundIdEvent, RoomObjectRoomAdEvent, RoomObjectSamplePlaybackEvent, RoomObjectSoundMachineEvent, RoomObjectStateChangedEvent, RoomObjectTileMouseEvent, RoomObjectWallMouseEvent, RoomObjectWidgetRequestEvent, RoomSpriteMouseEvent, RoomEngineTileClickEvent, RoomEngineTileHoverEvent } from '../../events';
+import { RoomEngineDimmerStateEvent, RoomEngineObjectEvent, RoomEngineObjectPlacedEvent, RoomEngineObjectPlacedOnUserEvent, RoomEngineObjectPlaySoundEvent, RoomEngineRoomAdEvent, RoomEngineSamplePlaybackEvent, RoomEngineTriggerWidgetEvent, RoomEngineUseProductEvent, RoomObjectBadgeAssetEvent, RoomObjectDataRequestEvent, RoomObjectDimmerStateUpdateEvent, RoomObjectEvent, RoomObjectFloorHoleEvent, RoomObjectFurnitureActionEvent, RoomObjectHSLColorEnabledEvent, RoomObjectHSLColorEnableEvent, RoomObjectMouseEvent, RoomObjectMoveEvent, RoomObjectPlaySoundIdEvent, RoomObjectRoomAdEvent, RoomObjectSamplePlaybackEvent, RoomObjectSoundMachineEvent, RoomObjectStateChangedEvent, RoomObjectTileMouseEvent, RoomObjectWallMouseEvent, RoomObjectWidgetRequestEvent, RoomSpriteMouseEvent, RoomEngineTileClickEvent, RoomEngineTileHoverEvent, RoomEngineTilePointerEvent } from '../../events';
 import { RoomEnterEffect, RoomId, RoomObjectUpdateMessage } from '../../room';
 import { BotPlaceComposer, FurnitureColorWheelComposer, FurnitureDiceActivateComposer, FurnitureDiceDeactivateComposer, FurnitureFloorUpdateComposer, FurnitureGroupInfoComposer, FurnitureMultiStateComposer, FurnitureOneWayDoorComposer, FurniturePickupComposer, FurniturePlaceComposer, FurniturePostItPlaceComposer, FurnitureRandomStateComposer, FurnitureWallMultiStateComposer, FurnitureWallUpdateComposer, GetItemDataComposer, GetResolutionAchievementsMessageComposer, PetMoveComposer, PetPlaceComposer, RemoveWallItemComposer, RoomUnitLookComposer, RoomUnitWalkComposer, SetItemDataMessageComposer, SetObjectDataMessageComposer } from '../communication';
 import { Nitro } from '../Nitro';
@@ -291,6 +291,46 @@ export class RoomObjectEventHandler extends Disposable implements IRoomCanvasMou
     private handleRoomObjectMouseEvent(event: RoomObjectMouseEvent, roomId: number): void
     {
         if(!event || !event.type) return;
+
+        if(
+            event instanceof RoomObjectTileMouseEvent &&
+            this._roomEngine.events
+        )
+        {
+            let pointerType: string = null;
+
+            switch(event.type)
+            {
+                case RoomObjectMouseEvent.MOUSE_DOWN:
+                    pointerType =
+                        RoomEngineTilePointerEvent.TILE_POINTER_DOWN;
+                    break;
+                case RoomObjectMouseEvent.MOUSE_MOVE:
+                    pointerType =
+                        RoomEngineTilePointerEvent.TILE_POINTER_MOVE;
+                    break;
+                case RoomObjectMouseEvent.MOUSE_UP:
+                    pointerType =
+                        RoomEngineTilePointerEvent.TILE_POINTER_UP;
+                    break;
+            }
+
+            if(pointerType)
+            {
+                this._roomEngine.events.dispatchEvent(
+                    new RoomEngineTilePointerEvent(
+                        pointerType,
+                        roomId,
+                        event.tileXAsInt,
+                        event.tileYAsInt,
+                        event.tileZAsInt,
+                        event.altKey,
+                        event.ctrlKey,
+                        event.shiftKey
+                    )
+                );
+            }
+        }
 
         switch(event.type)
         {

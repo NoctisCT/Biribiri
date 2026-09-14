@@ -297,6 +297,135 @@ public final class BuilderProHistoryService
         }
     }
 
+    public static boolean recordFillPlacementItemsWithMetadata(
+            Habbo actor,
+            List<HabboItem> placedItems,
+            String label)
+    {
+        if(actor == null
+                || placedItems == null
+                || placedItems.isEmpty()
+                || placedItems.size()
+                > GroupMoveService.MAX_GROUP_SIZE)
+        {
+            return false;
+        }
+
+        Room room =
+                actor.getHabboInfo()
+                        .getCurrentRoom();
+
+        if(room == null)
+        {
+            return false;
+        }
+
+        LinkedHashSet<Integer> uniqueIds =
+                new LinkedHashSet<Integer>();
+
+        List<ItemState> placedStates =
+                new ArrayList<ItemState>(
+                        placedItems.size()
+                );
+
+        for(HabboItem item : placedItems)
+        {
+            if(item == null
+                    || item.getRoomId()
+                    != room.getId()
+                    || !uniqueIds.add(
+                            item.getId()
+                    ))
+            {
+                return false;
+            }
+
+            placedStates.add(
+                    new ItemState(
+                            item
+                    )
+            );
+        }
+
+        placedStates.sort(
+                Comparator.comparingInt(
+                        state ->
+                                state.itemId
+                )
+        );
+
+        PickupMetadata metadata =
+                null;
+
+        try
+        {
+            metadata =
+                    capturePickupMetadata(
+                            room,
+                            new ArrayList<Integer>(
+                                    uniqueIds
+                            )
+                    );
+        }
+        catch(Exception exception)
+        {
+            System.out.println(
+                    "[BuilderProTrace] HISTORY_FILL_METADATA_FALLBACK "
+                            + exception.getClass()
+                                    .getName()
+                            + ": "
+                            + exception.getMessage()
+            );
+        }
+
+        History history =
+                HISTORIES.computeIfAbsent(
+                        key(actor, room),
+                        ignored -> new History()
+                );
+
+        Entry entry =
+                new Entry(
+                        room.getId(),
+                        copyStates(
+                                placedStates
+                        ),
+                        copyStates(
+                                placedStates
+                        ),
+                        PLACEMENT_PREFIX
+                                + (
+                                    label == null
+                                        ? "Rellenar"
+                                        : label
+                                ),
+                        metadata
+                );
+
+        synchronized(history)
+        {
+            history.undo.addLast(
+                    entry
+            );
+
+            while(history.undo.size()
+                    > MAX_HISTORY)
+            {
+                history.undo.removeFirst();
+            }
+
+            history.redo.clear();
+        }
+
+        System.out.println(
+                "[BuilderProTrace] HISTORY_FILL_RECORDED items="
+                        + placedStates.size()
+        );
+
+        return true;
+    }
+
+
     public static boolean recordPlacementWithMetadata(
             Habbo actor,
             List<ItemState> placed,
@@ -332,7 +461,26 @@ public final class BuilderProHistoryService
         catch(Exception exception)
         {
             exception.printStackTrace();
-            return false;
+
+            /*
+             * El placement ya existe correctamente en la sala.
+             * Si falla solo la captura de metadata auxiliar,
+             * conservamos Undo mediante un placement normal.
+             */
+            System.out.println(
+                    "[BuilderProTrace] HISTORY_PLACEMENT_METADATA_FALLBACK "
+                            + exception.getClass().getName()
+                            + ": "
+                            + exception.getMessage()
+            );
+
+            recordPlacement(
+                    actor,
+                    placed,
+                    label
+            );
+
+            return true;
         }
 
         History history =
@@ -667,6 +815,73 @@ public final class BuilderProHistoryService
                 key(actor, room)
         );
     }
+
+    public static boolean canUndo(
+            Habbo actor)
+    {
+        if(actor == null)
+        {
+            return false;
+        }
+
+        Room room =
+                actor.getHabboInfo()
+                        .getCurrentRoom();
+
+        if(room == null)
+        {
+            return false;
+        }
+
+        History history =
+                HISTORIES.get(
+                        key(actor, room)
+                );
+
+        if(history == null)
+        {
+            return false;
+        }
+
+        synchronized(history)
+        {
+            return !history.undo.isEmpty();
+        }
+    }
+
+    public static boolean canRedo(
+            Habbo actor)
+    {
+        if(actor == null)
+        {
+            return false;
+        }
+
+        Room room =
+                actor.getHabboInfo()
+                        .getCurrentRoom();
+
+        if(room == null)
+        {
+            return false;
+        }
+
+        History history =
+                HISTORIES.get(
+                        key(actor, room)
+                );
+
+        if(history == null)
+        {
+            return false;
+        }
+
+        synchronized(history)
+        {
+            return !history.redo.isEmpty();
+        }
+    }
+
 
     public static Result execute(
             Habbo actor,

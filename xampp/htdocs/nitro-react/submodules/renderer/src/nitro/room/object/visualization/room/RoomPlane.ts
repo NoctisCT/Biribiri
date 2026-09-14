@@ -668,25 +668,45 @@ export class RoomPlane implements IRoomPlane
 
     private renderGridOverlay(): void
     {
-        if(!GridEngine.enabled || (this._type !== RoomPlane.TYPE_FLOOR) || !this._bitmapData || !this._normal) return;
+        if((this._type !== RoomPlane.TYPE_FLOOR) || !this._bitmapData || !this._normal) return;
 
         // Los laterales del grosor del suelo tambien son TYPE_FLOOR. Solo dibujamos superficies transitables.
         if(Math.abs(this._normal.z) < 0.001) return;
 
+        const builderAreaTiles =
+            GridEngine.getTiles('builder-area');
+
+        if(!GridEngine.enabled && !builderAreaTiles.length) return;
+
         const graphics = new Graphics();
 
-        for(const tile of GridEngine.tiles)
+        if(GridEngine.enabled)
         {
-            this.drawGridTile(graphics, tile.x, tile.y, tile.kind);
+            for(const tile of GridEngine.tiles)
+            {
+                this.drawGridTile(graphics, tile.x, tile.y, tile.kind);
+            }
+
+            const style = GridEngine.style;
+
+            graphics.lineStyle(style.lineWidth, style.lineColor, style.lineAlpha, 0.5);
+
+            // En Habbo la coordenada entera es el centro de la baldosa; sus bordes estan en n +/- 0.5.
+            this.drawGridBoundaries(graphics, this._location, this._leftSide, this._cornerA, this._cornerD, this._cornerB, this._cornerC);
+            this.drawGridBoundaries(graphics, this._location, this._rightSide, this._cornerA, this._cornerB, this._cornerD, this._cornerC);
         }
-
-        const style = GridEngine.style;
-
-        graphics.lineStyle(style.lineWidth, style.lineColor, style.lineAlpha, 0.5);
-
-        // En Habbo la coordenada entera es el centro de la baldosa; sus bordes estan en n +/- 0.5.
-        this.drawGridBoundaries(graphics, this._location, this._leftSide, this._cornerA, this._cornerD, this._cornerB, this._cornerC);
-        this.drawGridBoundaries(graphics, this._location, this._rightSide, this._cornerA, this._cornerB, this._cornerD, this._cornerC);
+        else
+        {
+            for(const tile of builderAreaTiles)
+            {
+                this.drawGridTile(
+                    graphics,
+                    tile.x,
+                    tile.y,
+                    'builder-area'
+                );
+            }
+        }
 
         this._textureCache.writeToRenderTexture(graphics, this._bitmapData, false);
         graphics.destroy();
