@@ -8,6 +8,7 @@ import { ClearBuilderProGhostPreview, RenderBuilderProGhostPreview, SyncBuilderP
 import { BuilderProToolId, BuilderProToolVariantId, ResolveBuilderProToolLifecycle, ResolveBuilderProTransientChannels } from './BuilderProToolLifecycle';
 import { BuilderProGlobalToolbar } from './BuilderProGlobalToolbar';
 import { BuilderProOutlinerPanel } from './BuilderProOutlinerPanel';
+import { BuilderProRoomBackupPanel } from './BuilderProRoomBackupPanel';
 import { BuilderProSelectionContext } from './BuilderProSelectionContext';
 import { BuilderProToolFlyout } from './BuilderProToolFlyout';
 import { BuilderProToolPanel } from './BuilderProToolPanel';
@@ -18181,6 +18182,9 @@ export const BuilderProView: FC<{}> = props =>
                                 </div>
                             </div>
                         </details>
+
+                        <BuilderProRoomBackupPanel
+                            onStatus={ setStatus } />
 
                         <details className="builder-pro-section" data-builder-pro-family="collision" open>
                             <summary>Colisión</summary>

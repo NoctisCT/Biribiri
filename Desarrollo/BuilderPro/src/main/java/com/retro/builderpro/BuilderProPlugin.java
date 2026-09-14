@@ -37,6 +37,7 @@ import com.retro.builderpro.handlers.GridRepeatRequest;
 import com.retro.builderpro.handlers.RadialRepeatRequest;
 import com.retro.builderpro.handlers.FillRepeatRequest;
 import com.retro.builderpro.handlers.ItemLockStateRequest;
+import com.retro.builderpro.handlers.RoomBackupRequest;
 
 public class BuilderProPlugin
         extends HabboPlugin
@@ -59,6 +60,7 @@ public class BuilderProPlugin
         BuilderProBlueprintRepository.initialize();
         BuilderProLayerRepository.initialize();
         BuilderProItemLockService.initialize();
+        BuilderProRoomBackupRepository.initialize();
 
         Emulator.getGameServer()
                 .getPacketManager()
@@ -198,6 +200,13 @@ public class BuilderProPlugin
                 .registerHandler(
                         BuilderProPackets.ITEM_LOCK_STATE_REQUEST,
                         ItemLockStateRequest.class
+                );
+
+        Emulator.getGameServer()
+                .getPacketManager()
+                .registerHandler(
+                        BuilderProPackets.ROOM_BACKUP_REQUEST,
+                        RoomBackupRequest.class
                 );
 
         System.out.println(

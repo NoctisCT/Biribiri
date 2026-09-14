@@ -20,7 +20,8 @@ const TOOL_GLYPHS: Record<BuilderProToolId, string> = {
     repeat: '⧉',
     replace: '⇄',
     collision: '◇',
-    blueprints: '▣'
+    blueprints: '▣',
+    backup: '▤'
 };
 
 const TOOL_FLYOUTS:

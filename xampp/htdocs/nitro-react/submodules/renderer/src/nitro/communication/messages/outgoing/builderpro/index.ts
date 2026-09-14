@@ -18,3 +18,4 @@ export * from './BuilderProRadialRepeatComposer';
 export * from './BuilderProFillRepeatComposer';
 export * from './BuilderProItemLockStateComposer';
 export * from './BuilderProBlueprintStateComposer';
+export * from './BuilderProRoomBackupStateComposer';

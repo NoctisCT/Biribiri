@@ -17,3 +17,4 @@ export * from './BuilderProRadialRepeatResultEvent';
 export * from './BuilderProFillRepeatResultEvent';
 export * from './BuilderProItemLockStateEvent';
 export * from './BuilderProBlueprintStateEvent';
+export * from './BuilderProRoomBackupStateEvent';

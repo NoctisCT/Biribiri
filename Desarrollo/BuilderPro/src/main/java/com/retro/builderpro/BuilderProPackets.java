@@ -64,4 +64,7 @@ public final class BuilderProPackets
 
     public static final int ITEM_LOCK_STATE_REQUEST = 6337;
     public static final int ITEM_LOCK_STATE_RESULT = 6338;
+
+    public static final int ROOM_BACKUP_REQUEST = 6339;
+    public static final int ROOM_BACKUP_RESULT = 6340;
 }

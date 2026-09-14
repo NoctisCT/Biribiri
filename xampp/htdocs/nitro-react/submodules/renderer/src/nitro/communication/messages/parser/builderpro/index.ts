@@ -17,3 +17,4 @@ export * from './BuilderProRadialRepeatResultParser';
 export * from './BuilderProFillRepeatResultParser';
 export * from './BuilderProItemLockStateParser';
 export * from './BuilderProBlueprintStateParser';
+export * from './BuilderProRoomBackupStateParser';

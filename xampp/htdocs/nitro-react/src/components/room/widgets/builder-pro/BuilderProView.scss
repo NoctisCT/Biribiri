@@ -900,7 +900,9 @@
 .builder-pro-sections[data-builder-pro-active-tool="layers"] >
     .builder-pro-section[data-builder-pro-family="layers"],
 .builder-pro-sections[data-builder-pro-active-tool="blueprints"] >
-    .builder-pro-section[data-builder-pro-family="blueprints"] {
+    .builder-pro-section[data-builder-pro-family="blueprints"],
+.builder-pro-sections[data-builder-pro-active-tool="backup"] >
+    .builder-pro-section[data-builder-pro-family="backup"] {
     display: block;
 }
 
@@ -4383,6 +4385,13 @@ body.builder-pro-immersive:has(
     ] >
     .builder-pro-section[
         data-builder-pro-family="blueprints"
+    ],
+.builder-pro-workspace-shell
+    .builder-pro-sections[
+        data-builder-pro-active-tool="backup"
+    ] >
+    .builder-pro-section[
+        data-builder-pro-family="backup"
     ] {
     display: block !important;
 }
@@ -4671,6 +4680,14 @@ section.builder-pro-tool-panel.builder-pro-context-bar[
     ] >
     .builder-pro-section[
         data-builder-pro-family="blueprints"
+    ],
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-sections[
+        data-builder-pro-active-tool="backup"
+    ] >
+    .builder-pro-section[
+        data-builder-pro-family="backup"
     ] {
     display: block !important;
 }

@@ -6,7 +6,8 @@ export type BuilderProToolId =
     | 'repeat'
     | 'replace'
     | 'collision'
-    | 'blueprints';
+    | 'blueprints'
+    | 'backup';
 
 export type BuilderProToolVariantId =
     | 'selection-click'
@@ -29,7 +30,8 @@ export type BuilderProToolVariantId =
     | 'replace-reference'
     | 'collision-traversal'
     | 'blueprints-manage'
-    | 'blueprints-place';
+    | 'blueprints-place'
+    | 'backup-manage';
 
 export type BuilderProLifecyclePhase =
     | 'idle'
@@ -208,6 +210,13 @@ export const BUILDER_PRO_TOOL_DEFINITIONS:
             variants: [
                 'blueprints-manage',
                 'blueprints-place'
+            ]
+        },
+        {
+            id: 'backup',
+            label: 'Backup',
+            variants: [
+                'backup-manage'
             ]
         }
     ];
