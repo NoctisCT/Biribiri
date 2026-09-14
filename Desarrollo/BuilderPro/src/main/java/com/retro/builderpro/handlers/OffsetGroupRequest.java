@@ -6,6 +6,7 @@ import com.retro.builderpro.BuilderProHistoryService;
 import com.retro.builderpro.BuilderProGroupGuard;
 import com.retro.builderpro.BuilderProItemLockGuard;
 import com.retro.builderpro.BuilderProPackets;
+import com.retro.builderpro.BuilderProRateLimiter;
 import com.retro.builderpro.GroupOffsetService;
 
 import java.util.ArrayList;
@@ -32,6 +33,27 @@ public class OffsetGroupRequest
                 this.packet
                         .readInt()
                         .intValue();
+
+        BuilderProRateLimiter.Result rateLimit =
+                BuilderProRateLimiter.acquireItems(
+                        this.client.getHabbo(),
+                        "offset",
+                        count
+                );
+
+        if(!rateLimit.allowed)
+        {
+            sendResult(
+                    requestId,
+                    GroupOffsetService.Result.failure(
+                            98,
+                            rateLimit.message
+                    )
+            );
+
+            return;
+        }
+
 
         if(count < 1
                 || count > GroupOffsetService.MAX_GROUP_SIZE)

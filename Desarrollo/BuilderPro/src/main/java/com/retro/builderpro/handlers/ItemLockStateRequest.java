@@ -4,6 +4,7 @@ import com.eu.habbo.messages.ServerMessage;
 import com.eu.habbo.messages.incoming.MessageHandler;
 import com.retro.builderpro.BuilderProItemLockService;
 import com.retro.builderpro.BuilderProPackets;
+import com.retro.builderpro.BuilderProRateLimiter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +35,31 @@ public class ItemLockStateRequest
         int count =
                 this.packet.readInt()
                         .intValue();
+
+        if(operation != BuilderProItemLockService.OP_QUERY)
+        {
+            BuilderProRateLimiter.Result rateLimit =
+                    BuilderProRateLimiter.acquireItems(
+                            this.client.getHabbo(),
+                            "item-lock-state",
+                            count
+                    );
+
+            if(!rateLimit.allowed)
+            {
+                sendResult(
+                        requestId,
+                        BuilderProItemLockService.Result.failure(
+                                98,
+                                rateLimit.message,
+                                new ArrayList<Integer>()
+                        )
+                );
+
+                return;
+            }
+        }
+
 
         if(count < 0
                 || count >

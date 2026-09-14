@@ -84,7 +84,7 @@ export const BuilderProToolRail: FC<BuilderProToolRailProps> = props =>
                                 ? 'true'
                                 : undefined
                         }
-                        title={ definition.label }
+
                         aria-label={ definition.label }
                         aria-pressed={ isDisplayed }
                         aria-haspopup={

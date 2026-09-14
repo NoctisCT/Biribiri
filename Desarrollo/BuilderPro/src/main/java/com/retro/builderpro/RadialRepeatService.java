@@ -35,7 +35,7 @@ public final class RadialRepeatService
     public static final int OP_PREVIEW = 0;
     public static final int OP_EXECUTE = 1;
 
-    public static final int MAX_COPIES = 100;
+    public static final int MAX_COPIES = Room.MAXIMUM_FURNI;
     public static final int MAX_ANGLE = 360;
     public static final int MAX_RADIUS = 100;
     public static final int MAX_TOTAL_ITEMS =
@@ -445,6 +445,24 @@ public final class RadialRepeatService
                                 pivotRectangle.height
                                         - 1
                             ) / 2.0D;
+        }
+
+        BuilderProRateLimiter.Result rateLimit =
+                BuilderProRateLimiter.acquireItems(
+                        actor,
+                        operation == OP_EXECUTE
+                                ? "radial-repeat-execute"
+                                : "radial-repeat-preview",
+                        totalItems
+                );
+
+        if(!rateLimit.allowed)
+        {
+            return Result.failure(
+                    98,
+                    rateLimit.message,
+                    copies
+            );
         }
 
         List<HabboItem> inventoryItems =

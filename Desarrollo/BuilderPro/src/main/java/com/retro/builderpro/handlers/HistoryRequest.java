@@ -4,6 +4,7 @@ import com.eu.habbo.messages.ServerMessage;
 import com.eu.habbo.messages.incoming.MessageHandler;
 import com.retro.builderpro.BuilderProHistoryService;
 import com.retro.builderpro.BuilderProPackets;
+import com.retro.builderpro.BuilderProRateLimiter;
 
 public class HistoryRequest
         extends MessageHandler

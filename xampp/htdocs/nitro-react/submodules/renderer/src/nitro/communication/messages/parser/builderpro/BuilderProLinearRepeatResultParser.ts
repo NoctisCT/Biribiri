@@ -50,7 +50,7 @@ export class BuilderProLinearRepeatResultParser implements IMessageParser
 
         const previewCount = wrapper.readInt();
 
-        if(previewCount < 0 || previewCount > 100)
+        if(previewCount < 0 || previewCount > 4000)
         {
             return false;
         }
@@ -97,7 +97,7 @@ export class BuilderProLinearRepeatResultParser implements IMessageParser
 
         const itemCount = wrapper.readInt();
 
-        if(itemCount < 0 || itemCount > 100)
+        if(itemCount < 0 || itemCount > 4000)
         {
             return false;
         }

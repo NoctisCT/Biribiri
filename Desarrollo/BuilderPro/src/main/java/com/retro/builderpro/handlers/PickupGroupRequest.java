@@ -4,6 +4,7 @@ import com.eu.habbo.messages.ServerMessage;
 import com.eu.habbo.messages.incoming.MessageHandler;
 import com.retro.builderpro.BuilderProHistoryService;
 import com.retro.builderpro.BuilderProPackets;
+import com.retro.builderpro.BuilderProRateLimiter;
 import com.retro.builderpro.GroupMoveService;
 
 import java.util.ArrayList;
@@ -30,6 +31,33 @@ public class PickupGroupRequest
                 this.packet
                         .readInt()
                         .intValue();
+
+        BuilderProRateLimiter.Result rateLimit =
+                BuilderProRateLimiter.acquireItems(
+                        this.client.getHabbo(),
+                        "pickup",
+                        count
+                );
+
+        if(!rateLimit.allowed)
+        {
+            sendResult(
+                    requestId,
+                    BuilderProHistoryService.Result.failure(
+                            98,
+                            rateLimit.message,
+                            BuilderProHistoryService.canUndo(
+                                    this.client.getHabbo()
+                            ),
+                            BuilderProHistoryService.canRedo(
+                                    this.client.getHabbo()
+                            )
+                    )
+            );
+
+            return;
+        }
+
 
         if(count < 1
                 || count > GroupMoveService.MAX_GROUP_SIZE)

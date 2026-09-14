@@ -55,7 +55,7 @@ export class BuilderProMirrorDuplicateResultParser implements IMessageParser
         const count =
             wrapper.readInt();
 
-        if(count < 0 || count > 100)
+        if(count < 0 || count > 4000)
         {
             return false;
         }

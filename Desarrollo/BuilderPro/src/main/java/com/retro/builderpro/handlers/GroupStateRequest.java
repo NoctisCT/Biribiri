@@ -5,6 +5,7 @@ import com.eu.habbo.messages.incoming.MessageHandler;
 import com.retro.builderpro.BuilderProGroupRepository;
 import com.retro.builderpro.BuilderProGroupService;
 import com.retro.builderpro.BuilderProPackets;
+import com.retro.builderpro.BuilderProRateLimiter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,6 +43,31 @@ public class GroupStateRequest
         int count =
                 this.packet.readInt()
                         .intValue();
+
+        if(operation != BuilderProGroupService.OP_LIST)
+        {
+            BuilderProRateLimiter.Result rateLimit =
+                    BuilderProRateLimiter.acquireItems(
+                            this.client.getHabbo(),
+                            "group-state",
+                            count
+                    );
+
+            if(!rateLimit.allowed)
+            {
+                sendResult(
+                        requestId,
+                        BuilderProGroupService.Result.failure(
+                                98,
+                                rateLimit.message,
+                                new ArrayList<BuilderProGroupRepository.SavedGroup>()
+                        )
+                );
+
+                return;
+            }
+        }
+
 
         if(count < 0
                 || count >

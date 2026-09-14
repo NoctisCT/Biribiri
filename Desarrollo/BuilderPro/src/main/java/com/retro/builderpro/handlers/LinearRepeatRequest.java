@@ -5,6 +5,7 @@ import com.eu.habbo.messages.incoming.MessageHandler;
 import com.retro.builderpro.BuilderProGroupGuard;
 import com.retro.builderpro.BuilderProHistoryService;
 import com.retro.builderpro.BuilderProPackets;
+import com.retro.builderpro.BuilderProRateLimiter;
 import com.retro.builderpro.LinearRepeatService;
 
 import java.util.ArrayList;

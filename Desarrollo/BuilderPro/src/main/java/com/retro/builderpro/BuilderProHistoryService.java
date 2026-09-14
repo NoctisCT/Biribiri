@@ -43,6 +43,9 @@ public final class BuilderProHistoryService
 
     public static final int MAX_HISTORY = 50;
 
+    public static final int MAX_HISTORY_ITEM_STATES =
+            Room.MAXIMUM_FURNI * 40;
+
     private static final double EPSILON = 0.000001D;
 
     private static final String PLACEMENT_PREFIX =
@@ -175,13 +178,11 @@ public final class BuilderProHistoryService
         synchronized(history)
         {
             history.undo.addLast(entry);
-
-            while(history.undo.size() > MAX_HISTORY)
-            {
-                history.undo.removeFirst();
-            }
-
             history.redo.clear();
+
+            trimHistory(
+                    history
+            );
         }
     }
 
@@ -230,13 +231,11 @@ public final class BuilderProHistoryService
         synchronized(history)
         {
             history.undo.addLast(entry);
-
-            while(history.undo.size() > MAX_HISTORY)
-            {
-                history.undo.removeFirst();
-            }
-
             history.redo.clear();
+
+            trimHistory(
+                    history
+            );
         }
 
         return true;
@@ -287,13 +286,11 @@ public final class BuilderProHistoryService
         synchronized(history)
         {
             history.undo.addLast(entry);
-
-            while(history.undo.size() > MAX_HISTORY)
-            {
-                history.undo.removeFirst();
-            }
-
             history.redo.clear();
+
+            trimHistory(
+                    history
+            );
         }
     }
 
@@ -407,14 +404,11 @@ public final class BuilderProHistoryService
             history.undo.addLast(
                     entry
             );
-
-            while(history.undo.size()
-                    > MAX_HISTORY)
-            {
-                history.undo.removeFirst();
-            }
-
             history.redo.clear();
+
+            trimHistory(
+                    history
+            );
         }
 
         System.out.println(
@@ -506,13 +500,11 @@ public final class BuilderProHistoryService
         synchronized(history)
         {
             history.undo.addLast(entry);
-
-            while(history.undo.size() > MAX_HISTORY)
-            {
-                history.undo.removeFirst();
-            }
-
             history.redo.clear();
+
+            trimHistory(
+                    history
+            );
         }
 
         return true;
@@ -783,14 +775,11 @@ public final class BuilderProHistoryService
             history.undo.addLast(
                     entry
             );
-
-            while(history.undo.size()
-                    > MAX_HISTORY)
-            {
-                history.undo.removeFirst();
-            }
-
             history.redo.clear();
+
+            trimHistory(
+                    history
+            );
         }
     }
 
@@ -3641,6 +3630,100 @@ public final class BuilderProHistoryService
 
         return normalized;
     }
+
+    private static void trimHistory(
+            History history)
+    {
+        if(history == null)
+        {
+            return;
+        }
+
+        while(
+            history.undo.size() > MAX_HISTORY
+            || historyWeight(history)
+                    > MAX_HISTORY_ITEM_STATES
+        )
+        {
+            if(!history.undo.isEmpty())
+            {
+                history.undo.removeFirst();
+                continue;
+            }
+
+            if(!history.redo.isEmpty())
+            {
+                history.redo.removeFirst();
+                continue;
+            }
+
+            break;
+        }
+    }
+
+    private static int historyWeight(
+            History history)
+    {
+        long weight = 0L;
+
+        for(Entry entry : history.undo)
+        {
+            weight += entryWeight(entry);
+
+            if(weight > Integer.MAX_VALUE)
+            {
+                return Integer.MAX_VALUE;
+            }
+        }
+
+        for(Entry entry : history.redo)
+        {
+            weight += entryWeight(entry);
+
+            if(weight > Integer.MAX_VALUE)
+            {
+                return Integer.MAX_VALUE;
+            }
+        }
+
+        return (int)weight;
+    }
+
+    private static int entryWeight(
+            Entry entry)
+    {
+        if(entry == null)
+        {
+            return 0;
+        }
+
+        long weight = 0L;
+
+        if(entry.before != null)
+        {
+            weight += entry.before.size();
+        }
+
+        if(entry.after != null)
+        {
+            weight += entry.after.size();
+        }
+
+        if(entry.replacementRecord != null)
+        {
+            weight +=
+                    (long)entry.replacementRecord.size()
+                            * 2L;
+        }
+
+        if(weight > Integer.MAX_VALUE)
+        {
+            return Integer.MAX_VALUE;
+        }
+
+        return (int)weight;
+    }
+
 
     private static String key(
             Habbo actor,

@@ -15,9 +15,32 @@ import { BuilderProToolPanel } from './BuilderProToolPanel';
 import { BuilderProToolRail } from './BuilderProToolRail';
 import './BuilderProView.scss';
 
-const MAX_SELECTION = 100;
+const MAX_SELECTION = 4000;
+const MAX_REPEAT_COPIES = 4000;
+const MAX_GRID_DIMENSION = 4000;
 const KEYBOARD_REPEAT_INTERVAL_MS = 200;
 const MOVE_CONFIRM_TIMEOUT_MS = 2500;
+const FILL_CONFIRM_TIMEOUT_MIN_MS = 8000;
+const FILL_CONFIRM_TIMEOUT_MAX_MS = 60000;
+const FILL_CONFIRM_TIMEOUT_PER_ITEM_MS = 20;
+
+const getFillConfirmTimeoutMs = (
+    itemCount: number
+): number =>
+    Math.min(
+        FILL_CONFIRM_TIMEOUT_MAX_MS,
+        Math.max(
+            FILL_CONFIRM_TIMEOUT_MIN_MS,
+            5000 +
+                (
+                    Math.max(
+                        0,
+                        Math.trunc(itemCount)
+                    ) *
+                    FILL_CONFIRM_TIMEOUT_PER_ITEM_MS
+                )
+        )
+    );
 const formatBuilderProServerFailure = (
     code: number,
     message: string,
@@ -8734,7 +8757,7 @@ export const BuilderProView: FC<{}> = props =>
             if(current.length >= MAX_SELECTION)
             {
                 setStatus(
-                    `L?mite de ${ MAX_SELECTION } furnis alcanzado.`
+                    `Límite de ${ MAX_SELECTION } furnis alcanzado.`
                 );
 
                 return;
@@ -10331,7 +10354,7 @@ export const BuilderProView: FC<{}> = props =>
                 operation === FILL_REPEAT_OP_PREVIEW
                     ? (
                         isTileAreaFill
-                            ? 'Calculando Fill Area...'
+                            ? 'Calculando relleno de área...'
                             : (
                                 isRoomFill
                                     ? 'Calculando relleno de sala...'
@@ -10430,7 +10453,11 @@ export const BuilderProView: FC<{}> = props =>
                                 'Relleno sin confirmación del servidor.'
                             );
                         },
-                        MOVE_CONFIRM_TIMEOUT_MS
+                        operation === FILL_REPEAT_OP_EXECUTE
+                            ? getFillConfirmTimeoutMs(
+                                fillRepeatPreviewEntriesRef.current.length
+                            )
+                            : FILL_CONFIRM_TIMEOUT_MIN_MS
                     );
             }
             catch(error)
@@ -10947,7 +10974,7 @@ export const BuilderProView: FC<{}> = props =>
 
                 setStatus(
                     context.mode === FILL_REPEAT_MODE_TILE_AREA
-                        ? `Vista previa Fill Area: ${ parser.copies } módulos válidos · ${ entries.length } furnis nuevos.`
+                        ? `Vista previa de relleno de área: ${ parser.copies } módulos válidos · ${ entries.length } furnis nuevos.`
                         : (
                             context.mode === FILL_REPEAT_MODE_AREA
                                 ? `Vista previa de sala: ${ parser.copies } módulos válidos · ${ entries.length } furnis nuevos.`
@@ -11497,11 +11524,11 @@ export const BuilderProView: FC<{}> = props =>
             if(
                 !Number.isInteger(copies) ||
                 copies < 1 ||
-                copies > 100
+                copies > MAX_REPEAT_COPIES
             )
             {
                 setStatus(
-                    'Copias debe estar entre 1 y 100.'
+                    `Copias debe estar entre 1 y ${ MAX_REPEAT_COPIES }.`
                 );
 
                 return;
@@ -12258,14 +12285,14 @@ export const BuilderProView: FC<{}> = props =>
             if(
                 !Number.isSafeInteger(columns) ||
                 columns < 1 ||
-                columns > 100 ||
+                columns > MAX_GRID_DIMENSION ||
                 !Number.isSafeInteger(rows) ||
                 rows < 1 ||
-                rows > 100
+                rows > MAX_GRID_DIMENSION
             )
             {
                 setStatus(
-                    'Filas y columnas deben estar entre 1 y 100.'
+                    `Filas y columnas deben estar entre 1 y ${ MAX_GRID_DIMENSION }.`
                 );
 
                 return;
@@ -13120,11 +13147,11 @@ export const BuilderProView: FC<{}> = props =>
             if(
                 !Number.isSafeInteger(copies) ||
                 copies < 1 ||
-                copies > 100
+                copies > MAX_REPEAT_COPIES
             )
             {
                 setStatus(
-                    'Las copias deben estar entre 1 y 100.'
+                    `Las copias deben estar entre 1 y ${ MAX_REPEAT_COPIES }.`
                 );
 
                 return;
@@ -17365,6 +17392,34 @@ export const BuilderProView: FC<{}> = props =>
                                 </span>
                             </div>
 
+                            <div className="builder-pro-help-row">
+                                <strong>Ctrl + clic en furni</strong>
+                                <span>
+                                    Recoger rápidamente el furni; si pertenece a un grupo bloqueado, recoge el grupo completo
+                                </span>
+                            </div>
+
+                            <div className="builder-pro-help-row">
+                                <strong>Shift + clic en furni</strong>
+                                <span>
+                                    Girar rápidamente el furni; si pertenece a un grupo bloqueado, gira el grupo completo
+                                </span>
+                            </div>
+
+                            <div className="builder-pro-help-row">
+                                <strong>Escape</strong>
+                                <span>
+                                    Cancelar el modo o la vista previa transitoria activa
+                                </span>
+                            </div>
+
+                            <div className="builder-pro-help-row">
+                                <strong>Ctrl / Shift</strong>
+                                <span>
+                                    Usa cada modificador por separado
+                                </span>
+                            </div>
+
                         </div> }
 
 
@@ -18653,7 +18708,7 @@ export const BuilderProView: FC<{}> = props =>
                                         className="builder-pro-small-input"
                                         type="number"
                                         min="1"
-                                        max="100"
+                                        max={ MAX_REPEAT_COPIES }
                                         step="1"
                                         value={ linearRepeatCopies }
                                         disabled={ pending }
@@ -18831,7 +18886,7 @@ export const BuilderProView: FC<{}> = props =>
                                             className="builder-pro-small-input"
                                             type="number"
                                             min="1"
-                                            max="100"
+                                            max={ MAX_GRID_DIMENSION }
                                             step="1"
                                             value={ gridRepeatColumns }
                                             disabled={ pending }
@@ -18853,7 +18908,7 @@ export const BuilderProView: FC<{}> = props =>
                                             className="builder-pro-small-input"
                                             type="number"
                                             min="1"
-                                            max="100"
+                                            max={ MAX_GRID_DIMENSION }
                                             step="1"
                                             value={ gridRepeatRows }
                                             disabled={ pending }
@@ -18982,7 +19037,7 @@ export const BuilderProView: FC<{}> = props =>
                                             className="builder-pro-small-input"
                                             type="number"
                                             min="1"
-                                            max="100"
+                                            max={ MAX_REPEAT_COPIES }
                                             step="1"
                                             value={ radialRepeatCopies }
                                             disabled={ pending }

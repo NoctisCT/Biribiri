@@ -28,7 +28,7 @@ public final class BuilderProTraversalService
     public static final int OP_QUERY = 0;
     public static final int OP_SET = 1;
 
-    public static final int MAX_SELECTION = 100;
+    public static final int MAX_SELECTION = Room.MAXIMUM_FURNI;
 
     // P55G2_NATIVE_TRAVERSAL
     private static final long STEP_HELPER_LIFETIME_MS =
@@ -181,7 +181,7 @@ public final class BuilderProTraversalService
             {
                 return Result.failure(
                         7,
-                        "La seleccion supera 100 furnis.",
+                        "La seleccion supera " + MAX_SELECTION + " furnis.",
                         loadRoomIds(
                                 room
                         )

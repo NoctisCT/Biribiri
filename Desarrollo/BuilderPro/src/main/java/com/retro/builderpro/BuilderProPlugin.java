@@ -43,6 +43,15 @@ public class BuilderProPlugin
         extends HabboPlugin
         implements EventListener
 {
+    private static final int BUILDER_PRO_MAX_ROOM_FURNI =
+            4000;
+
+    private static final int BUILDER_PRO_MAX_FURNI =
+            4000;
+
+    private static final double BUILDER_PRO_MAX_FURNI_HEIGHT =
+            100.0D;
+
     @Override
     public void onEnable()
     {
@@ -55,6 +64,18 @@ public class BuilderProPlugin
             EmulatorLoadedEvent event)
             throws Exception
     {
+        Room.MAXIMUM_FURNI =
+                Math.max(
+                        Room.MAXIMUM_FURNI,
+                        BUILDER_PRO_MAX_FURNI
+                );
+
+        Room.MAXIMUM_FURNI_HEIGHT =
+                Math.max(
+                        Room.MAXIMUM_FURNI_HEIGHT,
+                        BUILDER_PRO_MAX_FURNI_HEIGHT
+                );
+
         BuilderProGroupRepository.initialize();
         BuilderProTraversalService.initialize();
         BuilderProBlueprintRepository.initialize();

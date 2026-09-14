@@ -88,7 +88,7 @@ export class BuilderProBlueprintStateParser implements IMessageParser
 
             if(
                 itemCount < 0 ||
-                itemCount > 100
+                itemCount > 4000
             )
             {
                 return false;
@@ -106,7 +106,7 @@ export class BuilderProBlueprintStateParser implements IMessageParser
 
         if(
             placedCount < 0 ||
-            placedCount > 100
+            placedCount > 4000
         )
         {
             return false;
@@ -139,7 +139,7 @@ export class BuilderProBlueprintStateParser implements IMessageParser
 
         if(
             previewCount < 0 ||
-            previewCount > 100
+            previewCount > 4000
         )
         {
             return false;

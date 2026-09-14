@@ -6,6 +6,7 @@ import com.retro.builderpro.BuilderProBlueprintRepository;
 import com.retro.builderpro.BuilderProBlueprintService;
 import com.retro.builderpro.BuilderProHistoryService;
 import com.retro.builderpro.BuilderProPackets;
+import com.retro.builderpro.BuilderProRateLimiter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,6 +49,31 @@ public class BlueprintStateRequest
         int count =
                 this.packet.readInt()
                         .intValue();
+
+        if(operation == BuilderProBlueprintService.OP_CREATE)
+        {
+            BuilderProRateLimiter.Result rateLimit =
+                    BuilderProRateLimiter.acquireItems(
+                            this.client.getHabbo(),
+                            "blueprint-create",
+                            count
+                    );
+
+            if(!rateLimit.allowed)
+            {
+                sendResult(
+                        requestId,
+                        BuilderProBlueprintService.Result.failure(
+                                98,
+                                rateLimit.message,
+                                new ArrayList<BuilderProBlueprintRepository.SavedBlueprint>()
+                        )
+                );
+
+                return;
+            }
+        }
+
 
         if(count < 0
                 || count >

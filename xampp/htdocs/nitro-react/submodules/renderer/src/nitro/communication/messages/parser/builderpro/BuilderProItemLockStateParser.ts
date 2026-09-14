@@ -30,7 +30,7 @@ export class BuilderProItemLockStateParser implements IMessageParser
 
         const count = wrapper.readInt();
 
-        if(count < 0 || count > 10000)
+        if(count < 0 || count > 4000)
         {
             return false;
         }

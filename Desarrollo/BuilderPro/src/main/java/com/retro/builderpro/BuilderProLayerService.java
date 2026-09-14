@@ -19,7 +19,7 @@ public final class BuilderProLayerService
     public static final int OP_UNASSIGN = 5;
 
     public static final int MAX_LAYERS = 50;
-    public static final int MAX_BATCH_SIZE = 100;
+    public static final int MAX_BATCH_SIZE = Room.MAXIMUM_FURNI;
     public static final int MAX_NAME_LENGTH = 40;
 
     private BuilderProLayerService()
@@ -321,7 +321,7 @@ public final class BuilderProLayerService
         {
             return Validation.failure(
                     21,
-                    "Solo se pueden mover 100 furnis de capa a la vez."
+                    "Solo se pueden mover " + MAX_BATCH_SIZE + " furnis de capa a la vez."
             );
         }
 

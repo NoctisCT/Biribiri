@@ -1,5 +1,6 @@
 package com.retro.builderpro;
 
+import com.eu.habbo.Emulator;
 import com.eu.habbo.habbohotel.items.FurnitureType;
 import com.eu.habbo.habbohotel.items.Item;
 import com.eu.habbo.habbohotel.items.interactions.InteractionStackHelper;
@@ -26,7 +27,7 @@ import java.util.Set;
 
 public final class GroupLayoutService
 {
-    public static final int MAX_GROUP_SIZE = 100;
+    public static final int MAX_GROUP_SIZE = Room.MAXIMUM_FURNI;
 
     public static final int ROW_LEFT = 1;
     public static final int ROW_RIGHT = 2;
@@ -35,6 +36,10 @@ public final class GroupLayoutService
     public static final int STACK = 5;
 
     private static final double EPSILON = 0.000001D;
+
+    private static final int DIRECT_UPDATE_LIMIT = 100;
+    private static final int UPDATE_CHUNK_SIZE = 50;
+    private static final long UPDATE_CHUNK_DELAY_MS = 25L;
 
     private GroupLayoutService()
     {
@@ -341,6 +346,9 @@ public final class GroupLayoutService
 
         int affectedCount = 0;
 
+        boolean deferredUpdates =
+                moving.size() > DIRECT_UPDATE_LIMIT;
+
         try
         {
             System.out.println(
@@ -370,7 +378,7 @@ public final class GroupLayoutService
                                 destination,
                                 target.snapshot.rotation,
                                 actor,
-                                true,
+                                !deferredUpdates,
                                 true
                         );
 
@@ -422,6 +430,26 @@ public final class GroupLayoutService
                     room,
                     affectedTiles
             );
+
+            if(deferredUpdates)
+            {
+                List<HabboItem> changedItems =
+                        new ArrayList<HabboItem>(
+                                moving.size()
+                        );
+
+                for(Target target : moving)
+                {
+                    changedItems.add(
+                            target.snapshot.item
+                    );
+                }
+
+                scheduleDeferredUpdates(
+                        room,
+                        changedItems
+                );
+            }
 
             System.out.println(
                     "[BuilderProTrace] SERVER FORMATION_END #"
@@ -818,65 +846,104 @@ public final class GroupLayoutService
     private static Result validateInternalTargets(
             List<Target> targets)
     {
-        for(int i = 0;
-                i < targets.size();
-                i++)
+        Map<Long, List<Target>> occupied =
+                new HashMap<Long, List<Target>>();
+
+        for(Target target : targets)
         {
-            Target first =
-                    targets.get(i);
+            Rectangle rectangle =
+                    targetRectangle(target);
 
-            Rectangle firstRectangle =
-                    targetRectangle(first);
+            double bottom =
+                    target.z;
 
-            double firstBottom =
-                    first.z;
-
-            double firstTop =
-                    first.z
+            double top =
+                    target.z
                             + Item.getCurrentHeight(
-                                    first.snapshot.item
+                                    target.snapshot.item
                             );
 
-            for(int j = i + 1;
-                    j < targets.size();
-                    j++)
+            for(int x = rectangle.x;
+                    x < rectangle.x + rectangle.width;
+                    x++)
             {
-                Target second =
-                        targets.get(j);
-
-                Rectangle secondRectangle =
-                        targetRectangle(second);
-
-                if(!firstRectangle.intersects(
-                        secondRectangle))
+                for(int y = rectangle.y;
+                        y < rectangle.y + rectangle.height;
+                        y++)
                 {
-                    continue;
+                    List<Target> existingTargets =
+                            occupied.get(
+                                    tileKey(
+                                            x,
+                                            y
+                                    )
+                            );
+
+                    if(existingTargets == null)
+                    {
+                        continue;
+                    }
+
+                    for(Target existing : existingTargets)
+                    {
+                        double existingBottom =
+                                existing.z;
+
+                        double existingTop =
+                                existing.z
+                                        + Item.getCurrentHeight(
+                                                existing.snapshot.item
+                                        );
+
+                        if(verticalRangesOverlap(
+                                bottom,
+                                top,
+                                existingBottom,
+                                existingTop))
+                        {
+                            return Result.failure(
+                                    27,
+                                    "La formacion produciria una colision interna."
+                            );
+                        }
+                    }
                 }
+            }
 
-                double secondBottom =
-                        second.z;
-
-                double secondTop =
-                        second.z
-                                + Item.getCurrentHeight(
-                                        second.snapshot.item
-                                );
-
-                if(verticalRangesOverlap(
-                        firstBottom,
-                        firstTop,
-                        secondBottom,
-                        secondTop))
+            for(int x = rectangle.x;
+                    x < rectangle.x + rectangle.width;
+                    x++)
+            {
+                for(int y = rectangle.y;
+                        y < rectangle.y + rectangle.height;
+                        y++)
                 {
-                    return Result.failure(
-                            27,
-                            "La formacion produciria una colision interna."
+                    occupied.computeIfAbsent(
+                            tileKey(
+                                    x,
+                                    y
+                            ),
+                            ignored ->
+                                    new ArrayList<Target>()
+                    ).add(
+                            target
                     );
                 }
             }
         }
 
         return Result.success(0);
+    }
+
+    private static long tileKey(
+            int x,
+            int y)
+    {
+        return (
+            ((long)x) << 32
+        ) ^ (
+            y & 0xffffffffL
+        );
     }
 
     private static void sortApplyOrder(
@@ -1062,6 +1129,61 @@ public final class GroupLayoutService
             room.updatePetsAt(
                     tile.x,
                     tile.y
+            );
+        }
+    }
+
+    private static void scheduleDeferredUpdates(
+            Room room,
+            List<HabboItem> items)
+    {
+        for(int offset = 0;
+                offset < items.size();
+                offset += UPDATE_CHUNK_SIZE)
+        {
+            int end =
+                    Math.min(
+                            items.size(),
+                            offset + UPDATE_CHUNK_SIZE
+                    );
+
+            List<HabboItem> chunk =
+                    new ArrayList<HabboItem>(
+                            end - offset
+                    );
+
+            for(int index = offset;
+                    index < end;
+                    index++)
+            {
+                chunk.add(
+                        items.get(index)
+                );
+            }
+
+            long delay =
+                    (long)(offset / UPDATE_CHUNK_SIZE)
+                            * UPDATE_CHUNK_DELAY_MS;
+
+            Emulator.getThreading().run(
+                    () ->
+                    {
+                        for(HabboItem item : chunk)
+                        {
+                            if(item != null
+                                    && room.getHabboItem(
+                                            item.getId()
+                                    ) == item)
+                            {
+                                room.sendComposer(
+                                        new FloorItemUpdateComposer(
+                                                item
+                                        ).compose()
+                                );
+                            }
+                        }
+                    },
+                    delay
             );
         }
     }

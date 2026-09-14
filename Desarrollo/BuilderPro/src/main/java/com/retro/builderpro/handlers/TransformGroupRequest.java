@@ -6,6 +6,7 @@ import com.retro.builderpro.BuilderProHistoryService;
 import com.retro.builderpro.BuilderProGroupGuard;
 import com.retro.builderpro.BuilderProItemLockGuard;
 import com.retro.builderpro.BuilderProPackets;
+import com.retro.builderpro.BuilderProRateLimiter;
 import com.retro.builderpro.GroupTransformService;
 
 import java.util.ArrayList;
@@ -42,6 +43,27 @@ public class TransformGroupRequest
                 this.packet
                         .readInt()
                         .intValue();
+
+        BuilderProRateLimiter.Result rateLimit =
+                BuilderProRateLimiter.acquireItems(
+                        this.client.getHabbo(),
+                        "transform",
+                        count
+                );
+
+        if(!rateLimit.allowed)
+        {
+            sendResult(
+                    requestId,
+                    GroupTransformService.Result.failure(
+                            98,
+                            rateLimit.message
+                    )
+            );
+
+            return;
+        }
+
 
         System.out.println(
                 "[BuilderProTrace] SERVER TRANSFORM_RECEIVE #"

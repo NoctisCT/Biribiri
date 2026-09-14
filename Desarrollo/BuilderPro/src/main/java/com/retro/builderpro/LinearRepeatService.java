@@ -40,7 +40,7 @@ public final class LinearRepeatService
     public static final int DIRECTION_UP = 3;
     public static final int DIRECTION_DOWN = 4;
 
-    public static final int MAX_COPIES = 100;
+    public static final int MAX_COPIES = Room.MAXIMUM_FURNI;
     public static final int MAX_SPACING = 50;
     public static final int MAX_TOTAL_ITEMS =
             CopyGroupService.MAX_GROUP_SIZE;
@@ -393,6 +393,24 @@ public final class LinearRepeatService
         {
             stepY =
                     structureHeight + spacing;
+        }
+
+        BuilderProRateLimiter.Result rateLimit =
+                BuilderProRateLimiter.acquireItems(
+                        actor,
+                        operation == OP_EXECUTE
+                                ? "linear-repeat-execute"
+                                : "linear-repeat-preview",
+                        totalItems
+                );
+
+        if(!rateLimit.allowed)
+        {
+            return Result.failure(
+                    98,
+                    rateLimit.message,
+                    copies
+            );
         }
 
         List<HabboItem> inventoryItems =

@@ -21,7 +21,7 @@ public final class BuilderProBlueprintService
     public static final int OP_PREVIEW = 5;
 
     public static final int MAX_BLUEPRINTS = 100;
-    public static final int MAX_BLUEPRINT_SIZE = 100;
+    public static final int MAX_BLUEPRINT_SIZE = Room.MAXIMUM_FURNI;
     public static final int MAX_NAME_LENGTH = 50;
 
     private BuilderProBlueprintService()
@@ -138,7 +138,7 @@ public final class BuilderProBlueprintService
                 {
                     return Result.failure(
                             24,
-                            "La seleccion supera el limite de 100 furnis.",
+                            "La seleccion supera el limite de " + MAX_BLUEPRINT_SIZE + " furnis.",
                             BuilderProBlueprintRepository.list(
                                     ownerId
                             )
@@ -358,6 +358,24 @@ public final class BuilderProBlueprintService
                     return Result.failure(
                             44,
                             "El blueprint no se puede previsualizar.",
+                            BuilderProBlueprintRepository.list(
+                                    ownerId
+                            )
+                    );
+                }
+
+                BuilderProRateLimiter.Result rateLimit =
+                        BuilderProRateLimiter.acquireItems(
+                                actor,
+                                "blueprint-preview",
+                                blueprint.items.size()
+                        );
+
+                if(!rateLimit.allowed)
+                {
+                    return Result.failure(
+                            98,
+                            rateLimit.message,
                             BuilderProBlueprintRepository.list(
                                     ownerId
                             )

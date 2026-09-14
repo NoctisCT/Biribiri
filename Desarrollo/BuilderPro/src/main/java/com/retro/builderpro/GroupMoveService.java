@@ -1,5 +1,6 @@
 package com.retro.builderpro;
 
+import com.eu.habbo.Emulator;
 import com.eu.habbo.habbohotel.items.FurnitureType;
 import com.eu.habbo.habbohotel.items.Item;
 import com.eu.habbo.habbohotel.items.interactions.InteractionStackHelper;
@@ -26,9 +27,13 @@ import java.util.Set;
 
 public final class GroupMoveService
 {
-    public static final int MAX_GROUP_SIZE = 100;
+    public static final int MAX_GROUP_SIZE = Room.MAXIMUM_FURNI;
 
     private static final double EPSILON = 0.000001D;
+
+    private static final int DIRECT_UPDATE_LIMIT = 100;
+    private static final int UPDATE_CHUNK_SIZE = 50;
+    private static final long UPDATE_CHUNK_DELAY_MS = 25L;
 
     private GroupMoveService()
     {
@@ -229,6 +234,9 @@ public final class GroupMoveService
 
         int movedCount = 0;
 
+        boolean deferredUpdates =
+                snapshots.size() > DIRECT_UPDATE_LIMIT;
+
         BuilderProContext.begin(
                 actorId,
                 forcedHeights
@@ -271,7 +279,7 @@ public final class GroupMoveService
                                 destination,
                                 snapshot.rotation,
                                 actor,
-                                true,
+                                !deferredUpdates,
                                 true
                         );
 
@@ -350,6 +358,14 @@ public final class GroupMoveService
                     room,
                     affectedTiles
             );
+
+            if(deferredUpdates)
+            {
+                scheduleDeferredUpdates(
+                        room,
+                        snapshots
+                );
+            }
 
             long refreshMs =
                     (System.nanoTime()
@@ -657,6 +673,61 @@ public final class GroupMoveService
                     output.add(tile);
                 }
             }
+        }
+    }
+
+    private static void scheduleDeferredUpdates(
+            Room room,
+            List<Snapshot> snapshots)
+    {
+        for(int offset = 0;
+                offset < snapshots.size();
+                offset += UPDATE_CHUNK_SIZE)
+        {
+            int end =
+                    Math.min(
+                            snapshots.size(),
+                            offset + UPDATE_CHUNK_SIZE
+                    );
+
+            List<HabboItem> chunk =
+                    new ArrayList<HabboItem>(
+                            end - offset
+                    );
+
+            for(int index = offset;
+                    index < end;
+                    index++)
+            {
+                chunk.add(
+                        snapshots.get(index).item
+                );
+            }
+
+            long delay =
+                    (long)(offset / UPDATE_CHUNK_SIZE)
+                            * UPDATE_CHUNK_DELAY_MS;
+
+            Emulator.getThreading().run(
+                    () ->
+                    {
+                        for(HabboItem item : chunk)
+                        {
+                            if(item != null
+                                    && room.getHabboItem(
+                                            item.getId()
+                                    ) == item)
+                            {
+                                room.sendComposer(
+                                        new FloorItemUpdateComposer(
+                                                item
+                                        ).compose()
+                                );
+                            }
+                        }
+                    },
+                    delay
+            );
         }
     }
 

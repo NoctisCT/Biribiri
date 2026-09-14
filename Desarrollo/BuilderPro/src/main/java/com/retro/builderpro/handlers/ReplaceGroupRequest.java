@@ -4,6 +4,7 @@ import com.eu.habbo.messages.ServerMessage;
 import com.eu.habbo.messages.incoming.MessageHandler;
 import com.retro.builderpro.BuilderProGroupGuard;
 import com.retro.builderpro.BuilderProPackets;
+import com.retro.builderpro.BuilderProRateLimiter;
 import com.retro.builderpro.ReplaceGroupService;
 
 import java.util.ArrayList;
@@ -36,6 +37,33 @@ public class ReplaceGroupRequest
         int count =
                 this.packet.readInt()
                         .intValue();
+
+        BuilderProRateLimiter.Result rateLimit =
+                BuilderProRateLimiter.acquireItems(
+                        this.client.getHabbo(),
+                        "replace",
+                        count
+                );
+
+        if(!rateLimit.allowed)
+        {
+            sendResult(
+                    requestId,
+                    operation,
+                    ReplaceGroupService.Result.failure(
+                            98,
+                            rateLimit.message,
+                            count,
+                            0,
+                            referenceId,
+                            0,
+                            ""
+                    )
+            );
+
+            return;
+        }
+
 
         if(count < 1
                 || count > ReplaceGroupService.MAX_GROUP_SIZE)

@@ -3,6 +3,7 @@ package com.retro.builderpro.handlers;
 import com.eu.habbo.messages.ServerMessage;
 import com.eu.habbo.messages.incoming.MessageHandler;
 import com.retro.builderpro.BuilderProPackets;
+import com.retro.builderpro.BuilderProRateLimiter;
 import com.retro.builderpro.BuilderProGroupGuard;
 import com.retro.builderpro.CopyGroupService;
 
@@ -30,6 +31,27 @@ public class CopyGroupRequest
                 this.packet
                         .readInt()
                         .intValue();
+
+        BuilderProRateLimiter.Result rateLimit =
+                BuilderProRateLimiter.acquireItems(
+                        this.client.getHabbo(),
+                        "copy",
+                        count
+                );
+
+        if(!rateLimit.allowed)
+        {
+            sendResult(
+                    requestId,
+                    CopyGroupService.Result.failure(
+                            98,
+                            rateLimit.message
+                    )
+            );
+
+            return;
+        }
+
 
         if(count < 1
                 || count > CopyGroupService.MAX_GROUP_SIZE)

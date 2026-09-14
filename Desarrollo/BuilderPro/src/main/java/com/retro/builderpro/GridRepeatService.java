@@ -35,7 +35,7 @@ public final class GridRepeatService
     public static final int OP_PREVIEW = 0;
     public static final int OP_EXECUTE = 1;
 
-    public static final int MAX_DIMENSION = 100;
+    public static final int MAX_DIMENSION = Room.MAXIMUM_FURNI;
     public static final int MAX_SPACING = 50;
     public static final int MAX_TOTAL_ITEMS =
             CopyGroupService.MAX_GROUP_SIZE;
@@ -388,6 +388,24 @@ public final class GridRepeatService
 
         int stepY =
                 structureHeight + spacingY;
+
+        BuilderProRateLimiter.Result rateLimit =
+                BuilderProRateLimiter.acquireItems(
+                        actor,
+                        operation == OP_EXECUTE
+                                ? "grid-repeat-execute"
+                                : "grid-repeat-preview",
+                        totalItems
+                );
+
+        if(!rateLimit.allowed)
+        {
+            return Result.failure(
+                    98,
+                    rateLimit.message,
+                    copies
+            );
+        }
 
         List<HabboItem> inventoryItems =
                 new ArrayList<HabboItem>(

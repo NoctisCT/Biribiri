@@ -1,5 +1,6 @@
 package com.retro.builderpro;
 
+import com.eu.habbo.Emulator;
 import com.eu.habbo.habbohotel.items.FurnitureType;
 import com.eu.habbo.habbohotel.items.Item;
 import com.eu.habbo.habbohotel.items.interactions.InteractionStackHelper;
@@ -26,9 +27,13 @@ import java.util.Set;
 
 public final class GroupOffsetService
 {
-    public static final int MAX_GROUP_SIZE = 100;
+    public static final int MAX_GROUP_SIZE = Room.MAXIMUM_FURNI;
 
     private static final double EPSILON = 0.000001D;
+
+    private static final int DIRECT_UPDATE_LIMIT = 100;
+    private static final int UPDATE_CHUNK_SIZE = 50;
+    private static final long UPDATE_CHUNK_DELAY_MS = 25L;
 
     private GroupOffsetService()
     {
@@ -296,6 +301,9 @@ public final class GroupOffsetService
 
         int affectedCount = 0;
 
+        boolean deferredUpdates =
+                targets.size() > DIRECT_UPDATE_LIMIT;
+
         BuilderProContext.begin(
                 actorId,
                 forcedHeights
@@ -330,7 +338,7 @@ public final class GroupOffsetService
                                 destination,
                                 target.snapshot.rotation,
                                 actor,
-                                true,
+                                !deferredUpdates,
                                 true
                         );
 
@@ -382,6 +390,26 @@ public final class GroupOffsetService
                     room,
                     affectedTiles
             );
+
+            if(deferredUpdates)
+            {
+                List<HabboItem> changedItems =
+                        new ArrayList<HabboItem>(
+                                targets.size()
+                        );
+
+                for(Target target : targets)
+                {
+                    changedItems.add(
+                            target.snapshot.item
+                    );
+                }
+
+                scheduleDeferredUpdates(
+                        room,
+                        changedItems
+                );
+            }
 
             System.out.println(
                     "[BuilderProTrace] SERVER OFFSET_END #"
@@ -706,6 +734,61 @@ public final class GroupOffsetService
             room.updatePetsAt(
                     tile.x,
                     tile.y
+            );
+        }
+    }
+
+    private static void scheduleDeferredUpdates(
+            Room room,
+            List<HabboItem> items)
+    {
+        for(int offset = 0;
+                offset < items.size();
+                offset += UPDATE_CHUNK_SIZE)
+        {
+            int end =
+                    Math.min(
+                            items.size(),
+                            offset + UPDATE_CHUNK_SIZE
+                    );
+
+            List<HabboItem> chunk =
+                    new ArrayList<HabboItem>(
+                            end - offset
+                    );
+
+            for(int index = offset;
+                    index < end;
+                    index++)
+            {
+                chunk.add(
+                        items.get(index)
+                );
+            }
+
+            long delay =
+                    (long)(offset / UPDATE_CHUNK_SIZE)
+                            * UPDATE_CHUNK_DELAY_MS;
+
+            Emulator.getThreading().run(
+                    () ->
+                    {
+                        for(HabboItem item : chunk)
+                        {
+                            if(item != null
+                                    && room.getHabboItem(
+                                            item.getId()
+                                    ) == item)
+                            {
+                                room.sendComposer(
+                                        new FloorItemUpdateComposer(
+                                                item
+                                        ).compose()
+                                );
+                            }
+                        }
+                    },
+                    delay
             );
         }
     }

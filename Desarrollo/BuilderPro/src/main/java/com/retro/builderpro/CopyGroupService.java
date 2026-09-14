@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentMap;
 
 public final class CopyGroupService
 {
-    public static final int MAX_GROUP_SIZE = 100;
+    public static final int MAX_GROUP_SIZE = Room.MAXIMUM_FURNI;
 
     private static final ConcurrentMap<Integer, Clipboard> CLIPBOARDS =
             new ConcurrentHashMap<Integer, Clipboard>();

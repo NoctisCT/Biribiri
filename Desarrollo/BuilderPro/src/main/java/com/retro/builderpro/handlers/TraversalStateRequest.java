@@ -3,6 +3,7 @@ package com.retro.builderpro.handlers;
 import com.eu.habbo.messages.ServerMessage;
 import com.eu.habbo.messages.incoming.MessageHandler;
 import com.retro.builderpro.BuilderProPackets;
+import com.retro.builderpro.BuilderProRateLimiter;
 import com.retro.builderpro.BuilderProTraversalService;
 
 import java.util.ArrayList;
@@ -34,6 +35,31 @@ public class TraversalStateRequest
         int count =
                 this.packet.readInt()
                         .intValue();
+
+        if(operation != BuilderProTraversalService.OP_QUERY)
+        {
+            BuilderProRateLimiter.Result rateLimit =
+                    BuilderProRateLimiter.acquireItems(
+                            this.client.getHabbo(),
+                            "traversal-state",
+                            count
+                    );
+
+            if(!rateLimit.allowed)
+            {
+                sendResult(
+                        requestId,
+                        BuilderProTraversalService.Result.failure(
+                                98,
+                                rateLimit.message,
+                                new ArrayList<Integer>()
+                        )
+                );
+
+                return;
+            }
+        }
+
 
         if(count < 0
                 || count >

@@ -5,6 +5,7 @@ import com.eu.habbo.messages.incoming.MessageHandler;
 import com.retro.builderpro.BuilderProGroupGuard;
 import com.retro.builderpro.BuilderProHistoryService;
 import com.retro.builderpro.BuilderProPackets;
+import com.retro.builderpro.BuilderProRateLimiter;
 import com.retro.builderpro.FillRepeatService;
 
 import java.util.ArrayList;
@@ -117,20 +118,49 @@ public class FillRepeatRequest
             return;
         }
 
-        FillRepeatService.Result result =
-                FillRepeatService.process(
-                        this.client.getHabbo(),
-                        itemIds,
-                        operation,
-                        mode,
-                        direction,
-                        spacing,
-                        requestId,
-                        areaMinX,
-                        areaMinY,
-                        areaMaxX,
-                        areaMaxY
-                );
+        FillRepeatService.Result result;
+
+        try
+        {
+            result =
+                    FillRepeatService.process(
+                            this.client.getHabbo(),
+                            itemIds,
+                            operation,
+                            mode,
+                            direction,
+                            spacing,
+                            requestId,
+                            areaMinX,
+                            areaMinY,
+                            areaMaxX,
+                            areaMaxY
+                    );
+        }
+        catch(Throwable exception)
+        {
+            System.err.println(
+                    "[BuilderProFill] UNCAUGHT #"
+                            + requestId
+                            + " "
+                            + exception.getClass()
+                                    .getName()
+                            + ": "
+                            + exception.getMessage()
+            );
+
+            exception.printStackTrace();
+
+            result =
+                    FillRepeatService.Result.failure(
+                            99,
+                            "Error interno al calcular el relleno ("
+                                    + exception.getClass()
+                                            .getSimpleName()
+                                    + ").",
+                            0
+                    );
+        }
 
         sendResult(
                 requestId,

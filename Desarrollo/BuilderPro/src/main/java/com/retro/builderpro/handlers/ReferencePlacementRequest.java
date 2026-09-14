@@ -6,6 +6,7 @@ import com.retro.builderpro.BuilderProGroupGuard;
 import com.retro.builderpro.BuilderProItemLockGuard;
 import com.retro.builderpro.BuilderProHistoryService;
 import com.retro.builderpro.BuilderProPackets;
+import com.retro.builderpro.BuilderProRateLimiter;
 import com.retro.builderpro.BuilderProReferencePlacementService;
 import com.retro.builderpro.GroupOffsetService;
 
@@ -38,6 +39,27 @@ public class ReferencePlacementRequest
 
         int count =
                 this.packet.readInt().intValue();
+
+        BuilderProRateLimiter.Result rateLimit =
+                BuilderProRateLimiter.acquireItems(
+                        this.client.getHabbo(),
+                        "reference",
+                        count
+                );
+
+        if(!rateLimit.allowed)
+        {
+            sendResult(
+                    requestId,
+                    BuilderProReferencePlacementService.Result.failure(
+                            98,
+                            rateLimit.message
+                    )
+            );
+
+            return;
+        }
+
 
         if(count < 1
                 || count > GroupOffsetService.MAX_GROUP_SIZE)

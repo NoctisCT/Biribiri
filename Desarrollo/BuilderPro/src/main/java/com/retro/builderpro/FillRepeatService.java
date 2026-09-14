@@ -73,6 +73,7 @@ public final class FillRepeatService
     {
         int copies = 0;
 
+
         if(actor == null)
         {
             return Result.failure(
@@ -580,6 +581,7 @@ public final class FillRepeatService
         copies =
                 offsets.size();
 
+
         if(copies < 1)
         {
             return Result.failure(
@@ -615,6 +617,24 @@ public final class FillRepeatService
             return Result.failure(
                     13,
                     "La sala alcanzaria el limite de furnis.",
+                    copies
+            );
+        }
+
+        BuilderProRateLimiter.Result rateLimit =
+                BuilderProRateLimiter.acquireItems(
+                        actor,
+                        operation == OP_EXECUTE
+                                ? "fill-repeat-execute"
+                                : "fill-repeat-preview",
+                        totalItems
+                );
+
+        if(!rateLimit.allowed)
+        {
+            return Result.failure(
+                    98,
+                    rateLimit.message,
                     copies
             );
         }
@@ -784,6 +804,7 @@ public final class FillRepeatService
             }
         }
 
+
         if(!missing.isEmpty())
         {
             return Result.failure(
@@ -812,6 +833,7 @@ public final class FillRepeatService
             return validation;
         }
 
+
         List<PreviewEntry> previewEntries =
                 buildPreviewEntries(
                         targets
@@ -819,6 +841,7 @@ public final class FillRepeatService
 
         if(operation == OP_PREVIEW)
         {
+
             return Result.preview(
                     copies,
                     previewEntries
@@ -1608,69 +1631,91 @@ public final class FillRepeatService
                 }
             }
 
-            for(int firstIndex = 0;
-                    firstIndex < targets.size();
-                    firstIndex++)
+            Map<Long, List<Target>> occupied =
+                    new HashMap<Long, List<Target>>();
+
+            for(Target target : targets)
             {
-                Target first =
-                        targets.get(
-                                firstIndex
-                        );
-
-                Rectangle firstRectangle =
+                Rectangle rectangle =
                         targetRectangle(
-                                first
+                                target
                         );
 
-                double firstBottom =
-                        first.z;
+                double bottom =
+                        target.z;
 
-                double firstTop =
-                        first.z
+                double top =
+                        target.z
                                 + Item.getCurrentHeight(
-                                        first.item
+                                        target.item
                                 );
 
-                for(int secondIndex =
-                            firstIndex + 1;
-                        secondIndex < targets.size();
-                        secondIndex++)
+                for(int x = rectangle.x;
+                        x < rectangle.x + rectangle.width;
+                        x++)
                 {
-                    Target second =
-                            targets.get(
-                                    secondIndex
-                            );
-
-                    Rectangle secondRectangle =
-                            targetRectangle(
-                                    second
-                            );
-
-                    if(!firstRectangle.intersects(
-                            secondRectangle))
+                    for(int y = rectangle.y;
+                            y < rectangle.y + rectangle.height;
+                            y++)
                     {
-                        continue;
+                        List<Target> existingTargets =
+                                occupied.get(
+                                        tileKey(
+                                                x,
+                                                y
+                                        )
+                                );
+
+                        if(existingTargets == null)
+                        {
+                            continue;
+                        }
+
+                        for(Target existing :
+                                existingTargets)
+                        {
+                            double existingBottom =
+                                    existing.z;
+
+                            double existingTop =
+                                    existing.z
+                                            + Item.getCurrentHeight(
+                                                    existing.item
+                                            );
+
+                            if(verticalRangesOverlap(
+                                    bottom,
+                                    top,
+                                    existingBottom,
+                                    existingTop))
+                            {
+                                return Result.failure(
+                                        26,
+                                        "Las piezas del relleno se solaparian entre si.",
+                                        copies
+                                );
+                            }
+                        }
                     }
+                }
 
-                    double secondBottom =
-                            second.z;
-
-                    double secondTop =
-                            second.z
-                                    + Item.getCurrentHeight(
-                                            second.item
-                                    );
-
-                    if(verticalRangesOverlap(
-                            firstBottom,
-                            firstTop,
-                            secondBottom,
-                            secondTop))
+                for(int x = rectangle.x;
+                        x < rectangle.x + rectangle.width;
+                        x++)
+                {
+                    for(int y = rectangle.y;
+                            y < rectangle.y + rectangle.height;
+                            y++)
                     {
-                        return Result.failure(
-                                26,
-                                "Las piezas del relleno se solaparian entre si.",
-                                copies
+                        occupied.computeIfAbsent(
+                                tileKey(
+                                        x,
+                                        y
+                                ),
+                                ignored ->
+                                        new ArrayList<Target>()
+                        ).add(
+                                target
                         );
                     }
                 }
@@ -1926,6 +1971,17 @@ public final class FillRepeatService
         return Result.preview(
                 copies,
                 Collections.<PreviewEntry>emptyList()
+        );
+    }
+
+    private static long tileKey(
+            int x,
+            int y)
+    {
+        return (
+            ((long)x) << 32
+        ) ^ (
+            y & 0xffffffffL
         );
     }
 

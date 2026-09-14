@@ -4,6 +4,7 @@ import com.eu.habbo.messages.ServerMessage;
 import com.eu.habbo.messages.incoming.MessageHandler;
 import com.retro.builderpro.BuilderProGroupGuard;
 import com.retro.builderpro.BuilderProPackets;
+import com.retro.builderpro.BuilderProRateLimiter;
 import com.retro.builderpro.CopyGroupService;
 import com.retro.builderpro.MirrorDuplicateService;
 
@@ -37,6 +38,27 @@ public class MirrorDuplicateRequest
         int count =
                 this.packet.readInt()
                         .intValue();
+
+        BuilderProRateLimiter.Result rateLimit =
+                BuilderProRateLimiter.acquireItems(
+                        this.client.getHabbo(),
+                        "mirror-duplicate",
+                        count
+                );
+
+        if(!rateLimit.allowed)
+        {
+            sendResult(
+                    requestId,
+                    MirrorDuplicateService.Result.failure(
+                            98,
+                            rateLimit.message
+                    )
+            );
+
+            return;
+        }
+
 
         if(count < 1
                 || count > CopyGroupService.MAX_GROUP_SIZE)

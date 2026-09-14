@@ -6,6 +6,7 @@ import com.retro.builderpro.BuilderProHistoryService;
 import com.retro.builderpro.BuilderProGroupGuard;
 import com.retro.builderpro.BuilderProItemLockGuard;
 import com.retro.builderpro.BuilderProPackets;
+import com.retro.builderpro.BuilderProRateLimiter;
 import com.retro.builderpro.GroupMoveService;
 
 import java.util.ArrayList;
@@ -35,6 +36,27 @@ public class MoveGroupRequest
                 this.packet
                         .readInt()
                         .intValue();
+
+        BuilderProRateLimiter.Result rateLimit =
+                BuilderProRateLimiter.acquireItems(
+                        this.client.getHabbo(),
+                        "move",
+                        count
+                );
+
+        if(!rateLimit.allowed)
+        {
+            sendResult(
+                    requestId,
+                    GroupMoveService.Result.failure(
+                            98,
+                            rateLimit.message
+                    )
+            );
+
+            return;
+        }
+
 
         System.out.println(
                 "[BuilderProTrace] SERVER RECEIVE #"

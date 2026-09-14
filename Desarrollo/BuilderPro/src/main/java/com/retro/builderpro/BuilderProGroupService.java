@@ -19,7 +19,7 @@ public final class BuilderProGroupService
     public static final int OP_DELETE = 4;
     public static final int OP_REPLACE_MEMBERS = 5;
 
-    public static final int MAX_GROUP_SIZE = 100;
+    public static final int MAX_GROUP_SIZE = Room.MAXIMUM_FURNI;
     public static final int MAX_NAME_LENGTH = 40;
 
     private BuilderProGroupService()
@@ -447,7 +447,7 @@ public final class BuilderProGroupService
         {
             return Validation.failure(
                     21,
-                    "El grupo supera el limite de 100 furnis."
+                    "El grupo supera el limite de " + MAX_GROUP_SIZE + " furnis."
             );
         }
 

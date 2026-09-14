@@ -54,7 +54,7 @@ export class BuilderProGroupStateParser implements IMessageParser
             const locked = wrapper.readBoolean();
             const itemCount = wrapper.readInt();
 
-            if(itemCount < 0 || itemCount > 100)
+            if(itemCount < 0 || itemCount > 4000)
             {
                 return false;
             }

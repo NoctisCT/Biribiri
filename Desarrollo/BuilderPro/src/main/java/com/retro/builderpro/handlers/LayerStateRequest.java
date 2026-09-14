@@ -5,6 +5,7 @@ import com.eu.habbo.messages.incoming.MessageHandler;
 import com.retro.builderpro.BuilderProLayerRepository;
 import com.retro.builderpro.BuilderProLayerService;
 import com.retro.builderpro.BuilderProPackets;
+import com.retro.builderpro.BuilderProRateLimiter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +36,31 @@ public class LayerStateRequest
 
         int count =
                 this.packet.readInt().intValue();
+
+        if(operation != BuilderProLayerService.OP_LIST)
+        {
+            BuilderProRateLimiter.Result rateLimit =
+                    BuilderProRateLimiter.acquireItems(
+                            this.client.getHabbo(),
+                            "layer-state",
+                            count
+                    );
+
+            if(!rateLimit.allowed)
+            {
+                sendResult(
+                        requestId,
+                        BuilderProLayerService.Result.failure(
+                                98,
+                                rateLimit.message,
+                                new ArrayList<BuilderProLayerRepository.SavedLayer>()
+                        )
+                );
+
+                return;
+            }
+        }
+
 
         if(count < 0
                 || count >

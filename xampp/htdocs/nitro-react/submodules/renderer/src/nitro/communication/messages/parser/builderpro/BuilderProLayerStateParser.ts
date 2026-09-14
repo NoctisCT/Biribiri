@@ -54,7 +54,7 @@ export class BuilderProLayerStateParser implements IMessageParser
             const sortOrder = wrapper.readInt();
             const itemCount = wrapper.readInt();
 
-            if(itemCount < 0 || itemCount > 10000)
+            if(itemCount < 0 || itemCount > 4000)
             {
                 return false;
             }

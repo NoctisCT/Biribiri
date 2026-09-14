@@ -97,6 +97,21 @@ public final class PasteGroupService
             );
         }
 
+        BuilderProRateLimiter.Result rateLimit =
+                BuilderProRateLimiter.acquireItems(
+                        actor,
+                        "paste",
+                        clipboard.size()
+                );
+
+        if(!rateLimit.allowed)
+        {
+            return Result.failure(
+                    98,
+                    rateLimit.message
+            );
+        }
+
         if(room.itemCount() + clipboard.size()
                 > Room.MAXIMUM_FURNI)
         {

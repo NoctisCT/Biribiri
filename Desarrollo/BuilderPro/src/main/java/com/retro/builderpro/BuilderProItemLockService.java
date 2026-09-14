@@ -18,7 +18,7 @@ public final class BuilderProItemLockService
 {
     public static final int OP_QUERY = 0;
     public static final int OP_SET = 1;
-    public static final int MAX_SELECTION = 100;
+    public static final int MAX_SELECTION = Room.MAXIMUM_FURNI;
 
     private static final ConcurrentHashMap<Integer, Set<Integer>> ROOM_CACHE =
             new ConcurrentHashMap<Integer, Set<Integer>>();
@@ -117,7 +117,7 @@ public final class BuilderProItemLockService
             {
                 return Result.failure(
                         6,
-                        "La seleccion supera 100 furnis.",
+                        "La seleccion supera " + MAX_SELECTION + " furnis.",
                         loadRoomIds(room)
                 );
             }

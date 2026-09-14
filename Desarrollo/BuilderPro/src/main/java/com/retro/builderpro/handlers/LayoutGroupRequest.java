@@ -6,6 +6,7 @@ import com.retro.builderpro.BuilderProHistoryService;
 import com.retro.builderpro.BuilderProGroupGuard;
 import com.retro.builderpro.BuilderProItemLockGuard;
 import com.retro.builderpro.BuilderProPackets;
+import com.retro.builderpro.BuilderProRateLimiter;
 import com.retro.builderpro.GroupLayoutService;
 
 import java.util.ArrayList;
@@ -28,6 +29,27 @@ public class LayoutGroupRequest
 
         int count =
                 this.packet.readInt().intValue();
+
+        BuilderProRateLimiter.Result rateLimit =
+                BuilderProRateLimiter.acquireItems(
+                        this.client.getHabbo(),
+                        "layout",
+                        count
+                );
+
+        if(!rateLimit.allowed)
+        {
+            sendResult(
+                    requestId,
+                    GroupLayoutService.Result.failure(
+                            98,
+                            rateLimit.message
+                    )
+            );
+
+            return;
+        }
+
 
         if(count < 2
                 || count > GroupLayoutService.MAX_GROUP_SIZE)

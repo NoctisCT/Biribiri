@@ -42,7 +42,7 @@ export class BuilderProCopyGroupResultParser implements IMessageParser
         const anchorZ = Number.parseFloat(wrapper.readString());
         this._sourceAnchorZ = Number.isFinite(anchorZ) ? anchorZ : 0;
         const count = wrapper.readInt();
-        if(count < 0 || count > 100) return false;
+        if(count < 0 || count > 4000) return false;
         this._previewEntries = [];
         for(let index = 0; index < count; index++)
         {
