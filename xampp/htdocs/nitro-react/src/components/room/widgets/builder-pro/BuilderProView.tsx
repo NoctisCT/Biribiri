@@ -3,9 +3,14 @@ import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { FaBoxOpen, FaClone, FaCopy, FaEllipsisH, FaEye, FaEyeSlash, FaLock, FaMinus, FaPaste, FaPlus, FaQuestion, FaRedo, FaSearch, FaUndo, FaWalking } from 'react-icons/fa';
 import { AddEventLinkTracker, BuilderProSelectionVisualizer, CanManipulateFurniture, ClearBuilderProInspectorState, CreateLinkEvent, GetRoomEngine, GetSessionDataManager, HasHabboClub, RemoveLinkEventTracker, SendMessageComposer, SetBuilderProInspectorState, SetBuilderProSelectionModeActive } from '../../../../api';
 import { useMessageEvent, useRoom, useRoomEngineEvent } from '../../../../hooks';
-import { NitroCardContentView, NitroCardHeaderView, NitroCardView } from '../../../../common';
 import { useBuilderProItemLocks } from './useBuilderProItemLocks';
-import { BuilderProTransientOperation, ResolveBuilderProToolLifecycle } from './BuilderProToolLifecycle';
+import { BuilderProToolId, BuilderProToolVariantId, BuilderProTransientOperation, ResolveBuilderProToolLifecycle } from './BuilderProToolLifecycle';
+import { BuilderProGlobalToolbar } from './BuilderProGlobalToolbar';
+import { BuilderProOutlinerPanel } from './BuilderProOutlinerPanel';
+import { BuilderProSelectionContext } from './BuilderProSelectionContext';
+import { BuilderProToolFlyout } from './BuilderProToolFlyout';
+import { BuilderProToolPanel } from './BuilderProToolPanel';
+import { BuilderProToolRail } from './BuilderProToolRail';
 import './BuilderProView.scss';
 
 const MAX_SELECTION = 100;
@@ -356,6 +361,7 @@ export const BuilderProView: FC<{}> = props =>
     const [ canRedo, setCanRedo ] = useState(false);
     const [ minimized, setMinimized ] = useState(false);
     const [ helpOpen, setHelpOpen ] = useState(false);
+    const [ outlinerOpen, setOutlinerOpen ] = useState(true);
     const [ savedGroups, setSavedGroups ] =
         useState<BuilderProSavedGroupState[]>([]);
     const [ selectedGroupId, setSelectedGroupId ] =
@@ -754,6 +760,80 @@ export const BuilderProView: FC<{}> = props =>
             !!sessionDataManager?.isModerator
         );
 
+    useEffect(() =>
+    {
+        if(
+            !active ||
+            !canBuild
+        )
+        {
+            return;
+        }
+
+        const body =
+            document.body;
+
+        body.classList.add(
+            'builder-pro-immersive'
+        );
+
+        let parentControls:
+            HTMLElement | null =
+            null;
+
+        let previousParentDisplay =
+            '';
+
+        try
+        {
+            if(window.parent !== window)
+            {
+                const parentDocument =
+                    window.parent.document;
+
+                const reloadControl =
+                    parentDocument.querySelector<HTMLElement>(
+                        '#nitro-client [onclick="reloadClient()"]'
+                    );
+
+                parentControls =
+                    reloadControl?.parentElement ||
+                    parentDocument.querySelector<HTMLElement>(
+                        '#nitro-client > div.absolute.top-4.left-4.z-10'
+                    );
+
+                if(parentControls)
+                {
+                    previousParentDisplay =
+                        parentControls.style.display;
+
+                    parentControls.style.display =
+                        'none';
+                }
+            }
+        }
+        catch
+        {
+            // Si el iframe cambia de origen, el modo inmersivo
+            // interno sigue funcionando sin romper Construcción Avanzada.
+        }
+
+        return () =>
+        {
+            body.classList.remove(
+                'builder-pro-immersive'
+            );
+
+            if(parentControls)
+            {
+                parentControls.style.display =
+                    previousParentDisplay;
+            }
+        };
+    }, [
+        active,
+        canBuild
+    ]);
     const selectedSavedGroup =
         selectedGroupId === null
             ? null
@@ -1584,7 +1664,7 @@ export const BuilderProView: FC<{}> = props =>
 
                 /*
                  * Si este furni no necesita un efecto de capa,
-                 * Builder Pro no debe gestionar su alpha. Esto
+                 * Construcción Avanzada no debe gestionar su alpha. Esto
                  * evita capturar el 0.5 temporal que Nitro usa
                  * al colocar/mover furnis.
                  */
@@ -16119,7 +16199,7 @@ export const BuilderProView: FC<{}> = props =>
         /*
          * Bubble phase intencionada:
          * RoomView procesa primero el mousemove
-         * del canvas; Builder Pro solo calcula
+         * del canvas; Construcción Avanzada solo calcula
          * el delta despues.
          */
         window.addEventListener(
@@ -16340,7 +16420,7 @@ export const BuilderProView: FC<{}> = props =>
 
             /*
              * El autorepeat nativo solo se consume.
-             * Builder Pro genera su propia cadena
+             * Construcción Avanzada genera su propia cadena
              * despues de cada ACK del servidor.
              */
             if(event.repeat) return;
@@ -17133,6 +17213,19 @@ export const BuilderProView: FC<{}> = props =>
         );
     };
 
+    const [ activeTool, setActiveTool ] =
+        useState<BuilderProToolId>('selection');
+    const [ toolFlyout, setToolFlyout ] =
+        useState<BuilderProToolId | null>(null);
+    const [ activeTransformVariant, setActiveTransformVariant ] =
+        useState<BuilderProToolVariantId>(
+            'transform-orient'
+        );
+    const [ activeRepeatVariant, setActiveRepeatVariant ] =
+        useState<BuilderProToolVariantId>(
+            'repeat-linear'
+        );
+
     const pendingLifecycleOperation:
         BuilderProTransientOperation =
         pendingFillRepeatOperationRef.current !== null
@@ -17245,47 +17338,149 @@ export const BuilderProView: FC<{}> = props =>
         });
 
 
+    const contextualTool:
+        BuilderProToolId =
+        activeTool;
+
+    const activeSelectionVariant:
+        BuilderProToolVariantId =
+        areaMode
+            ? 'selection-area'
+            : 'selection-click';
+
+    const normalizedTransformVariant:
+        BuilderProToolVariantId =
+        activeTransformVariant ===
+            'transform-mirror-duplicate'
+            ? 'transform-mirror'
+            : activeTransformVariant;
+
+    const activeToolVariant:
+        BuilderProToolVariantId | null =
+        contextualTool === 'selection'
+            ? activeSelectionVariant
+            : contextualTool === 'transform'
+                ? normalizedTransformVariant
+                : contextualTool === 'repeat'
+                    ? activeRepeatVariant
+                    : null;
+    const selectPrimaryTool = (
+        tool: BuilderProToolId
+    ) =>
+    {
+        if(pending)
+        {
+            return;
+        }
+
+        const hasFlyout =
+            tool === 'selection' ||
+            tool === 'transform' ||
+            tool === 'repeat';
+
+        if(
+            activeTool === tool &&
+            hasFlyout
+        )
+        {
+            setToolFlyout(
+                current =>
+                    current === tool
+                        ? null
+                        : tool
+            );
+
+            return;
+        }
+
+        setActiveTool(tool);
+        setToolFlyout(
+            hasFlyout
+                ? tool
+                : null
+        );
+    };
+
+    const selectToolVariant = (
+        variant: BuilderProToolVariantId
+    ) =>
+    {
+        if(pending)
+        {
+            return;
+        }
+
+        if(
+            variant === 'selection-click' ||
+            variant === 'selection-area'
+        )
+        {
+            const nextAreaMode =
+                variant === 'selection-area';
+
+            if(areaMode !== nextAreaMode)
+            {
+                toggleAreaMode();
+            }
+
+            setToolFlyout(null);
+            return;
+        }
+
+        if(toolLifecycle.isTransient)
+        {
+            return;
+        }
+
+        if(
+            variant === 'transform-orient' ||
+            variant === 'transform-structure' ||
+            variant === 'transform-mirror'
+        )
+        {
+            setActiveTransformVariant(
+                variant
+            );
+        }
+        else if(
+            variant === 'repeat-linear' ||
+            variant === 'repeat-grid' ||
+            variant === 'repeat-radial' ||
+            variant === 'repeat-fill'
+        )
+        {
+            setActiveRepeatVariant(
+                variant
+            );
+        }
+
+        setToolFlyout(null);
+    };
+
     return (
 
         <>
             { active &&
-                <NitroCardView
-                    uniqueKey="builder-pro"
-                    className="builder-pro-panel no-resize"
-                    theme="primary-slim">
-                    <NitroCardHeaderView
-                        headerText="Construcción"
-                        onCloseClick={ deactivate } />
+                <div
+                    className={
+                        `builder-pro-workspace-shell${
+                            minimized
+                                ? ' is-minimized'
+                                : ''
+                        }`
+                    }>
 
-                    <div className="builder-pro-header-actions">
-                        <button
-                            type="button"
-                            className="builder-pro-header-button"
-                            title={
-                                minimized
-                                    ? 'Restaurar'
-                                    : 'Minimizar'
-                            }
-                            aria-label={
-                                minimized
-                                    ? 'Restaurar'
-                                    : 'Minimizar'
-                            }
-                            onClick={ () =>
-                            {
-                                setMinimized(
-                                    current => !current
-                                );
-
-                                setHelpOpen(false);
-                            } }>
-                            <FaMinus />
-                        </button>
+                                        <div className="builder-pro-shell-controls">
+                        <span
+                            className="builder-pro-shell-counter"
+                            title="Furnis seleccionados">
+                            { selectedIds.length }/{ MAX_SELECTION }
+                        </span>
 
                         <button
                             type="button"
                             className={
-                                `builder-pro-header-button ${
+                                `builder-pro-shell-control ${
                                     helpOpen
                                         ? 'is-active'
                                         : ''
@@ -17307,8 +17502,41 @@ export const BuilderProView: FC<{}> = props =>
                             } }>
                             <FaQuestion />
                         </button>
-                    </div>
 
+                        <button
+                            type="button"
+                            className="builder-pro-shell-control"
+                            title={
+                                minimized
+                                    ? 'Restaurar'
+                                    : 'Minimizar'
+                            }
+                            aria-label={
+                                minimized
+                                    ? 'Restaurar'
+                                    : 'Minimizar'
+                            }
+                            onClick={ () =>
+                            {
+                                setMinimized(
+                                    current =>
+                                        !current
+                                );
+
+                                setHelpOpen(false);
+                            } }>
+                            <FaMinus />
+                        </button>
+
+                        <button
+                            type="button"
+                            className="builder-pro-shell-control builder-pro-shell-close"
+                            title="Cerrar Construcción Avanzada"
+                            aria-label="Cerrar Construcción Avanzada"
+                            onClick={ deactivate }>
+                            ×
+                        </button>
+                    </div>
                     { helpOpen &&
                         <div className="builder-pro-help">
                             <div className="builder-pro-help-title">
@@ -17356,22 +17584,124 @@ export const BuilderProView: FC<{}> = props =>
 
 
                     { !minimized &&
-                    <NitroCardContentView
-                        className="builder-pro-content">
-                    <div className="builder-pro-status">
-                        <span className="builder-pro-status-text">
+                    <div className="builder-pro-shell-content">
+                                        { status &&
+                        <div className="builder-pro-status-toast">
                             { status }
-                        </span>
-
-                        <span
-                            className="builder-pro-counter"
-                            title="Furnis seleccionados">
-                            { selectedIds.length }/{ MAX_SELECTION }
-                        </span>
-                    </div>
-
-                    <div
+                        </div> }
+<div className="builder-pro-workspace">
+                        <BuilderProToolPanel
+                            tool={ contextualTool }
+                            phase={ toolLifecycle.phase }>
+                                            { contextualTool === 'selection' &&
+                            <BuilderProSelectionContext
+                                pending={ pending }
+                                selectedCount={ selectedIds.length }
+                                areaMode={ areaMode }
+                                pivotId={ pivotId }
+                                pivotPickMode={ pivotPickMode }
+                                onOpenModeMenu={
+                                    () =>
+                                        setToolFlyout(
+                                            'selection'
+                                        )
+                                }
+                                onTogglePivotPick={ togglePivotPick }
+                                onClearPivot={ clearStructuralPivot }
+                                onStatePrevious={
+                                    () =>
+                                        transformGroup(
+                                            TRANSFORM_STATE_PREVIOUS,
+                                            0
+                                        )
+                                }
+                                onStateNext={
+                                    () =>
+                                        transformGroup(
+                                            TRANSFORM_STATE_NEXT,
+                                            0
+                                        )
+                                }
+                                onSelectAdvanced={
+                                    criterion =>
+                                        selectByAdvancedCriterion(
+                                            criterion
+                                        )
+                                }
+                                canRestoreVisibility={
+                                    !!individualHiddenItemIds.length ||
+                                    !!individualDimmedItemIds.length
+                                }
+                                onHideSelection={
+                                    hideSelectedItemsLocally
+                                }
+                                onDimSelection={
+                                    dimSelectedItemsLocally
+                                }
+                                onRestoreVisibility={
+                                    restoreIndividualItemVisibility
+                                }
+                                itemLockPending={ itemLockPending }
+                                allSelectedLocked={ allSelectedLocked }
+                                selectedLockedCount={
+                                    selectedLockedCount
+                                }
+                                onLockSelection={
+                                    () =>
+                                        setConstructionLockSelection(
+                                            true
+                                        )
+                                }
+                                onUnlockSelection={
+                                    () =>
+                                        setConstructionLockSelection(
+                                            false
+                                        )
+                                }
+                                groups={ savedGroups }
+                                selectedGroupId={ selectedGroupId }
+                                selectedGroupLocked={
+                                    !!selectedSavedGroup?.locked
+                                }
+                                hasSelectedGroup={
+                                    !!selectedSavedGroup
+                                }
+                                groupName={ groupName }
+                                groupPending={ groupPending }
+                                onSelectedGroupIdChange={
+                                    setSelectedGroupId
+                                }
+                                onGroupNameChange={
+                                    setGroupName
+                                }
+                                onCreateGroup={
+                                    createSavedGroup
+                                }
+                                onSelectGroup={
+                                    () =>
+                                        selectedSavedGroup &&
+                                        selectSavedGroup(
+                                            selectedSavedGroup
+                                        )
+                                }
+                                onToggleGroupLock={
+                                    toggleSavedGroupLock
+                                }
+                                onUpdateGroupMembers={
+                                    updateSavedGroupMembers
+                                }
+                                onRenameGroup={
+                                    renameSavedGroup
+                                }
+                                onDeleteGroup={
+                                    deleteSavedGroup
+                                } /> }
+<div
                         className="builder-pro-sections"
+                        data-builder-pro-active-tool={ contextualTool }
+                        data-builder-pro-active-variant={
+                            activeToolVariant || undefined
+                        }
                         data-builder-pro-tool={
                             toolLifecycle.suggestedTool
                         }
@@ -17392,39 +17722,10 @@ export const BuilderProView: FC<{}> = props =>
                                 : 'false'
                         }>
 
-                        <details className="builder-pro-section">
+                        <details className="builder-pro-section" data-builder-pro-family="selection" open>
                             <summary>Selección</summary>
 
                             <div className="builder-pro-section-body">
-                                <div className="builder-pro-grid-2">
-                                    <button
-                                        type="button"
-                                        className={
-                                            areaMode
-                                                ? 'is-selected'
-                                                : ''
-                                        }
-                                        disabled={ pending }
-                                        onClick={ toggleAreaMode }>
-                                        { areaMode
-                                            ? 'Área activa'
-                                            : 'Seleccionar área' }
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        className={
-                                            !highlightSelection
-                                                ? 'is-selected'
-                                                : ''
-                                        }
-                                        disabled={ pending }
-                                        onClick={ toggleHighlight }>
-                                        { highlightSelection
-                                            ? 'Ocultar resaltado'
-                                            : 'Mostrar resaltado' }
-                                    </button>
-                                </div>
 
                                 <div className="builder-pro-subtitle">
                                     Selección avanzada
@@ -17707,16 +18008,6 @@ export const BuilderProView: FC<{}> = props =>
                                         : 'Pivote automático: primer furni seleccionado' }
                                 </div>
 
-                                <button
-                                    type="button"
-                                    className="builder-pro-full"
-                                    disabled={
-                                        pending ||
-                                        !selectedIds.length
-                                    }
-                                    onClick={ clearSelection }>
-                                    Limpiar selección
-                                </button>
 
                                 <div className="builder-pro-subtitle">
                                     Grupos
@@ -17884,186 +18175,7 @@ export const BuilderProView: FC<{}> = props =>
                         </details>
 
 
-                        <details className="builder-pro-section">
-                            <summary>Capas</summary>
-
-
-                            <div className="builder-pro-section-body">
-                                <div className="builder-pro-subtitle">
-                                    Capa de trabajo
-                                </div>
-
-                                <select
-                                    className="builder-pro-group-select"
-                                    disabled={
-                                        pending ||
-                                        layerPending
-                                    }
-                                    value={ layerScopeId }
-                                    onChange={
-                                        event =>
-                                        {
-                                            const value =
-                                                Number(
-                                                    event.target.value
-                                                );
-
-                                            if(
-                                                value ===
-                                                LAYER_SCOPE_ALL
-                                            )
-                                            {
-                                                layerScopeIdRef.current =
-                                                    LAYER_SCOPE_ALL;
-
-                                                setLayerScopeId(
-                                                    LAYER_SCOPE_ALL
-                                                );
-
-                                                clearSelection();
-
-                                                setStatus(
-                                                    'Capa de trabajo: todas las capas. Builder Pro puede interactuar con cualquier furni; los nuevos quedarán en Sin capa.'
-                                                );
-
-                                                return;
-                                            }
-
-                                            if(
-                                                Number.isSafeInteger(
-                                                    value
-                                                ) &&
-                                                value >= 0
-                                            )
-                                            {
-                                                layerScopeIdRef.current =
-                                                    value;
-
-                                                setLayerScopeId(
-                                                    value
-                                                );
-
-                                                clearSelection();
-
-                                                const label =
-                                                    value === 0
-                                                        ? 'Sin capa'
-                                                        : (
-                                                            savedLayersRef.current.find(
-                                                                layer =>
-                                                                    layer.id === value
-                                                            )?.name ||
-                                                            'Capa'
-                                                        );
-
-                                                setStatus(
-                                                    value > 0
-                                                        ? `Capa de trabajo: ${ label }. Todo Builder Pro queda limitado a esta capa y los furnis nuevos entran en ella.`
-                                                        : 'Capa de trabajo: Sin capa. Todo Builder Pro queda limitado a los furnis sin capa.'
-                                                );
-                                            }
-                                        }
-                                    }>
-                                    <option
-                                        value={ LAYER_SCOPE_ALL }>
-                                        Todas las capas
-                                    </option>
-
-                                    <option value={ 0 }>
-                                        Sin capa
-                                    </option>
-
-                                    { savedLayers.map(
-                                        layer =>
-                                            <option
-                                                key={ `work-${ layer.id }` }
-                                                value={ layer.id }>
-                                                { `${ layer.name } · ${ layer.itemIds.length } furnis` }
-                                            </option>
-                                    ) }
-                                </select>
-
-                                <div className="builder-pro-hint">
-                                    La capa de trabajo limita toda la interacción de Builder Pro: selección, área, mover, rotar, recoger y acciones avanzadas. Los furnis nuevos entran directamente en ella. Los grupos bloqueados siguen siendo atómicos aunque crucen capas.
-                                </div>
-
-
-                                <div className="builder-pro-subtitle">
-                                    Outliner
-                                </div>
-
-                                <div className="builder-pro-outliner-search">
-                                    <FaSearch />
-
-                                    <input
-                                        type="text"
-                                        value={ outlinerQuery }
-                                        placeholder="Buscar furni, grupo o ID..."
-                                        onChange={
-                                            event =>
-                                                setOutlinerQuery(
-                                                    event.target.value
-                                                )
-                                        } />
-
-                                    <button
-                                        type="button"
-                                        className="builder-pro-outliner-toolbar-button"
-                                        title="Crear capa"
-                                        aria-label="Crear capa"
-                                        disabled={
-                                            pending ||
-                                            layerPending ||
-                                            savedLayers.length >= 50
-                                        }
-                                        onClick={ createLayer }>
-                                        <FaPlus />
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        className="builder-pro-outliner-toolbar-button"
-                                        title="Mostrar todas las capas"
-                                        aria-label="Mostrar todas las capas"
-                                        disabled={
-                                            pending ||
-                                            layerPending ||
-                                            (
-                                                !hiddenLayerIds.length &&
-                                                isolatedLayerId === null &&
-                                                dimmedOthersLayerId === null
-                                            )
-                                        }
-                                        onClick={ showAllLayers }>
-                                        <FaEye />
-                                    </button>
-                                </div>
-
-                                <div
-                                    className="builder-pro-outliner"
-                                    data-revision={ outlinerRevision }>
-                                    { savedLayers.map(
-                                        layer =>
-                                            renderOutlinerLayer(
-                                                layer.id,
-                                                layer.name
-                                            )
-                                    ) }
-
-                                    { renderOutlinerLayer(
-                                        0,
-                                        'Sin capa'
-                                    ) }
-                                </div>
-
-
-                                <div className="builder-pro-hint">
-                                    Clic activa la capa. Doble clic en su nombre renombra; ⋯ reúne mover, aislar, atenuar y eliminar.
-                                </div>
-                            </div>
-                        </details>
-
-                        <details className="builder-pro-section">
+                        <details className="builder-pro-section" data-builder-pro-family="blueprints" open>
                             <summary>Blueprints</summary>
 
                             <div className="builder-pro-section-body">
@@ -18273,7 +18385,7 @@ export const BuilderProView: FC<{}> = props =>
                             </div>
                         </details>
 
-                        <details className="builder-pro-section">
+                        <details className="builder-pro-section" data-builder-pro-family="collision" open>
                             <summary>Colisión</summary>
 
                             <div className="builder-pro-section-body">
@@ -18307,7 +18419,7 @@ export const BuilderProView: FC<{}> = props =>
                             </div>
                         </details>
 
-                        <details className="builder-pro-section">
+                        <details className="builder-pro-section" data-builder-pro-family="move" open>
                             <summary>Movimiento</summary>
 
                             <div className="builder-pro-section-body">
@@ -18597,7 +18709,7 @@ export const BuilderProView: FC<{}> = props =>
                             </div>
                         </details>
 
-                        <details className="builder-pro-section">
+                        <details className="builder-pro-section" data-builder-pro-family="replace" open>
                             <summary>Reemplazar</summary>
 
                             <div className="builder-pro-section-body">
@@ -18624,7 +18736,7 @@ export const BuilderProView: FC<{}> = props =>
                             </div>
                         </details>
 
-                        <details className="builder-pro-section">
+                        <details className="builder-pro-section" data-builder-pro-family="arrange" open>
                             <summary>Formaciones</summary>
 
                             <div className="builder-pro-section-body">
@@ -18729,7 +18841,7 @@ export const BuilderProView: FC<{}> = props =>
                         </details>
 
 
-                        <details className="builder-pro-section">
+                        <details className="builder-pro-section" data-builder-pro-family="repeat" data-builder-pro-variant="repeat-linear" open>
                             <summary>Repetición lineal</summary>
 
                             <div className="builder-pro-section-body">
@@ -18906,7 +19018,7 @@ export const BuilderProView: FC<{}> = props =>
                         </details>
 
 
-                        <details className="builder-pro-section">
+                        <details className="builder-pro-section" data-builder-pro-family="repeat" data-builder-pro-variant="repeat-grid" open>
                             <summary>Cuadrícula</summary>
 
                             <div className="builder-pro-section-body">
@@ -19057,7 +19169,7 @@ export const BuilderProView: FC<{}> = props =>
                         </details>
 
 
-                        <details className="builder-pro-section">
+                        <details className="builder-pro-section" data-builder-pro-family="repeat" data-builder-pro-variant="repeat-radial" open>
                             <summary>Patrón radial</summary>
 
                             <div className="builder-pro-section-body">
@@ -19208,7 +19320,7 @@ export const BuilderProView: FC<{}> = props =>
                         </details>
 
 
-                        <details className="builder-pro-section">
+                        <details className="builder-pro-section" data-builder-pro-family="repeat" data-builder-pro-variant="repeat-fill" open>
                             <summary>Rellenar hasta límite / área</summary>
 
                             <div className="builder-pro-section-body">
@@ -19407,11 +19519,12 @@ export const BuilderProView: FC<{}> = props =>
                         </details>
 
 
-                        <details className="builder-pro-section">
+                        <details className="builder-pro-section" data-builder-pro-family="transform" open>
                             <summary>Rotación</summary>
 
                             <div className="builder-pro-section-body">
                                 <button
+                                    data-builder-pro-tool-variant="transform-orient"
                                     type="button"
                                     className="builder-pro-full"
                                     disabled={
@@ -19427,7 +19540,9 @@ export const BuilderProView: FC<{}> = props =>
                                     Girar furnis
                                 </button>
 
-                                <div className="builder-pro-grid-2">
+                                <div
+                                    className="builder-pro-grid-2"
+                                    data-builder-pro-tool-variant="transform-structure">
                                     <button
                                         type="button"
                                         disabled={
@@ -19459,11 +19574,15 @@ export const BuilderProView: FC<{}> = props =>
                                     </button>
                                 </div>
 
-                                <div className="builder-pro-subtitle">
+                                <div
+                                    className="builder-pro-subtitle"
+                                    data-builder-pro-tool-variant="transform-mirror">
                                     Espejo
                                 </div>
 
-                                <div className="builder-pro-grid-2">
+                                <div
+                                    className="builder-pro-grid-2"
+                                    data-builder-pro-tool-variant="transform-mirror">
                                     <button
                                         type="button"
                                         disabled={
@@ -19495,7 +19614,9 @@ export const BuilderProView: FC<{}> = props =>
                                     </button>
                                 </div>
 
-                                <div className="builder-pro-grid-2">
+                                <div
+                                    className="builder-pro-grid-2"
+                                    data-builder-pro-tool-variant="transform-mirror">
                                     <button
                                         type="button"
                                         disabled={
@@ -19525,7 +19646,9 @@ export const BuilderProView: FC<{}> = props =>
                                     </button>
                                 </div>
 
-                                <div className="builder-pro-hint">
+                                <div
+                                    className="builder-pro-hint"
+                                    data-builder-pro-tool-variant="transform-mirror">
                                     Duplicar espejo crea una copia completa reflejada y la deja en el cursor para colocarla donde quieras.
                                 </div>
                             </div>
@@ -19534,8 +19657,24 @@ export const BuilderProView: FC<{}> = props =>
 
 
                     </div>
+                        </BuilderProToolPanel>
+                    </div>
 
-                    <div className="builder-pro-bottom-toolbar">
+
+                    <BuilderProGlobalToolbar
+                        pending={ pending }
+                        hasSelection={ !!selectedIds.length }
+                        onClearSelection={ clearSelection }
+                        highlightSelection={ highlightSelection }
+                        onToggleHighlight={ toggleHighlight }
+                        outlinerOpen={ outlinerOpen }
+                        onToggleOutliner={
+                            () =>
+                                setOutlinerOpen(
+                                    current =>
+                                        !current
+                                )
+                        }>
                         <button
                                                                 type="button"
                                                                 className="btn btn-sm btn-secondary builder-pro-icon-button"
@@ -19731,10 +19870,225 @@ export const BuilderProView: FC<{}> = props =>
                                                     }>
                                                     <FaRedo />
                                                 </button>
-                    </div>
-                    </NitroCardContentView> }
-                </NitroCardView> }
+                    </BuilderProGlobalToolbar>
+                    </div> }
+                </div> }
 
+            { active && canBuild &&
+                <>
+                    <BuilderProToolRail
+                        activeTool={ activeTool }
+                        displayTool={ contextualTool }
+                        locked={ pending }
+                        onSelectTool={ selectPrimaryTool } />
+
+                    <div
+                        className="builder-pro-floating-tool-flyout"
+                        data-tool-flyout={
+                            toolFlyout ||
+                            undefined
+                        }>
+                        <BuilderProToolFlyout
+                            tool={ toolFlyout }
+                            activeVariant={ activeToolVariant }
+                            disabled={
+                                pending ||
+                                (
+                                    toolLifecycle.isTransient &&
+                                    contextualTool !== 'selection'
+                                )
+                            }
+                            onSelectVariant={ selectToolVariant }
+                            onClose={
+                                () => setToolFlyout(null)
+                            } />
+                    </div>
+
+                    <BuilderProOutlinerPanel
+                        open={ outlinerOpen }
+                        onClose={
+                            () => setOutlinerOpen(false)
+                        }>
+                        <details className="builder-pro-section" data-builder-pro-family="layers" open>
+                        <summary>Capas</summary>
+
+
+                        <div className="builder-pro-section-body">
+                        <div className="builder-pro-subtitle">
+                        Capa de trabajo
+                        </div>
+
+                        <select
+                        className="builder-pro-group-select"
+                        disabled={
+                        pending ||
+                        layerPending
+                        }
+                        value={ layerScopeId }
+                        onChange={
+                        event =>
+                        {
+                        const value =
+                        Number(
+                        event.target.value
+                        );
+
+                        if(
+                        value ===
+                        LAYER_SCOPE_ALL
+                        )
+                        {
+                        layerScopeIdRef.current =
+                        LAYER_SCOPE_ALL;
+
+                        setLayerScopeId(
+                        LAYER_SCOPE_ALL
+                        );
+
+                        clearSelection();
+
+                        setStatus(
+                        'Capa de trabajo: todas las capas. Construcción Avanzada puede interactuar con cualquier furni; los nuevos quedarán en Sin capa.'
+                        );
+
+                        return;
+                        }
+
+                        if(
+                        Number.isSafeInteger(
+                        value
+                        ) &&
+                        value >= 0
+                        )
+                        {
+                        layerScopeIdRef.current =
+                        value;
+
+                        setLayerScopeId(
+                        value
+                        );
+
+                        clearSelection();
+
+                        const label =
+                        value === 0
+                        ? 'Sin capa'
+                        : (
+                        savedLayersRef.current.find(
+                        layer =>
+                        layer.id === value
+                        )?.name ||
+                        'Capa'
+                        );
+
+                        setStatus(
+                        value > 0
+                        ? `Capa de trabajo: ${ label }. Todo Construcción Avanzada queda limitado a esta capa y los furnis nuevos entran en ella.`
+                        : 'Capa de trabajo: Sin capa. Todo Construcción Avanzada queda limitado a los furnis sin capa.'
+                        );
+                        }
+                        }
+                        }>
+                        <option
+                        value={ LAYER_SCOPE_ALL }>
+                        Todas las capas
+                        </option>
+
+                        <option value={ 0 }>
+                        Sin capa
+                        </option>
+
+                        { savedLayers.map(
+                        layer =>
+                        <option
+                        key={ `work-${ layer.id }` }
+                        value={ layer.id }>
+                        { `${ layer.name } · ${ layer.itemIds.length } furnis` }
+                        </option>
+                        ) }
+                        </select>
+
+                        <div className="builder-pro-hint">
+                        La capa de trabajo limita toda la interacción de Construcción Avanzada: selección, área, mover, rotar, recoger y acciones avanzadas. Los furnis nuevos entran directamente en ella. Los grupos bloqueados siguen siendo atómicos aunque crucen capas.
+                        </div>
+
+
+                        <div className="builder-pro-subtitle">
+                        Outliner
+                        </div>
+
+                        <div className="builder-pro-outliner-search">
+                        <FaSearch />
+
+                        <input
+                        type="text"
+                        value={ outlinerQuery }
+                        placeholder="Buscar furni, grupo o ID..."
+                        onChange={
+                        event =>
+                        setOutlinerQuery(
+                        event.target.value
+                        )
+                        } />
+
+                        <button
+                        type="button"
+                        className="builder-pro-outliner-toolbar-button"
+                        title="Crear capa"
+                        aria-label="Crear capa"
+                        disabled={
+                        pending ||
+                        layerPending ||
+                        savedLayers.length >= 50
+                        }
+                        onClick={ createLayer }>
+                        <FaPlus />
+                        </button>
+
+                        <button
+                        type="button"
+                        className="builder-pro-outliner-toolbar-button"
+                        title="Mostrar todas las capas"
+                        aria-label="Mostrar todas las capas"
+                        disabled={
+                        pending ||
+                        layerPending ||
+                        (
+                        !hiddenLayerIds.length &&
+                        isolatedLayerId === null &&
+                        dimmedOthersLayerId === null
+                        )
+                        }
+                        onClick={ showAllLayers }>
+                        <FaEye />
+                        </button>
+                        </div>
+
+                        <div
+                        className="builder-pro-outliner"
+                        data-revision={ outlinerRevision }>
+                        { savedLayers.map(
+                        layer =>
+                        renderOutlinerLayer(
+                        layer.id,
+                        layer.name
+                        )
+                        ) }
+
+                        { renderOutlinerLayer(
+                        0,
+                        'Sin capa'
+                        ) }
+                        </div>
+
+
+                        <div className="builder-pro-hint">
+                        Clic activa la capa. Doble clic en su nombre renombra; ⋯ reúne mover, aislar, atenuar y eliminar.
+                        </div>
+                        </div>
+                        </details>
+                    </BuilderProOutlinerPanel>
+                </> }
             { selectionBox &&
                 <div
                     className="builder-pro-selection-box"

@@ -766,3 +766,4591 @@
     font-weight: 700;
     outline: none;
 }
+/* P13-B1: shell profesional de herramientas. */
+.builder-pro-panel {
+    width: 344px;
+}
+
+.builder-pro-workspace {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    min-height: 0;
+}
+
+.builder-pro-tool-rail {
+    flex: 0 0 38px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 3px;
+    border: 1px solid #a6a6a6;
+    border-radius: 4px;
+    background: #deddd8;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.builder-pro-tool-rail-divider {
+    width: 26px;
+    height: 1px;
+    margin: 2px 0;
+    background: rgba(0, 0, 0, 0.18);
+}
+
+.builder-pro-tool-button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    background: transparent;
+    color: #2c2d2b;
+    cursor: pointer;
+    user-select: none;
+}
+
+.builder-pro-tool-button:hover:not([aria-disabled="true"]) {
+    border-color: #8e908c;
+    background: #f1f0eb;
+}
+
+.builder-pro-tool-button.is-active {
+    border-color: #34383a;
+    background: #4b5052;
+    color: #ffffff;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        0 1px 1px rgba(0, 0, 0, 0.18);
+}
+
+.builder-pro-tool-button[aria-disabled="true"]:not(.is-active) {
+    cursor: default;
+    opacity: 0.42;
+}
+
+.builder-pro-tool-glyph {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.builder-pro-tool-panel {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid #a6a6a6;
+    border-radius: 4px;
+    background: #f7f7f5;
+}
+
+.builder-pro-tool-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    min-height: 28px;
+    padding: 5px 7px;
+    border-bottom: 1px solid #b9b9b7;
+    background: #e3e2de;
+    color: #252525;
+    font-size: 10px;
+}
+
+.builder-pro-tool-panel-header strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.builder-pro-tool-phase {
+    flex: 0 0 auto;
+    padding: 2px 5px;
+    border: 1px solid #9c9d99;
+    border-radius: 8px;
+    background: #f4f3ef;
+    color: #4b4c49;
+    font-size: 8px;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.builder-pro-tool-panel-body {
+    min-width: 0;
+    padding: 4px;
+}
+
+.builder-pro-sections {
+    gap: 4px;
+}
+
+.builder-pro-sections > .builder-pro-section {
+    display: none;
+}
+
+.builder-pro-sections[data-builder-pro-active-tool="selection"] >
+    .builder-pro-section[data-builder-pro-family="selection"],
+.builder-pro-sections[data-builder-pro-active-tool="move"] >
+    .builder-pro-section[data-builder-pro-family="move"],
+.builder-pro-sections[data-builder-pro-active-tool="transform"] >
+    .builder-pro-section[data-builder-pro-family="transform"],
+.builder-pro-sections[data-builder-pro-active-tool="arrange"] >
+    .builder-pro-section[data-builder-pro-family="arrange"],
+.builder-pro-sections[data-builder-pro-active-tool="repeat"] >
+    .builder-pro-section[data-builder-pro-family="repeat"],
+.builder-pro-sections[data-builder-pro-active-tool="replace"] >
+    .builder-pro-section[data-builder-pro-family="replace"],
+.builder-pro-sections[data-builder-pro-active-tool="collision"] >
+    .builder-pro-section[data-builder-pro-family="collision"],
+.builder-pro-sections[data-builder-pro-active-tool="layers"] >
+    .builder-pro-section[data-builder-pro-family="layers"],
+.builder-pro-sections[data-builder-pro-active-tool="blueprints"] >
+    .builder-pro-section[data-builder-pro-family="blueprints"] {
+    display: block;
+}
+
+.builder-pro-section[data-builder-pro-family]:not(
+    [data-builder-pro-family="repeat"]
+) {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    overflow: visible;
+}
+
+.builder-pro-section[data-builder-pro-family]:not(
+    [data-builder-pro-family="repeat"]
+) > summary {
+    display: none;
+}
+
+.builder-pro-section[data-builder-pro-family]:not(
+    [data-builder-pro-family="repeat"]
+) > .builder-pro-section-body {
+    padding: 2px;
+}
+
+.builder-pro-global-toolbar {
+    justify-content: center;
+    gap: 5px;
+    padding-top: 1px;
+}
+
+.builder-pro-global-toolbar > :nth-child(7) {
+    order: 1;
+}
+
+.builder-pro-global-toolbar > :nth-child(8) {
+    order: 2;
+}
+
+.builder-pro-global-toolbar > :nth-child(1) {
+    order: 3;
+}
+
+.builder-pro-global-toolbar > :nth-child(2) {
+    order: 4;
+}
+
+.builder-pro-global-toolbar > :nth-child(3) {
+    order: 5;
+}
+
+.builder-pro-global-toolbar > :nth-child(4) {
+    order: 6;
+}
+
+.builder-pro-global-toolbar > :nth-child(5) {
+    order: 7;
+}
+
+.builder-pro-global-toolbar > :nth-child(6) {
+    order: 8;
+}
+
+.builder-pro-clear-selection-glyph {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1;
+}
+/* P13-B2: flyouts y subherramientas. */
+.builder-pro-workspace {
+    position: relative;
+}
+
+.builder-pro-tool-flyout {
+    position: absolute;
+    z-index: 40;
+    top: 0;
+    left: 42px;
+    width: 126px;
+    padding: 4px;
+    border: 1px solid #747672;
+    border-radius: 4px;
+    background: #e3e2de;
+    box-shadow:
+        0 3px 9px rgba(0, 0, 0, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.58);
+}
+
+.builder-pro-tool-flyout-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    min-height: 24px;
+    padding: 1px 2px 4px 5px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+    color: #272825;
+    font-size: 9px;
+}
+
+.builder-pro-tool-flyout-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    border-radius: 2px;
+    background: transparent;
+    color: #40413f;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.builder-pro-tool-flyout-close:hover {
+    background: rgba(0, 0, 0, 0.09);
+}
+
+.builder-pro-tool-flyout-options {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-top: 4px;
+}
+
+.builder-pro-tool-flyout-option {
+    width: 100%;
+    min-height: 25px;
+    padding: 3px 6px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    background: transparent;
+    color: #272825;
+    font-size: 9px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+}
+
+.builder-pro-tool-flyout-option:hover:not(:disabled) {
+    border-color: #9b9c98;
+    background: #f3f2ee;
+}
+
+.builder-pro-tool-flyout-option.is-active {
+    border-color: #34383a;
+    background: #4b5052;
+    color: #ffffff;
+}
+
+.builder-pro-tool-flyout-option:disabled {
+    cursor: default;
+    opacity: 0.48;
+}
+
+.builder-pro-sections[data-builder-pro-active-tool="repeat"] >
+    .builder-pro-section[data-builder-pro-family="repeat"] {
+    display: none;
+}
+
+.builder-pro-sections[
+    data-builder-pro-active-tool="repeat"
+][
+    data-builder-pro-active-variant="repeat-linear"
+] >
+    .builder-pro-section[
+        data-builder-pro-variant="repeat-linear"
+    ],
+.builder-pro-sections[
+    data-builder-pro-active-tool="repeat"
+][
+    data-builder-pro-active-variant="repeat-grid"
+] >
+    .builder-pro-section[
+        data-builder-pro-variant="repeat-grid"
+    ],
+.builder-pro-sections[
+    data-builder-pro-active-tool="repeat"
+][
+    data-builder-pro-active-variant="repeat-radial"
+] >
+    .builder-pro-section[
+        data-builder-pro-variant="repeat-radial"
+    ],
+.builder-pro-sections[
+    data-builder-pro-active-tool="repeat"
+][
+    data-builder-pro-active-variant="repeat-fill"
+] >
+    .builder-pro-section[
+        data-builder-pro-variant="repeat-fill"
+    ] {
+    display: block;
+}
+
+.builder-pro-section[data-builder-pro-family="repeat"] {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    overflow: visible;
+}
+
+.builder-pro-section[data-builder-pro-family="repeat"] > summary {
+    display: none;
+}
+
+.builder-pro-section[data-builder-pro-family="repeat"] >
+    .builder-pro-section-body {
+    padding: 2px;
+}
+
+.builder-pro-section[data-builder-pro-family="transform"]
+    [data-builder-pro-tool-variant] {
+    display: none;
+}
+
+.builder-pro-sections[
+    data-builder-pro-active-variant="transform-orient"
+]
+    [data-builder-pro-tool-variant="transform-orient"] {
+    display: block;
+}
+
+.builder-pro-sections[
+    data-builder-pro-active-variant="transform-structure"
+]
+    [data-builder-pro-tool-variant="transform-structure"] {
+    display: grid;
+}
+
+.builder-pro-sections[
+    data-builder-pro-active-variant="transform-mirror"
+]
+    [data-builder-pro-tool-variant="transform-mirror"] {
+    display: block;
+}
+
+.builder-pro-sections[
+    data-builder-pro-active-variant="transform-mirror"
+]
+    .builder-pro-grid-2[
+        data-builder-pro-tool-variant="transform-mirror"
+    ] {
+    display: grid;
+}
+
+.builder-pro-sections[
+    data-builder-pro-active-variant="transform-mirror-duplicate"
+]
+    [data-builder-pro-tool-variant="transform-mirror-duplicate"] {
+    display: block;
+}
+
+.builder-pro-sections[
+    data-builder-pro-active-variant="transform-mirror-duplicate"
+]
+    .builder-pro-grid-2[
+        data-builder-pro-tool-variant="transform-mirror-duplicate"
+    ] {
+    display: grid;
+}
+/* P13-B3: pulido del shell profesional. */
+.builder-pro-selection-mode-row {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.builder-pro-highlight-button[aria-pressed="true"] {
+    border-color: #34383a !important;
+    background: #4b5052 !important;
+    color: #ffffff !important;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+}
+
+/*
+ * Orden global:
+ * Undo, Redo, Clear, Highlight, Copy, Paste, Duplicate, Pickup, Freeze.
+ * Con B3, los dos primeros hijos propios de GlobalToolbar son
+ * Clear y Highlight; los siete siguientes son las acciones legacy.
+ */
+.builder-pro-global-toolbar > :nth-child(8) {
+    order: 1;
+}
+
+.builder-pro-global-toolbar > :nth-child(9) {
+    order: 2;
+}
+
+.builder-pro-global-toolbar > :nth-child(1) {
+    order: 3;
+}
+
+.builder-pro-global-toolbar > :nth-child(2) {
+    order: 4;
+}
+
+.builder-pro-global-toolbar > :nth-child(3) {
+    order: 5;
+}
+
+.builder-pro-global-toolbar > :nth-child(4) {
+    order: 6;
+}
+
+.builder-pro-global-toolbar > :nth-child(5) {
+    order: 7;
+}
+
+.builder-pro-global-toolbar > :nth-child(6) {
+    order: 8;
+}
+
+.builder-pro-global-toolbar > :nth-child(7) {
+    order: 9;
+}
+/* P13-B4: shell horizontal tipo editor profesional. */
+.builder-pro-panel {
+    width: min(920px, calc(100vw - 28px));
+    max-height: none;
+    overflow: visible;
+}
+
+.builder-pro-content {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: visible;
+    padding: 5px !important;
+}
+
+.builder-pro-content > .builder-pro-global-toolbar {
+    order: 0;
+}
+
+.builder-pro-content > .builder-pro-status {
+    order: 1;
+}
+
+.builder-pro-content > .builder-pro-workspace {
+    order: 2;
+}
+
+.builder-pro-status {
+    min-height: 23px;
+    margin: 3px 0 4px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+.builder-pro-global-toolbar {
+    min-height: 31px;
+    margin: 0;
+    padding: 2px 3px 3px;
+    border-bottom: 1px solid #b9b9b7;
+    justify-content: flex-start;
+    background: #e3e2de;
+}
+
+.builder-pro-workspace {
+    position: relative;
+    display: block;
+    min-height: 78px;
+    padding-left: 44px;
+    overflow: visible;
+}
+
+.builder-pro-tool-rail {
+    position: absolute;
+    z-index: 70;
+    top: 0;
+    left: 0;
+    width: 38px;
+    min-height: 0;
+    padding: 3px;
+    gap: 2px;
+    border-color: #8b8d89;
+    background: #d7d6d1;
+    box-shadow:
+        0 2px 7px rgba(0, 0, 0, 0.24),
+        inset 0 1px 0 rgba(255, 255, 255, 0.62);
+}
+
+.builder-pro-tool-button {
+    width: 30px;
+    height: 29px;
+}
+
+.builder-pro-tool-button[data-has-flyout="true"] {
+    overflow: visible;
+}
+
+.builder-pro-tool-caret {
+    position: absolute;
+    right: 1px;
+    bottom: 0;
+    font-size: 6px;
+    line-height: 1;
+    opacity: 0.72;
+}
+
+.builder-pro-tool-button::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    z-index: 90;
+    top: 50%;
+    left: 35px;
+    min-width: max-content;
+    padding: 3px 6px;
+    border: 1px solid #6e706d;
+    border-radius: 3px;
+    background: #292b2b;
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1.2;
+    pointer-events: none;
+    opacity: 0;
+    transform:
+        translateY(-50%)
+        translateX(-3px);
+    transition:
+        opacity 0.1s ease,
+        transform 0.1s ease;
+}
+
+.builder-pro-tool-button:hover::after {
+    opacity: 1;
+    transform:
+        translateY(-50%)
+        translateX(0);
+}
+
+.builder-pro-tool-rail-divider {
+    margin: 2px 0;
+}
+
+.builder-pro-context-bar {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    min-width: 0;
+    height: 78px;
+    max-height: 78px;
+    overflow: hidden;
+    border-color: #92938f;
+    border-radius: 3px;
+    background: #efefec;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.68);
+}
+
+.builder-pro-tool-panel-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    padding: 6px 7px;
+    border-right: 1px solid #b8b9b5;
+    border-bottom: 0;
+    background: #dad9d5;
+}
+
+.builder-pro-tool-panel-header strong {
+    max-width: 100%;
+    font-size: 10px;
+}
+
+.builder-pro-tool-phase {
+    max-width: 100%;
+    border-radius: 3px;
+    font-size: 8px;
+    white-space: nowrap;
+}
+
+.builder-pro-tool-panel-body {
+    min-width: 0;
+    height: 100%;
+    padding: 4px 5px;
+    overflow: hidden;
+}
+
+.builder-pro-sections {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.builder-pro-sections > .builder-pro-section {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+}
+
+.builder-pro-sections >
+    .builder-pro-section >
+    .builder-pro-section-body {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 6px;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: 1px 2px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+}
+
+.builder-pro-section-body > * {
+    flex: 0 0 auto;
+}
+
+.builder-pro-section-body > .builder-pro-hint {
+    display: none;
+}
+
+.builder-pro-section-body > .builder-pro-subtitle {
+    display: inline-flex;
+    align-items: center;
+    align-self: center;
+    min-height: 24px;
+    margin: 0;
+    padding: 0 6px;
+    border-left: 1px solid #b5b6b2;
+    color: #555753;
+    font-size: 8px;
+    font-weight: 700;
+    line-height: 1.1;
+    white-space: nowrap;
+}
+
+.builder-pro-section-body >
+    .builder-pro-subtitle:first-child {
+    border-left: 0;
+}
+
+.builder-pro-section-body >
+    .builder-pro-grid-2,
+.builder-pro-section-body >
+    .builder-pro-grid-3 {
+    display: inline-grid;
+    align-self: center;
+    gap: 3px;
+    margin: 0;
+}
+
+.builder-pro-section-body >
+    .builder-pro-grid-2 {
+    grid-template-columns:
+        repeat(2, minmax(72px, auto));
+}
+
+.builder-pro-section-body >
+    .builder-pro-grid-3 {
+    grid-template-columns:
+        repeat(3, minmax(66px, auto));
+}
+
+.builder-pro-section-body >
+    .builder-pro-move-buttons {
+    display: inline-grid;
+    grid-template-columns:
+        repeat(4, 33px);
+    align-self: center;
+    gap: 3px;
+    margin: 0;
+}
+
+.builder-pro-section-body >
+    .builder-pro-offset-row {
+    display: inline-grid;
+    grid-template-columns:
+        52px
+        52px
+        52px
+        auto;
+    align-self: center;
+    gap: 3px;
+    margin: 0;
+}
+
+.builder-pro-section-body >
+    .builder-pro-field-row {
+    min-width: 112px;
+    margin: 0;
+}
+
+.builder-pro-section-body >
+    .builder-pro-field-row >
+    span {
+    white-space: nowrap;
+}
+
+.builder-pro-section-body >
+    .builder-pro-full {
+    width: auto;
+    min-width: 88px;
+    margin: 0;
+}
+
+.builder-pro-section-body button {
+    min-height: 24px;
+    white-space: nowrap;
+}
+
+.builder-pro-section-body select {
+    max-width: 170px;
+}
+
+.builder-pro-selection-mode-row {
+    display: none !important;
+}
+
+.builder-pro-tool-flyout {
+    z-index: 80;
+    top: 0;
+    left: 42px;
+    width: 142px;
+}
+
+.builder-pro-tool-flyout-option {
+    min-height: 26px;
+}
+
+.builder-pro-section[
+    data-builder-pro-family="repeat"
+] >
+    .builder-pro-section-body {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 6px;
+    width: 100%;
+    height: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.builder-pro-section[
+    data-builder-pro-family="transform"
+] >
+    .builder-pro-section-body {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 6px;
+    width: 100%;
+    height: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.builder-pro-section[
+    data-builder-pro-family="transform"
+]
+    [data-builder-pro-tool-variant] {
+    flex: 0 0 auto;
+}
+
+.builder-pro-section[
+    data-builder-pro-family="transform"
+]
+    .builder-pro-grid-2[
+        data-builder-pro-tool-variant="transform-mirror"
+    ] {
+    grid-template-columns:
+        repeat(2, minmax(92px, auto));
+}
+
+/*
+ * Capas sigue accesible temporalmente en la zona separada del rail.
+ * P13-E la convertira en un panel organizativo independiente sin
+ * convertirla en una herramienta primaria.
+ */
+.builder-pro-tool-button[data-tool="layers"] {
+    margin-top: 2px;
+}
+
+@media (max-width: 760px) {
+    .builder-pro-panel {
+        width: calc(100vw - 12px);
+    }
+
+    .builder-pro-context-bar {
+        grid-template-columns: 76px minmax(0, 1fr);
+    }
+
+    .builder-pro-tool-panel-header {
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+}
+/* P13-B5: rail y Outliner independientes del panel contextual. */
+.builder-pro-panel,
+.builder-pro-panel .content-area {
+    overflow: visible !important;
+}
+
+.builder-pro-workspace {
+    padding-left: 0;
+}
+
+.builder-pro-tool-panel,
+.builder-pro-tool-panel-body,
+.builder-pro-context-bar {
+    overflow: visible;
+}
+
+.builder-pro-floating-tool-rail {
+    position: fixed;
+    z-index: 1300;
+    top: 112px;
+    left: 12px;
+    width: 38px;
+    max-height: calc(100vh - 128px);
+    padding: 3px;
+    overflow: visible;
+    border: 1px solid #727471;
+    border-radius: 4px;
+    background: #d6d5d0;
+    box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.32),
+        inset 0 1px 0 rgba(255, 255, 255, 0.64);
+}
+
+.builder-pro-floating-tool-flyout {
+    position: fixed;
+    z-index: 1310;
+    top: 112px;
+    left: 54px;
+}
+
+.builder-pro-floating-tool-flyout[
+    data-tool-flyout="transform"
+] {
+    top: 174px;
+}
+
+.builder-pro-floating-tool-flyout[
+    data-tool-flyout="repeat"
+] {
+    top: 236px;
+}
+
+.builder-pro-floating-tool-flyout
+    .builder-pro-tool-flyout {
+    position: static;
+}
+
+.builder-pro-sections[
+    data-builder-pro-active-tool="selection"
+] {
+    display: none;
+}
+
+.builder-pro-selection-context {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    overflow: visible;
+}
+
+.builder-pro-context-cluster {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    min-height: 30px;
+    padding-right: 5px;
+    border-right: 1px solid #b9bab6;
+}
+
+.builder-pro-context-label {
+    color: #666763;
+    font-size: 8px;
+    font-weight: 700;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.builder-pro-selection-context button,
+.builder-pro-selection-context select,
+.builder-pro-selection-context input {
+    min-height: 24px;
+    border: 1px solid #a2a39f;
+    border-radius: 3px;
+    background: #fafaf8;
+    color: #292a28;
+    font-size: 9px;
+}
+
+.builder-pro-selection-context button {
+    padding: 3px 7px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.builder-pro-selection-context button:hover:not(:disabled) {
+    background: #dcecf6;
+}
+
+.builder-pro-selection-context button.is-selected {
+    border-color: #34383a;
+    background: #4b5052;
+    color: #ffffff;
+}
+
+.builder-pro-selection-context button:disabled,
+.builder-pro-selection-context select:disabled,
+.builder-pro-selection-context input:disabled {
+    cursor: default;
+    opacity: 0.48;
+}
+
+.builder-pro-context-primary {
+    min-width: 72px;
+}
+
+.builder-pro-context-menu-anchor {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.builder-pro-context-popover {
+    position: absolute;
+    z-index: 1320;
+    top: calc(100% + 5px);
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 178px;
+    padding: 6px;
+    border: 1px solid #747672;
+    border-radius: 4px;
+    background: #e5e4df;
+    box-shadow:
+        0 5px 14px rgba(0, 0, 0, 0.32),
+        inset 0 1px 0 rgba(255, 255, 255, 0.62);
+}
+
+.builder-pro-context-popover button {
+    width: 100%;
+    text-align: left;
+}
+
+.builder-pro-popover-title {
+    padding: 1px 2px 5px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.14);
+    color: #292a28;
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.builder-pro-popover-meta {
+    padding: 2px 1px;
+    color: #5c5d59;
+    font-size: 8px;
+}
+
+.builder-pro-popover-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+    gap: 3px;
+}
+
+.builder-pro-popover-inline {
+    display: grid;
+    grid-template-columns:
+        minmax(0, 1fr)
+        auto;
+    gap: 3px;
+}
+
+.builder-pro-popover-inline input,
+.builder-pro-groups-popover select {
+    width: 100%;
+    min-width: 0;
+    padding: 0 5px;
+}
+
+.builder-pro-groups-popover {
+    width: 238px;
+}
+
+.builder-pro-popover-danger {
+    border-color: #a85f5f !important;
+    color: #8a2f2f !important;
+}
+
+.builder-pro-outliner-panel {
+    position: fixed;
+    z-index: 1280;
+    top: 112px;
+    right: 12px;
+    width: 300px;
+    max-height: calc(100vh - 128px);
+    overflow: hidden;
+    border: 1px solid #727471;
+    border-radius: 4px;
+    background: #e7e6e1;
+    color: #292a28;
+    box-shadow:
+        0 5px 16px rgba(0, 0, 0, 0.32),
+        inset 0 1px 0 rgba(255, 255, 255, 0.62);
+}
+
+.builder-pro-outliner-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 31px;
+    padding: 4px 5px 4px 8px;
+    border-bottom: 1px solid #969793;
+    background: #d4d3ce;
+}
+
+.builder-pro-outliner-panel-header > div {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.builder-pro-outliner-panel-header strong {
+    font-size: 10px;
+}
+
+.builder-pro-outliner-panel-header span {
+    color: #666763;
+    font-size: 8px;
+}
+
+.builder-pro-outliner-panel-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 3px;
+    background: transparent;
+    color: #393a37;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.builder-pro-outliner-panel-close:hover {
+    background: rgba(0, 0, 0, 0.09);
+}
+
+.builder-pro-outliner-panel-body {
+    max-height: calc(100vh - 164px);
+    padding: 5px;
+    overflow-y: auto;
+}
+
+.builder-pro-outliner-panel-body >
+    .builder-pro-section {
+    display: block !important;
+    width: 100%;
+    height: auto;
+    border: 0;
+    background: transparent;
+    overflow: visible;
+}
+
+.builder-pro-outliner-panel-body >
+    .builder-pro-section >
+    summary {
+    display: none;
+}
+
+.builder-pro-outliner-panel-body
+    .builder-pro-section-body {
+    display: block !important;
+    width: 100%;
+    height: auto !important;
+    padding: 0 !important;
+    overflow: visible !important;
+}
+
+.builder-pro-outliner-panel-body
+    .builder-pro-section-body >
+    .builder-pro-subtitle {
+    display: block;
+    min-height: 0;
+    margin: 7px 0 4px;
+    padding: 0;
+    border: 0;
+    color: #444542;
+    font-size: 9px;
+}
+
+.builder-pro-outliner-panel-body
+    .builder-pro-section-body >
+    .builder-pro-hint {
+    display: block;
+    margin-top: 5px;
+    color: #666763;
+    font-size: 8px;
+}
+
+.builder-pro-outliner-panel-body
+    .builder-pro-group-select {
+    width: 100%;
+    max-width: none;
+}
+
+.builder-pro-outliner-panel-body
+    .builder-pro-outliner-search {
+    display: grid;
+}
+
+.builder-pro-outliner-panel-body
+    .builder-pro-outliner {
+    display: block;
+    max-height: calc(100vh - 300px);
+    overflow-y: auto;
+}
+
+.builder-pro-outliner-toggle {
+    margin-left: auto;
+}
+
+.builder-pro-outliner-toggle-glyph {
+    font-size: 13px;
+    line-height: 1;
+}
+
+/* Orden global B5: Undo, Redo, Clear, Highlight, Copy, Paste,
+ * Duplicate, Pickup, Freeze, Outliner. */
+.builder-pro-global-toolbar > :nth-child(9) {
+    order: 1;
+}
+
+.builder-pro-global-toolbar > :nth-child(10) {
+    order: 2;
+}
+
+.builder-pro-global-toolbar > :nth-child(1) {
+    order: 3;
+}
+
+.builder-pro-global-toolbar > :nth-child(2) {
+    order: 4;
+}
+
+.builder-pro-global-toolbar > :nth-child(4) {
+    order: 5;
+}
+
+.builder-pro-global-toolbar > :nth-child(5) {
+    order: 6;
+}
+
+.builder-pro-global-toolbar > :nth-child(6) {
+    order: 7;
+}
+
+.builder-pro-global-toolbar > :nth-child(7) {
+    order: 8;
+}
+
+.builder-pro-global-toolbar > :nth-child(8) {
+    order: 9;
+}
+
+.builder-pro-global-toolbar > :nth-child(3) {
+    order: 10;
+}
+
+@media (max-width: 900px) {
+    .builder-pro-outliner-panel {
+        width: 260px;
+    }
+
+    .builder-pro-selection-context {
+        overflow-x: auto;
+    }
+}
+/* P13-B7: workspace nativo de Builder Pro, sin NitroCard/DraggableWindow. */
+
+/* Modo inmersivo: fuera HUD no necesario, se conserva toolbar inferior. */
+body.builder-pro-immersive
+    .nitro-right-side,
+body.builder-pro-immersive
+    .pokemon-menu-toolbar,
+body.builder-pro-immersive
+    .nitro-room-tools-container {
+    display: none !important;
+}
+
+body.builder-pro-immersive
+    .nitro-toolbar.holo-classic-toolbar {
+    display: flex !important;
+    z-index: 70 !important;
+}
+
+/* ===== TOP WORKSPACE ===== */
+
+.builder-pro-workspace-shell {
+    position: fixed;
+    z-index: 1290;
+    top: 0;
+    right: 0;
+    left: 40px;
+
+    display: block;
+
+    height: 66px;
+
+    border-bottom: 1px solid #858984;
+
+    background: #dededa;
+
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.28);
+
+    color: #292c2d;
+
+    font-size: 9px;
+
+    overflow: visible;
+}
+
+.builder-pro-shell-content {
+    position: relative;
+
+    display: flex;
+    flex-direction: column;
+
+    width: 100%;
+    height: 66px;
+
+    overflow: visible;
+}
+
+.builder-pro-shell-controls {
+    position: absolute;
+    z-index: 6;
+    top: 3px;
+    right: 5px;
+
+    display: flex;
+    align-items: center;
+    gap: 3px;
+
+    height: 26px;
+}
+
+.builder-pro-shell-counter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 43px;
+    height: 21px;
+
+    padding: 0 7px;
+
+    border: 1px solid #858b89;
+    border-radius: 3px;
+
+    background: #f1f1ee;
+
+    color: #343738;
+
+    font-size: 8px;
+    font-weight: 700;
+}
+
+.builder-pro-shell-control {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 22px;
+    height: 22px;
+
+    padding: 0;
+
+    border: 1px solid #949894;
+    border-radius: 3px;
+
+    background: #efefec;
+
+    color: #303334;
+
+    font-size: 10px;
+
+    cursor: pointer;
+}
+
+.builder-pro-shell-control:hover {
+    background: #d7e5ec;
+}
+
+.builder-pro-shell-control.is-active {
+    border-color: #60696d;
+    background: #576267;
+    color: #ffffff;
+}
+
+.builder-pro-shell-close {
+    font-size: 15px;
+    line-height: 1;
+}
+
+/* Global: primera fila. */
+.builder-pro-workspace-shell
+    .builder-pro-global-toolbar {
+    order: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+
+    width: 100%;
+    height: 30px;
+    min-height: 30px;
+
+    margin: 0;
+    padding: 3px 118px 3px 4px;
+
+    border: 0;
+    border-bottom: 1px solid #b0b3af;
+
+    background: #d1d2ce;
+
+    box-shadow: none;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-global-toolbar >
+    button {
+    width: 24px;
+    min-width: 24px;
+    height: 22px;
+    min-height: 22px;
+
+    padding: 0;
+
+    border-color: #979b97;
+
+    font-size: 9px;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-global-toolbar >
+    button + button {
+    margin-left: 2px;
+}
+
+/* Contextual: segunda fila. */
+.builder-pro-workspace-shell
+    .builder-pro-workspace {
+    order: 1;
+
+    display: block;
+
+    width: 100%;
+    height: 36px;
+    min-height: 36px;
+
+    padding: 0;
+
+    overflow: visible;
+}
+
+.builder-pro-context-bar {
+    display: grid;
+
+    grid-template-columns:
+        58px
+        minmax(0, 1fr);
+
+    width: 100%;
+    height: 36px;
+    min-height: 36px;
+    max-height: 36px;
+
+    margin: 0;
+
+    border: 0;
+    border-radius: 0;
+
+    background: #e8e8e4;
+
+    box-shadow: none;
+
+    overflow: visible;
+}
+
+.builder-pro-context-tool-name {
+    display: flex;
+    align-items: center;
+
+    height: 36px;
+
+    padding: 0 6px;
+
+    border-right: 1px solid #b2b5b1;
+
+    color: #414546;
+
+    font-size: 8px;
+    font-weight: 800;
+
+    text-transform: uppercase;
+
+    white-space: nowrap;
+}
+
+.builder-pro-tool-panel-body {
+    position: relative;
+
+    display: block;
+
+    width: 100%;
+    height: 36px;
+
+    min-width: 0;
+
+    padding: 2px 4px;
+
+    overflow: visible;
+}
+
+.builder-pro-selection-context {
+    display: flex;
+    align-items: center;
+
+    gap: 3px;
+
+    width: 100%;
+    height: 32px;
+
+    overflow: visible;
+}
+
+.builder-pro-context-cluster {
+    display: flex;
+    align-items: center;
+
+    gap: 3px;
+
+    min-height: 28px;
+
+    padding-right: 4px;
+
+    border-right: 1px solid #b8bbb7;
+}
+
+.builder-pro-context-label {
+    color: #6a6d6b;
+
+    font-size: 7px;
+    font-weight: 700;
+
+    text-transform: uppercase;
+}
+
+.builder-pro-selection-context
+    button,
+.builder-pro-selection-context
+    select,
+.builder-pro-selection-context
+    input {
+    height: 22px;
+    min-height: 22px;
+
+    font-size: 8px;
+}
+
+.builder-pro-selection-context
+    button {
+    padding: 2px 6px;
+}
+
+/* Las herramientas legacy se reutilizan como controles contextuales compactos. */
+.builder-pro-workspace-shell
+    .builder-pro-sections {
+    display: block;
+
+    width: 100%;
+    height: 32px;
+
+    overflow: visible;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-sections >
+    .builder-pro-section {
+    width: 100%;
+    height: 32px;
+
+    margin: 0;
+
+    border: 0;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-sections >
+    .builder-pro-section >
+    .builder-pro-section-body {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+
+    gap: 4px;
+
+    width: 100%;
+    height: 32px;
+
+    padding: 1px 2px;
+
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    scrollbar-width: thin;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-section-body
+    button {
+    min-height: 22px;
+    height: 22px;
+
+    padding-top: 1px;
+    padding-bottom: 1px;
+
+    font-size: 8px;
+}
+
+/* Estado humano: toast, no una tercera franja permanente. */
+.builder-pro-status-toast {
+    position: fixed;
+    z-index: 1330;
+
+    top: 72px;
+    left: 50%;
+
+    max-width: min(520px, 70vw);
+
+    padding: 5px 10px;
+
+    border: 1px solid rgba(0, 0, 0, 0.34);
+    border-radius: 4px;
+
+    background: rgba(35, 38, 39, 0.92);
+
+    color: #ffffff;
+
+    font-size: 9px;
+    line-height: 1.25;
+
+    box-shadow:
+        0 3px 10px rgba(0, 0, 0, 0.25);
+
+    transform: translateX(-50%);
+
+    pointer-events: none;
+}
+
+/* Ayuda flotante; tampoco ocupa altura en la topbar. */
+.builder-pro-help {
+    position: fixed;
+    z-index: 1340;
+
+    top: 70px;
+    right: 8px;
+
+    width: 310px;
+    max-height: 55vh;
+
+    overflow-y: auto;
+
+    border: 1px solid #777b78;
+    border-radius: 4px;
+
+    background: #e8e7e2;
+
+    box-shadow:
+        0 5px 15px rgba(0, 0, 0, 0.30);
+}
+
+/* ===== TOOL RAIL ===== */
+
+.builder-pro-floating-tool-rail {
+    position: fixed;
+    z-index: 1300;
+
+    top: 66px;
+    left: 0;
+
+    display: flex;
+    flex-direction: column;
+
+    width: 40px;
+
+    padding: 4px;
+
+    border: 0;
+    border-right: 1px solid #4f5556;
+    border-bottom: 1px solid #4f5556;
+    border-radius: 0 0 4px 0;
+
+    background: #2d3132;
+
+    box-shadow:
+        2px 3px 8px rgba(0, 0, 0, 0.28);
+}
+
+.builder-pro-floating-tool-rail
+    .builder-pro-tool-button {
+    position: relative;
+
+    width: 31px;
+    height: 31px;
+
+    margin: 0 0 2px;
+
+    border: 1px solid transparent;
+    border-radius: 3px;
+
+    background: transparent;
+
+    color: #d9dddd;
+}
+
+.builder-pro-floating-tool-rail
+    .builder-pro-tool-button:hover {
+    border-color: #636b6d;
+
+    background: #3b4142;
+}
+
+.builder-pro-floating-tool-rail
+    .builder-pro-tool-button.is-active {
+    border-color: #8da9b4;
+
+    background: #53666d;
+
+    color: #ffffff;
+}
+
+.builder-pro-floating-tool-rail
+    .builder-pro-tool-button::after {
+    left: 36px;
+}
+
+.builder-pro-floating-tool-flyout {
+    position: fixed;
+    z-index: 1310;
+
+    top: 69px;
+    left: 40px;
+
+    width: auto;
+    height: auto;
+
+    padding: 0;
+    margin: 0;
+
+    border: 0;
+
+    background: transparent;
+
+    box-shadow: none;
+
+    pointer-events: none;
+}
+
+.builder-pro-floating-tool-flyout:empty {
+    display: none;
+}
+
+.builder-pro-floating-tool-flyout[
+    data-tool-flyout="transform"
+] {
+    top: 135px;
+}
+
+.builder-pro-floating-tool-flyout[
+    data-tool-flyout="repeat"
+] {
+    top: 201px;
+}
+
+.builder-pro-floating-tool-flyout
+    .builder-pro-tool-flyout {
+    position: static;
+
+    pointer-events: auto;
+}
+
+/* ===== OUTLINER ===== */
+
+.builder-pro-outliner-panel {
+    position: fixed;
+    z-index: 1280;
+
+    top: auto;
+    right: auto;
+    bottom: 62px;
+    left: 48px;
+
+    display: flex;
+    flex-direction: column;
+
+    width: 274px;
+    height: min(36vh, 350px);
+
+    min-height: 230px;
+    max-height: calc(100vh - 150px);
+
+    overflow: hidden;
+
+    border: 1px solid #6f7471;
+    border-radius: 4px;
+
+    background: #e4e4df;
+
+    box-shadow:
+        0 5px 14px rgba(0, 0, 0, 0.30);
+}
+
+.builder-pro-outliner-panel-header {
+    flex: 0 0 27px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    min-height: 27px;
+
+    padding: 3px 4px 3px 7px;
+
+    border-bottom: 1px solid #a5a8a4;
+
+    background: #d0d1cd;
+}
+
+.builder-pro-outliner-panel-header
+    strong {
+    font-size: 9px;
+}
+
+.builder-pro-outliner-panel-close {
+    width: 20px;
+    height: 20px;
+}
+
+.builder-pro-outliner-panel-body {
+    flex: 1 1 auto;
+
+    display: block;
+
+    min-height: 0;
+
+    padding: 5px;
+
+    overflow: hidden;
+}
+
+.builder-pro-outliner-panel-body >
+    .builder-pro-section {
+    display: flex !important;
+    flex-direction: column;
+
+    width: 100%;
+    height: 100%;
+
+    min-height: 0;
+
+    overflow: hidden;
+}
+
+.builder-pro-outliner-panel-body >
+    .builder-pro-section >
+    summary {
+    display: none;
+}
+
+.builder-pro-outliner-panel-body
+    .builder-pro-section-body {
+    display: flex !important;
+    flex-direction: column;
+
+    width: 100%;
+    height: 100% !important;
+
+    min-height: 0;
+
+    padding: 0 !important;
+
+    overflow: hidden !important;
+}
+
+/* Documentacion fuera de la UI de uso continuo. */
+.builder-pro-outliner-panel
+    .builder-pro-hint {
+    display: none !important;
+}
+
+/* "Outliner" es redundante: ya estamos dentro del panel Capas. */
+.builder-pro-outliner-panel
+    .builder-pro-subtitle:has(
+        + .builder-pro-outliner-search
+    ) {
+    display: none !important;
+}
+
+.builder-pro-outliner-panel
+    .builder-pro-subtitle {
+    flex: 0 0 auto;
+
+    min-height: 0;
+
+    margin: 0 0 3px;
+    padding: 0;
+
+    border: 0;
+
+    font-size: 8px;
+}
+
+.builder-pro-outliner-panel
+    .builder-pro-group-select {
+    flex: 0 0 24px;
+
+    width: 100%;
+    max-width: none;
+
+    height: 24px;
+    min-height: 24px;
+
+    margin-bottom: 4px;
+
+    font-size: 8px;
+}
+
+.builder-pro-outliner-panel
+    .builder-pro-outliner-search {
+    flex: 0 0 26px;
+
+    display: grid;
+
+    height: 26px;
+
+    margin-bottom: 4px;
+}
+
+.builder-pro-outliner-panel
+    .builder-pro-outliner {
+    flex: 1 1 auto;
+
+    display: block;
+
+    min-height: 80px;
+    max-height: none;
+
+    overflow-x: hidden;
+    overflow-y: auto;
+
+    overscroll-behavior: contain;
+
+    scrollbar-width: thin;
+}
+
+/* Context popovers por encima de canvas, no recortados por topbar. */
+.builder-pro-context-popover {
+    z-index: 1350;
+}
+
+/* En viewport pequeno seguimos reservando canvas. */
+@media (max-width: 900px) {
+    .builder-pro-workspace-shell {
+        left: 38px;
+    }
+
+    .builder-pro-floating-tool-rail {
+        width: 38px;
+    }
+
+    .builder-pro-outliner-panel {
+        left: 44px;
+
+        width: 248px;
+        height: min(34vh, 320px);
+    }
+
+    .builder-pro-context-bar {
+        grid-template-columns:
+            52px
+            minmax(0, 1fr);
+    }
+}
+/* P13-B7.1: paleta compacta izquierda y limpieza de Seleccion. */
+
+/*
+ * La topbar deja de ser una barra de aplicacion de ancho completo.
+ * Es una paleta compacta anclada junto al rail, como el Outliner.
+ */
+.builder-pro-workspace-shell {
+    top: 0;
+    right: auto;
+    left: 40px;
+
+    width: min(
+        780px,
+        calc(100vw - 48px)
+    );
+
+    height: 60px;
+
+    border-right:
+        1px solid
+        #858984;
+
+    border-radius:
+        0 0 4px 0;
+}
+
+.builder-pro-shell-content {
+    width: 100%;
+    height: 60px;
+}
+
+/* Primera fila compacta. */
+.builder-pro-workspace-shell
+    .builder-pro-global-toolbar {
+    width: 100%;
+
+    height: 28px;
+    min-height: 28px;
+    max-height: 28px;
+
+    padding:
+        3px
+        124px
+        3px
+        4px;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-global-toolbar >
+    button {
+    width: 22px;
+    min-width: 22px;
+
+    height: 20px;
+    min-height: 20px;
+}
+
+.builder-pro-shell-controls {
+    top: 3px;
+    right: 4px;
+
+    height: 22px;
+}
+
+.builder-pro-shell-counter {
+    min-width: 40px;
+    height: 20px;
+
+    padding: 0 5px;
+}
+
+.builder-pro-shell-control {
+    width: 20px;
+    height: 20px;
+}
+
+/* Segunda fila contextual. */
+.builder-pro-workspace-shell
+    .builder-pro-workspace {
+    height: 32px;
+    min-height: 32px;
+    max-height: 32px;
+}
+
+.builder-pro-context-bar {
+    grid-template-columns:
+        54px
+        minmax(0, 1fr);
+
+    height: 32px;
+    min-height: 32px;
+    max-height: 32px;
+}
+
+.builder-pro-context-tool-name {
+    height: 32px;
+
+    padding: 0 5px;
+
+    font-size: 7px;
+}
+
+.builder-pro-tool-panel-body {
+    height: 32px;
+
+    padding: 1px 3px;
+}
+
+.builder-pro-selection-context {
+    height: 30px;
+
+    gap: 2px;
+}
+
+.builder-pro-context-cluster {
+    min-height: 26px;
+
+    gap: 2px;
+
+    padding-right: 3px;
+}
+
+.builder-pro-selection-context
+    button,
+.builder-pro-selection-context
+    select,
+.builder-pro-selection-context
+    input {
+    height: 20px;
+    min-height: 20px;
+
+    font-size: 8px;
+}
+
+.builder-pro-selection-context
+    button {
+    padding: 1px 5px;
+}
+
+/*
+ * B5/B7 seguian dejando el bloque legacy de Seleccion en el DOM.
+ * Nunca debe renderizar visualmente junto al contexto nuevo.
+ */
+.builder-pro-context-bar[
+    data-builder-pro-context-tool="selection"
+]
+    .builder-pro-sections {
+    display: none !important;
+}
+
+/*
+ * Para el resto de herramientas el bloque legacy solo actua como
+ * proveedor temporal de controles contextuales. No puede crear filas.
+ */
+.builder-pro-workspace-shell
+    .builder-pro-sections {
+    height: 30px;
+    min-height: 30px;
+    max-height: 30px;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-sections >
+    .builder-pro-section {
+    height: 30px;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-sections >
+    .builder-pro-section >
+    .builder-pro-section-body {
+    height: 30px;
+
+    gap: 3px;
+
+    padding: 0 2px;
+}
+
+/* Rail alineado exactamente con el borde inferior de la paleta. */
+.builder-pro-floating-tool-rail {
+    top: 60px;
+
+    width: 40px;
+
+    border-radius:
+        0 0 4px 0;
+
+    box-shadow:
+        2px 2px 6px rgba(0, 0, 0, 0.24);
+}
+
+.builder-pro-floating-tool-flyout {
+    top: 63px;
+}
+
+.builder-pro-floating-tool-flyout[
+    data-tool-flyout="transform"
+] {
+    top: 129px;
+}
+
+.builder-pro-floating-tool-flyout[
+    data-tool-flyout="repeat"
+] {
+    top: 195px;
+}
+
+/* Outliner mas pequeño y sin rotulos redundantes. */
+.builder-pro-outliner-panel {
+    left: 46px;
+    bottom: 62px;
+
+    width: 258px;
+
+    height: min(
+        32vh,
+        310px
+    );
+
+    min-height: 215px;
+}
+
+.builder-pro-outliner-panel-header {
+    flex-basis: 25px;
+
+    min-height: 25px;
+
+    padding:
+        2px
+        3px
+        2px
+        6px;
+}
+
+.builder-pro-outliner-panel-header
+    strong {
+    font-size: 8px;
+}
+
+.builder-pro-outliner-panel-body {
+    padding: 4px;
+}
+
+/*
+ * "Capa de trabajo" y "Outliner" ya los explica la propia estructura.
+ * El selector queda visible directamente.
+ */
+.builder-pro-outliner-panel
+    .builder-pro-subtitle {
+    display: none !important;
+}
+
+.builder-pro-outliner-panel
+    .builder-pro-group-select {
+    flex-basis: 22px;
+
+    height: 22px;
+    min-height: 22px;
+
+    margin-bottom: 3px;
+}
+
+.builder-pro-outliner-panel
+    .builder-pro-outliner-search {
+    flex-basis: 24px;
+
+    height: 24px;
+
+    margin-bottom: 3px;
+}
+
+.builder-pro-outliner-panel
+    .builder-pro-outliner {
+    min-height: 75px;
+
+    overflow-y: auto;
+}
+
+/*
+ * Popovers salen hacia el canvas.
+ * Nunca ensanchan ni aumentan la altura de la paleta.
+ */
+.builder-pro-context-popover {
+    top: calc(100% + 4px);
+
+    z-index: 1350;
+}
+
+/* Toast debajo de la paleta compacta. */
+.builder-pro-status-toast {
+    top: 66px;
+}
+
+/* Ayuda alineada a la paleta, no al extremo derecho del viewport. */
+.builder-pro-help {
+    top: 64px;
+    right: auto;
+    left: 472px;
+
+    width: 300px;
+}
+
+@media (max-width: 900px) {
+    .builder-pro-workspace-shell {
+        left: 38px;
+
+        width: min(
+            690px,
+            calc(100vw - 44px)
+        );
+    }
+
+    .builder-pro-floating-tool-rail {
+        top: 60px;
+
+        width: 38px;
+    }
+
+    .builder-pro-outliner-panel {
+        left: 42px;
+
+        width: 242px;
+
+        height: min(
+            30vh,
+            290px
+        );
+    }
+
+    .builder-pro-help {
+        left: 390px;
+
+        width: 280px;
+    }
+}
+/* P13-B7.2: topbar full-width, paleta unificada y Mover sin scroll. */
+
+/* La Construccion Avanzada ocupa todo el ancho desde el borde izquierdo. */
+.builder-pro-workspace-shell {
+    top: 0;
+    right: 0;
+    left: 0;
+
+    width: 100vw;
+    max-width: none;
+
+    height: 60px;
+
+    border-right: 0;
+    border-bottom: 1px solid #777b77;
+    border-radius: 0;
+
+    background: #d6d5d0;
+
+    box-shadow:
+        0 2px 7px rgba(0, 0, 0, 0.24);
+}
+
+.builder-pro-shell-content {
+    width: 100vw;
+    max-width: none;
+}
+
+/* Un unico lenguaje visual para topbar, rail y Outliner. */
+.builder-pro-workspace-shell
+    .builder-pro-global-toolbar {
+    background: #d1d0cb;
+
+    border-bottom:
+        1px solid
+        #a3a49f;
+}
+
+.builder-pro-context-bar {
+    background: #e2e1dc;
+}
+
+.builder-pro-context-tool-name {
+    background: #d1d0cb;
+
+    border-right:
+        1px solid
+        #a3a49f;
+
+    color: #303332;
+}
+
+.builder-pro-floating-tool-rail {
+    top: 60px;
+    left: 0;
+
+    width: 40px;
+
+    padding: 4px;
+
+    border-right:
+        1px solid
+        #777b77;
+
+    border-bottom:
+        1px solid
+        #777b77;
+
+    background: #d1d0cb;
+
+    box-shadow:
+        2px 2px 6px rgba(0, 0, 0, 0.22);
+}
+
+.builder-pro-floating-tool-rail
+    .builder-pro-tool-button {
+    border:
+        1px solid
+        #aaa9a4;
+
+    background: #ecebe7;
+
+    color: #303332;
+}
+
+.builder-pro-floating-tool-rail
+    .builder-pro-tool-button:hover {
+    border-color: #7d8584;
+
+    background: #dcecf6;
+
+    color: #242727;
+}
+
+.builder-pro-floating-tool-rail
+    .builder-pro-tool-button.is-active {
+    border-color: #34383a;
+
+    background: #4b5052;
+
+    color: #ffffff;
+}
+
+.builder-pro-outliner-panel {
+    left: 0;
+    bottom: 62px;
+
+    border-color: #777b77;
+
+    background: #e2e1dc;
+}
+
+.builder-pro-outliner-panel-header {
+    background: #d1d0cb;
+
+    border-bottom:
+        1px solid
+        #a3a49f;
+}
+
+/*
+ * MOVER: toda la herramienta cabe en la contextual full-width.
+ * Se elimina el scrollbar horizontal y se compactan sus grupos.
+ */
+.builder-pro-context-bar[
+    data-builder-pro-context-tool="move"
+]
+    .builder-pro-tool-panel-body {
+    overflow: hidden !important;
+}
+
+.builder-pro-context-bar[
+    data-builder-pro-context-tool="move"
+]
+    .builder-pro-sections {
+    width: 100%;
+    height: 30px;
+
+    overflow: hidden !important;
+}
+
+.builder-pro-context-bar[
+    data-builder-pro-context-tool="move"
+]
+    .builder-pro-sections >
+    .builder-pro-section {
+    width: 100%;
+    height: 30px;
+
+    overflow: visible !important;
+}
+
+.builder-pro-context-bar[
+    data-builder-pro-context-tool="move"
+]
+    .builder-pro-section-body {
+    display: flex !important;
+    align-items: center;
+    flex-wrap: nowrap;
+
+    gap: 4px;
+
+    width: 100%;
+    height: 30px;
+
+    padding: 0 2px;
+
+    overflow: hidden !important;
+}
+
+.builder-pro-context-bar[
+    data-builder-pro-context-tool="move"
+]
+    .builder-pro-section-body >
+    * {
+    flex: 0 0 auto;
+
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+/* Casillas y Altura. */
+.builder-pro-context-bar[
+    data-builder-pro-context-tool="move"
+]
+    .builder-pro-field-row {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 3px;
+
+    width: auto;
+    min-width: 0;
+
+    margin: 0;
+}
+
+.builder-pro-context-bar[
+    data-builder-pro-context-tool="move"
+]
+    .builder-pro-field-row >
+    span {
+    flex: 0 0 auto;
+
+    font-size: 7px;
+
+    white-space: nowrap;
+}
+
+.builder-pro-context-bar[
+    data-builder-pro-context-tool="move"
+]
+    .builder-pro-small-input {
+    flex: 0 0 48px;
+
+    width: 48px;
+    min-width: 48px;
+
+    height: 20px;
+    min-height: 20px;
+
+    padding: 0 4px;
+
+    font-size: 8px;
+}
+
+/* Primer grid de Mover: Izquierda / Derecha / Arriba / Abajo. */
+.builder-pro-context-bar[
+    data-builder-pro-context-tool="move"
+]
+    .builder-pro-section-body >
+    .builder-pro-grid-2:first-of-type {
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, 52px);
+
+    gap: 2px;
+
+    width: 214px;
+
+    margin: 0;
+}
+
+.builder-pro-context-bar[
+    data-builder-pro-context-tool="move"
+]
+    .builder-pro-section-body >
+    .builder-pro-grid-2:first-of-type
+    button {
+    width: 52px;
+    min-width: 52px;
+
+    height: 20px;
+    min-height: 20px;
+
+    padding: 1px 2px;
+
+    font-size: 7px;
+}
+
+/* Separadores/titulos internos convertidos en etiquetas pequenas. */
+.builder-pro-context-bar[
+    data-builder-pro-context-tool="move"
+]
+    .builder-pro-subtitle {
+    display: inline-flex;
+    align-items: center;
+
+    min-height: 20px;
+
+    margin: 0;
+    padding: 0 5px;
+
+    border-left:
+        1px solid
+        #b2b3ae;
+
+    color: #5a5d5b;
+
+    font-size: 7px;
+    font-weight: 700;
+
+    white-space: nowrap;
+}
+
+/* XYZ + Aplicar. */
+.builder-pro-context-bar[
+    data-builder-pro-context-tool="move"
+]
+    .builder-pro-offset-row {
+    display: grid;
+
+    grid-template-columns:
+        42px
+        42px
+        42px
+        48px;
+
+    gap: 2px;
+
+    width: 180px;
+
+    margin: 0;
+}
+
+.builder-pro-context-bar[
+    data-builder-pro-context-tool="move"
+]
+    .builder-pro-offset-row
+    input {
+    width: 42px;
+    min-width: 42px;
+
+    height: 20px;
+    min-height: 20px;
+
+    padding: 0 4px;
+
+    font-size: 8px;
+}
+
+.builder-pro-context-bar[
+    data-builder-pro-context-tool="move"
+]
+    .builder-pro-offset-row
+    button {
+    width: 48px;
+    min-width: 48px;
+
+    height: 20px;
+    min-height: 20px;
+
+    padding: 1px 3px;
+
+    font-size: 7px;
+}
+
+/* Los siguientes grid-2 son Altura y Referencia; compactos pero legibles. */
+.builder-pro-context-bar[
+    data-builder-pro-context-tool="move"
+]
+    .builder-pro-section-body >
+    .builder-pro-grid-2:not(:first-of-type) {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, minmax(54px, auto));
+
+    gap: 2px;
+
+    width: auto;
+
+    margin: 0;
+}
+
+.builder-pro-context-bar[
+    data-builder-pro-context-tool="move"
+]
+    .builder-pro-section-body >
+    .builder-pro-grid-2:not(:first-of-type)
+    button {
+    min-width: 54px;
+
+    height: 20px;
+    min-height: 20px;
+
+    padding: 1px 4px;
+
+    font-size: 7px;
+
+    white-space: nowrap;
+}
+
+/* Bajar al suelo deja de ocupar una fila completa. */
+.builder-pro-context-bar[
+    data-builder-pro-context-tool="move"
+]
+    .builder-pro-full {
+    width: auto;
+    min-width: 72px;
+
+    height: 20px;
+    min-height: 20px;
+
+    margin: 0;
+    padding: 1px 5px;
+
+    font-size: 7px;
+
+    white-space: nowrap;
+}
+
+/* Los hints no pertenecen a una barra contextual. */
+.builder-pro-context-bar[
+    data-builder-pro-context-tool="move"
+]
+    .builder-pro-hint {
+    display: none !important;
+}
+
+/* Nunca debe aparecer un scrollbar debajo de Mover. */
+.builder-pro-context-bar[
+    data-builder-pro-context-tool="move"
+]
+    * {
+    scrollbar-width: none;
+}
+
+.builder-pro-context-bar[
+    data-builder-pro-context-tool="move"
+]
+    *::-webkit-scrollbar {
+    display: none;
+}
+
+/* El shell full-width permite que los controles finales lleguen hasta la derecha. */
+.builder-pro-context-bar[
+    data-builder-pro-context-tool="move"
+]
+    .builder-pro-tool-panel-body {
+    padding-right: 6px;
+}
+
+/* Flyouts siguen naciendo al lado del rail. */
+.builder-pro-floating-tool-flyout {
+    left: 40px;
+}
+
+/* Responsive: ancho completo tambien en pantallas menores. */
+@media (max-width: 900px) {
+    .builder-pro-workspace-shell {
+        right: 0;
+        left: 0;
+
+        width: 100vw;
+    }
+
+    .builder-pro-outliner-panel {
+        left: 0;
+    }
+}
+/* P13-B7.3: contextual generica compacta, sin overflow ni scroll horizontal. */
+
+/*
+ * Todas las herramientas legacy se adaptan a una barra contextual horizontal.
+ * Mover deja de ser una excepcion.
+ */
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-sections {
+    display: block !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+
+    height: 30px !important;
+    min-height: 30px !important;
+    max-height: 30px !important;
+
+    overflow: hidden !important;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-sections >
+    .builder-pro-section {
+    display: block !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+
+    height: 30px !important;
+    min-height: 30px !important;
+    max-height: 30px !important;
+
+    margin: 0 !important;
+
+    border: 0 !important;
+
+    overflow: hidden !important;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-section >
+    summary {
+    display: none !important;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-section-body {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+
+    gap: 3px !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+
+    height: 30px !important;
+
+    padding: 0 3px !important;
+
+    overflow: hidden !important;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-section-body >
+    * {
+    flex: 0 0 auto !important;
+
+    min-width: 0;
+
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+
+    box-sizing: border-box;
+}
+
+/* Titulos internos pasan a separadores pequenos. */
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-subtitle {
+    display: inline-flex !important;
+    align-items: center !important;
+
+    min-height: 21px !important;
+
+    margin: 0 !important;
+    padding: 0 5px !important;
+
+    border-left:
+        1px solid
+        #b2b3ae !important;
+
+    color: #565a58 !important;
+
+    font-size: 9px !important;
+    font-weight: 700 !important;
+
+    white-space: nowrap !important;
+}
+
+/* Campos en linea, nunca bloques verticales. */
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-field-row {
+    display: inline-flex !important;
+    align-items: center !important;
+
+    gap: 3px !important;
+
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: 150px !important;
+
+    margin: 0 !important;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-field-row >
+    span {
+    flex: 0 0 auto !important;
+
+    min-width: 0 !important;
+
+    font-size: 9px !important;
+
+    white-space: nowrap !important;
+}
+
+/*
+ * Este es el bug visible de Transformar:
+ * los inputs heredaban flex/width de panel vertical y salian de su caja.
+ */
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-small-input,
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    input[type="number"],
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    input[type="text"] {
+    flex: 0 0 52px !important;
+
+    width: 52px !important;
+    min-width: 0 !important;
+    max-width: 52px !important;
+
+    height: 22px !important;
+    min-height: 22px !important;
+
+    padding: 0 4px !important;
+
+    box-sizing: border-box !important;
+
+    font-size: 9px !important;
+}
+
+/* Grids horizontales para Transformar, Repetir, Formaciones, etc. */
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-grid-2,
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-grid-3 {
+    display: inline-flex !important;
+    align-items: center !important;
+
+    gap: 2px !important;
+
+    width: auto !important;
+    min-width: 0 !important;
+
+    margin: 0 !important;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-grid-2 >
+    *,
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-grid-3 >
+    * {
+    flex: 0 0 auto !important;
+
+    min-width: 0 !important;
+}
+
+/* Boton contextual comun. */
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-section
+    button,
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-full,
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-offset-row
+    button {
+    width: auto !important;
+    min-width: 50px !important;
+    max-width: 150px !important;
+
+    height: 22px !important;
+    min-height: 22px !important;
+
+    margin: 0 !important;
+    padding: 1px 6px !important;
+
+    box-sizing: border-box !important;
+
+    font-size: 9px !important;
+    line-height: 1 !important;
+
+    white-space: nowrap !important;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-full-grid {
+    grid-column: auto !important;
+}
+
+/* XYZ y otros offsets siempre compactos. */
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-offset-row {
+    display: inline-flex !important;
+    align-items: center !important;
+
+    gap: 2px !important;
+
+    width: auto !important;
+    min-width: 0 !important;
+
+    margin: 0 !important;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-offset-row
+    input {
+    flex: 0 0 46px !important;
+
+    width: 46px !important;
+    min-width: 0 !important;
+    max-width: 46px !important;
+}
+
+/* Selects legacy compactos. */
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    select {
+    width: auto !important;
+    min-width: 92px !important;
+    max-width: 170px !important;
+
+    height: 22px !important;
+    min-height: 22px !important;
+
+    box-sizing: border-box !important;
+
+    font-size: 9px !important;
+}
+
+/* Renombrados y grupos no pueden forzar ancho infinito. */
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-group-rename {
+    display: inline-flex !important;
+    align-items: center !important;
+
+    gap: 2px !important;
+
+    width: auto !important;
+    min-width: 0 !important;
+
+    margin: 0 !important;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-group-rename
+    input {
+    width: 100px !important;
+    max-width: 100px !important;
+}
+
+/* Hints/documentacion fuera de la contextual. */
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-hint {
+    display: none !important;
+}
+
+/* Nunca debe volver a aparecer una barra horizontal debajo de una herramienta. */
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    * {
+    scrollbar-width: none !important;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    *::-webkit-scrollbar {
+    display: none !important;
+}
+
+/* Tipografia general algo mayor: la barra seguira siendo compacta. */
+.builder-pro-context-tool-name {
+    font-size: 9px !important;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-global-toolbar >
+    button {
+    font-size: 10px !important;
+}
+
+/* ===== MINIMIZAR REAL ===== */
+
+.builder-pro-workspace-shell.is-minimized {
+    height: 30px;
+}
+
+.builder-pro-workspace-shell.is-minimized
+    .builder-pro-shell-content {
+    height: 30px;
+}
+
+.builder-pro-workspace-shell.is-minimized
+    .builder-pro-workspace {
+    display: none !important;
+}
+
+.builder-pro-workspace-shell.is-minimized
+    .builder-pro-global-toolbar {
+    height: 30px;
+    min-height: 30px;
+    max-height: 30px;
+
+    border-bottom: 0;
+}
+
+body.builder-pro-immersive:has(
+    .builder-pro-workspace-shell.is-minimized
+)
+    .builder-pro-floating-tool-rail {
+    top: 30px;
+}
+
+body.builder-pro-immersive:has(
+    .builder-pro-workspace-shell.is-minimized
+)
+    .builder-pro-floating-tool-flyout {
+    top: 33px;
+}
+
+/* ===== OUTLINER: SCROLLBAR REAL Y VISIBLE ===== */
+
+.builder-pro-outliner-panel-body {
+    overflow: hidden !important;
+}
+
+.builder-pro-outliner-panel
+    .builder-pro-section-body {
+    min-height: 0 !important;
+
+    overflow: hidden !important;
+}
+
+.builder-pro-outliner-panel
+    .builder-pro-outliner {
+    flex: 1 1 auto !important;
+
+    min-height: 70px !important;
+    max-height: none !important;
+
+    overflow-x: hidden !important;
+    overflow-y: scroll !important;
+
+    scrollbar-width: auto !important;
+    scrollbar-color:
+        #777b77
+        #d0d1cd;
+}
+
+.builder-pro-outliner-panel
+    .builder-pro-outliner::-webkit-scrollbar {
+    display: block !important;
+
+    width: 9px !important;
+}
+
+.builder-pro-outliner-panel
+    .builder-pro-outliner::-webkit-scrollbar-track {
+    background: #d0d1cd;
+}
+
+.builder-pro-outliner-panel
+    .builder-pro-outliner::-webkit-scrollbar-thumb {
+    border: 2px solid #d0d1cd;
+    border-radius: 5px;
+
+    background: #777b77;
+}
+/* P13-B7.4: limpieza de Seleccion, tipografia legible y sizing final. */
+
+/* Dos filas algo mas altas: siguen compactas, pero ya no microscopicas. */
+.builder-pro-workspace-shell {
+    height: 66px;
+}
+
+.builder-pro-shell-content {
+    height: 66px;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-global-toolbar {
+    height: 30px;
+    min-height: 30px;
+    max-height: 30px;
+
+    padding-top: 3px;
+    padding-bottom: 3px;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-workspace {
+    height: 36px;
+    min-height: 36px;
+    max-height: 36px;
+}
+
+.builder-pro-context-bar {
+    grid-template-columns:
+        64px
+        minmax(0, 1fr);
+
+    height: 36px;
+    min-height: 36px;
+    max-height: 36px;
+}
+
+.builder-pro-context-tool-name {
+    height: 36px;
+
+    padding: 0 7px;
+
+    font-size: 10px !important;
+    letter-spacing: 0.01em;
+}
+
+.builder-pro-tool-panel-body {
+    height: 36px;
+
+    padding: 2px 5px;
+}
+
+/* Seleccion usa exclusivamente el contexto nuevo. */
+section.builder-pro-tool-panel.builder-pro-context-bar[
+    data-builder-pro-context-tool="selection"
+]
+    .builder-pro-tool-panel-body >
+    .builder-pro-sections,
+section.builder-pro-tool-panel.builder-pro-context-bar[
+    data-builder-pro-context-tool="selection"
+]
+    .builder-pro-sections {
+    display: none !important;
+
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+
+    height: 0 !important;
+    min-height: 0 !important;
+    max-height: 0 !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    overflow: hidden !important;
+
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+section.builder-pro-tool-panel.builder-pro-context-bar[
+    data-builder-pro-context-tool="selection"
+]
+    .builder-pro-selection-context {
+    display: flex !important;
+
+    width: 100% !important;
+    height: 32px !important;
+    min-height: 32px !important;
+
+    gap: 4px !important;
+
+    overflow: visible !important;
+}
+
+.builder-pro-context-label {
+    font-size: 9px !important;
+}
+
+.builder-pro-context-cluster {
+    min-height: 30px !important;
+
+    gap: 3px !important;
+
+    padding-right: 5px !important;
+}
+
+.builder-pro-selection-context
+    button,
+.builder-pro-selection-context
+    select,
+.builder-pro-selection-context
+    input {
+    height: 24px !important;
+    min-height: 24px !important;
+
+    font-size: 10px !important;
+}
+
+.builder-pro-selection-context
+    button {
+    padding:
+        2px
+        7px !important;
+}
+
+/* Herramientas legacy: misma altura y fuente, usando el ancho completo. */
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-sections {
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-sections >
+    .builder-pro-section {
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-section-body {
+    height: 32px !important;
+
+    gap: 4px !important;
+
+    padding:
+        0
+        4px !important;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-subtitle {
+    min-height: 24px !important;
+
+    padding:
+        0
+        6px !important;
+
+    font-size: 9px !important;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-field-row >
+    span {
+    font-size: 10px !important;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-small-input,
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    input[type="number"],
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    input[type="text"] {
+    flex-basis: 60px !important;
+
+    width: 60px !important;
+    max-width: 60px !important;
+
+    height: 24px !important;
+    min-height: 24px !important;
+
+    padding:
+        0
+        5px !important;
+
+    font-size: 10px !important;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-section
+    button,
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-full,
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-offset-row
+    button {
+    min-width: 56px !important;
+    max-width: 170px !important;
+
+    height: 24px !important;
+    min-height: 24px !important;
+
+    padding:
+        2px
+        7px !important;
+
+    font-size: 10px !important;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-offset-row
+    input {
+    flex-basis: 52px !important;
+
+    width: 52px !important;
+    max-width: 52px !important;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    select {
+    min-width: 110px !important;
+    max-width: 190px !important;
+
+    height: 24px !important;
+    min-height: 24px !important;
+
+    font-size: 10px !important;
+}
+
+/* Blueprints/grupos: inputs de nombre con espacio suficiente, sin desbordar. */
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-group-rename
+    input {
+    width: 130px !important;
+    max-width: 130px !important;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-group-select {
+    width: 170px !important;
+    max-width: 170px !important;
+
+    height: 24px !important;
+    min-height: 24px !important;
+
+    margin: 0 !important;
+
+    font-size: 10px !important;
+}
+
+/* Toolbar superior tambien legible. */
+.builder-pro-workspace-shell
+    .builder-pro-global-toolbar >
+    button {
+    width: 24px !important;
+    min-width: 24px !important;
+
+    height: 22px !important;
+    min-height: 22px !important;
+
+    font-size: 11px !important;
+}
+
+.builder-pro-shell-counter {
+    height: 22px;
+
+    font-size: 9px;
+}
+
+.builder-pro-shell-control {
+    width: 22px;
+    height: 22px;
+
+    font-size: 11px;
+}
+
+/* Rail acompasa su inicio con la nueva altura de topbar. */
+.builder-pro-floating-tool-rail {
+    top: 66px;
+}
+
+.builder-pro-floating-tool-flyout {
+    top: 69px;
+}
+
+.builder-pro-floating-tool-flyout[
+    data-tool-flyout="transform"
+] {
+    top: 135px;
+}
+
+.builder-pro-floating-tool-flyout[
+    data-tool-flyout="repeat"
+] {
+    top: 201px;
+}
+
+/* Minimizacion: una unica fila de 30px y contexto completamente fuera. */
+.builder-pro-workspace-shell.is-minimized {
+    height: 30px !important;
+}
+
+.builder-pro-workspace-shell.is-minimized
+    .builder-pro-shell-content {
+    height: 30px !important;
+}
+
+.builder-pro-workspace-shell.is-minimized
+    .builder-pro-workspace,
+.builder-pro-workspace-shell.is-minimized
+    .builder-pro-context-bar {
+    display: none !important;
+}
+
+body.builder-pro-immersive:has(
+    .builder-pro-workspace-shell.is-minimized
+)
+    .builder-pro-floating-tool-rail {
+    top: 30px !important;
+}
+
+body.builder-pro-immersive:has(
+    .builder-pro-workspace-shell.is-minimized
+)
+    .builder-pro-floating-tool-flyout {
+    top: 33px !important;
+}
+
+/* Outliner: fuente legible sin perder densidad. */
+.builder-pro-outliner-panel {
+    width: 270px;
+
+    font-size: 10px;
+}
+
+.builder-pro-outliner-panel-header
+    strong {
+    font-size: 10px;
+}
+
+.builder-pro-outliner-panel
+    .builder-pro-group-select,
+.builder-pro-outliner-search
+    input {
+    font-size: 10px !important;
+}
+
+.builder-pro-outliner-name {
+    font-size: 10px !important;
+}
+
+.builder-pro-outliner-item {
+    font-size: 10px !important;
+}
+
+.builder-pro-outliner-count {
+    font-size: 9px !important;
+}
+
+.builder-pro-outliner-item
+    small {
+    font-size: 9px !important;
+}
+
+/* Scrollbar claramente visible. */
+.builder-pro-outliner-panel
+    .builder-pro-outliner {
+    overflow-y: scroll !important;
+
+    scrollbar-width: auto !important;
+
+    scrollbar-color:
+        #626864
+        #d0d1cd !important;
+}
+
+.builder-pro-outliner-panel
+    .builder-pro-outliner::-webkit-scrollbar {
+    display: block !important;
+
+    width: 10px !important;
+}
+
+.builder-pro-outliner-panel
+    .builder-pro-outliner::-webkit-scrollbar-track {
+    background: #d0d1cd !important;
+}
+
+.builder-pro-outliner-panel
+    .builder-pro-outliner::-webkit-scrollbar-thumb {
+    min-height: 28px;
+
+    border:
+        2px solid
+        #d0d1cd !important;
+
+    border-radius: 6px;
+
+    background: #626864 !important;
+}
+/* P13-B7.5: restaurar filtro por herramienta y scroll real del Outliner. */
+
+/*
+ * B7.3 generalizo el layout con display:block !important y piso
+ * el selector original por herramienta. Restablecemos explicitamente
+ * que solo una familia pueda estar visible.
+ */
+.builder-pro-workspace-shell
+    .builder-pro-sections >
+    .builder-pro-section {
+    display: none !important;
+}
+
+/* Seleccion no usa nunca su seccion legacy; usa SelectionContext. */
+.builder-pro-workspace-shell
+    .builder-pro-sections[
+        data-builder-pro-active-tool="selection"
+    ] >
+    .builder-pro-section {
+    display: none !important;
+}
+
+/* Familias simples. */
+.builder-pro-workspace-shell
+    .builder-pro-sections[
+        data-builder-pro-active-tool="move"
+    ] >
+    .builder-pro-section[
+        data-builder-pro-family="move"
+    ],
+.builder-pro-workspace-shell
+    .builder-pro-sections[
+        data-builder-pro-active-tool="transform"
+    ] >
+    .builder-pro-section[
+        data-builder-pro-family="transform"
+    ],
+.builder-pro-workspace-shell
+    .builder-pro-sections[
+        data-builder-pro-active-tool="arrange"
+    ] >
+    .builder-pro-section[
+        data-builder-pro-family="arrange"
+    ],
+.builder-pro-workspace-shell
+    .builder-pro-sections[
+        data-builder-pro-active-tool="replace"
+    ] >
+    .builder-pro-section[
+        data-builder-pro-family="replace"
+    ],
+.builder-pro-workspace-shell
+    .builder-pro-sections[
+        data-builder-pro-active-tool="collision"
+    ] >
+    .builder-pro-section[
+        data-builder-pro-family="collision"
+    ],
+.builder-pro-workspace-shell
+    .builder-pro-sections[
+        data-builder-pro-active-tool="blueprints"
+    ] >
+    .builder-pro-section[
+        data-builder-pro-family="blueprints"
+    ] {
+    display: block !important;
+}
+
+/*
+ * Repeticion tiene varias secciones hermanas.
+ * Solo se muestra la variante elegida en el flyout.
+ */
+.builder-pro-workspace-shell
+    .builder-pro-sections[
+        data-builder-pro-active-tool="repeat"
+    ] >
+    .builder-pro-section[
+        data-builder-pro-family="repeat"
+    ] {
+    display: none !important;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-sections[
+        data-builder-pro-active-tool="repeat"
+    ][
+        data-builder-pro-active-variant="repeat-linear"
+    ] >
+    .builder-pro-section[
+        data-builder-pro-variant="repeat-linear"
+    ],
+.builder-pro-workspace-shell
+    .builder-pro-sections[
+        data-builder-pro-active-tool="repeat"
+    ][
+        data-builder-pro-active-variant="repeat-grid"
+    ] >
+    .builder-pro-section[
+        data-builder-pro-variant="repeat-grid"
+    ],
+.builder-pro-workspace-shell
+    .builder-pro-sections[
+        data-builder-pro-active-tool="repeat"
+    ][
+        data-builder-pro-active-variant="repeat-radial"
+    ] >
+    .builder-pro-section[
+        data-builder-pro-variant="repeat-radial"
+    ],
+.builder-pro-workspace-shell
+    .builder-pro-sections[
+        data-builder-pro-active-tool="repeat"
+    ][
+        data-builder-pro-active-variant="repeat-fill"
+    ] >
+    .builder-pro-section[
+        data-builder-pro-variant="repeat-fill"
+    ] {
+    display: block !important;
+}
+
+/* El selector de Seleccion debe prevalecer incluso sobre cualquier legacy. */
+section.builder-pro-tool-panel.builder-pro-context-bar[
+    data-builder-pro-context-tool="selection"
+]
+    .builder-pro-sections {
+    display: none !important;
+}
+
+/* ===== OUTLINER: geometria de scroll determinista ===== */
+
+.builder-pro-outliner-panel {
+    display: flex !important;
+    flex-direction: column !important;
+
+    height: min(38vh, 360px) !important;
+    min-height: 230px !important;
+
+    overflow: hidden !important;
+
+    pointer-events: auto !important;
+}
+
+.builder-pro-outliner-panel-header {
+    flex: 0 0 27px !important;
+}
+
+.builder-pro-outliner-panel-body {
+    flex: 1 1 auto !important;
+
+    display: block !important;
+
+    height: auto !important;
+    min-height: 0 !important;
+
+    padding: 4px !important;
+
+    overflow: hidden !important;
+
+    pointer-events: auto !important;
+}
+
+.builder-pro-outliner-panel-body >
+    .builder-pro-section {
+    display: block !important;
+
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+
+    overflow: hidden !important;
+
+    pointer-events: auto !important;
+}
+
+.builder-pro-outliner-panel-body
+    .builder-pro-section-body {
+    display: grid !important;
+
+    grid-template-rows:
+        24px
+        26px
+        minmax(0, 1fr) !important;
+
+    gap: 3px !important;
+
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+
+    padding: 0 !important;
+
+    overflow: hidden !important;
+
+    pointer-events: auto !important;
+}
+
+/* Solo estas tres piezas ocupan filas del grid. */
+.builder-pro-outliner-panel
+    .builder-pro-group-select {
+    grid-row: 1;
+
+    width: 100% !important;
+    height: 24px !important;
+    min-height: 24px !important;
+
+    margin: 0 !important;
+}
+
+.builder-pro-outliner-panel
+    .builder-pro-outliner-search {
+    grid-row: 2;
+
+    display: grid !important;
+
+    width: 100% !important;
+    height: 26px !important;
+    min-height: 26px !important;
+
+    margin: 0 !important;
+}
+
+.builder-pro-outliner-panel
+    .builder-pro-outliner {
+    grid-row: 3;
+
+    display: block !important;
+
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    margin: 0 !important;
+
+    overflow-x: hidden !important;
+    overflow-y: scroll !important;
+
+    overscroll-behavior: contain !important;
+
+    scrollbar-width: auto !important;
+    scrollbar-color:
+        #626864
+        #d0d1cd !important;
+
+    pointer-events: auto !important;
+    touch-action: pan-y !important;
+}
+
+/* Elementos de documentacion no participan en el grid. */
+.builder-pro-outliner-panel
+    .builder-pro-subtitle,
+.builder-pro-outliner-panel
+    .builder-pro-hint {
+    display: none !important;
+}
+
+.builder-pro-outliner-panel
+    .builder-pro-outliner::-webkit-scrollbar {
+    display: block !important;
+
+    width: 10px !important;
+}
+
+.builder-pro-outliner-panel
+    .builder-pro-outliner::-webkit-scrollbar-track {
+    background: #d0d1cd !important;
+}
+
+.builder-pro-outliner-panel
+    .builder-pro-outliner::-webkit-scrollbar-thumb {
+    min-height: 28px;
+
+    border:
+        2px solid
+        #d0d1cd !important;
+
+    border-radius: 6px;
+
+    background: #626864 !important;
+}
+/* P13-B7.6: correccion basada en auditoria real del working tree. */
+
+/*
+ * B7.3 usa exactamente este selector con display:block!important.
+ * Repetimos LA MISMA especificidad despues, con display:none,
+ * para que ninguna seccion legacy quede visible por defecto.
+ */
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-sections >
+    .builder-pro-section {
+    display: none !important;
+}
+
+/* Seleccion solo usa BuilderProSelectionContext. */
+.builder-pro-workspace-shell
+    .builder-pro-context-bar[
+        data-builder-pro-context-tool="selection"
+    ]
+    .builder-pro-sections {
+    display: none !important;
+}
+
+/* Herramientas simples: mostrar solo su familia. */
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-sections[
+        data-builder-pro-active-tool="move"
+    ] >
+    .builder-pro-section[
+        data-builder-pro-family="move"
+    ],
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-sections[
+        data-builder-pro-active-tool="transform"
+    ] >
+    .builder-pro-section[
+        data-builder-pro-family="transform"
+    ],
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-sections[
+        data-builder-pro-active-tool="arrange"
+    ] >
+    .builder-pro-section[
+        data-builder-pro-family="arrange"
+    ],
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-sections[
+        data-builder-pro-active-tool="replace"
+    ] >
+    .builder-pro-section[
+        data-builder-pro-family="replace"
+    ],
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-sections[
+        data-builder-pro-active-tool="collision"
+    ] >
+    .builder-pro-section[
+        data-builder-pro-family="collision"
+    ],
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-sections[
+        data-builder-pro-active-tool="blueprints"
+    ] >
+    .builder-pro-section[
+        data-builder-pro-family="blueprints"
+    ] {
+    display: block !important;
+}
+
+/* Repeticion: mostrar solo la variante seleccionada. */
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-sections[
+        data-builder-pro-active-tool="repeat"
+    ] >
+    .builder-pro-section[
+        data-builder-pro-family="repeat"
+    ] {
+    display: none !important;
+}
+
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-sections[
+        data-builder-pro-active-tool="repeat"
+    ][
+        data-builder-pro-active-variant="repeat-linear"
+    ] >
+    .builder-pro-section[
+        data-builder-pro-variant="repeat-linear"
+    ],
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-sections[
+        data-builder-pro-active-tool="repeat"
+    ][
+        data-builder-pro-active-variant="repeat-grid"
+    ] >
+    .builder-pro-section[
+        data-builder-pro-variant="repeat-grid"
+    ],
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-sections[
+        data-builder-pro-active-tool="repeat"
+    ][
+        data-builder-pro-active-variant="repeat-radial"
+    ] >
+    .builder-pro-section[
+        data-builder-pro-variant="repeat-radial"
+    ],
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-sections[
+        data-builder-pro-active-tool="repeat"
+    ][
+        data-builder-pro-active-variant="repeat-fill"
+    ] >
+    .builder-pro-section[
+        data-builder-pro-variant="repeat-fill"
+    ] {
+    display: block !important;
+}
+
+/*
+ * OUTLINER:
+ * El scroll pertenece al BODY del panel, no al arbol interno.
+ * Asi evitamos toda la cadena de alturas 100% / grid / overflow
+ * contradictoria de B7.3-B7.5.
+ */
+.builder-pro-outliner-panel {
+    height: min(40vh, 380px) !important;
+    min-height: 240px !important;
+
+    overflow: hidden !important;
+}
+
+.builder-pro-outliner-panel-body {
+    flex: 1 1 auto !important;
+
+    display: block !important;
+
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    padding: 5px !important;
+
+    overflow-x: hidden !important;
+    overflow-y: scroll !important;
+
+    overscroll-behavior: contain !important;
+
+    pointer-events: auto !important;
+
+    scrollbar-width: auto !important;
+    scrollbar-color:
+        #5f6662
+        #d0d1cd !important;
+}
+
+.builder-pro-outliner-panel-body >
+    .builder-pro-section {
+    display: block !important;
+
+    width: 100% !important;
+
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    overflow: visible !important;
+}
+
+.builder-pro-outliner-panel-body
+    .builder-pro-section-body {
+    display: block !important;
+
+    width: 100% !important;
+
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    padding: 0 !important;
+
+    overflow: visible !important;
+}
+
+.builder-pro-outliner-panel
+    .builder-pro-outliner {
+    display: block !important;
+
+    width: 100% !important;
+
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+
+    overflow: visible !important;
+
+    pointer-events: auto !important;
+}
+
+/* Scrollbar visible del contenedor que realmente scrollea. */
+.builder-pro-outliner-panel-body::-webkit-scrollbar {
+    display: block !important;
+
+    width: 11px !important;
+}
+
+.builder-pro-outliner-panel-body::-webkit-scrollbar-track {
+    background: #d0d1cd !important;
+}
+
+.builder-pro-outliner-panel-body::-webkit-scrollbar-thumb {
+    min-height: 30px;
+
+    border:
+        2px solid
+        #d0d1cd !important;
+
+    border-radius: 6px;
+
+    background: #5f6662 !important;
+}
+
+/* Tipografia del Outliner: aumento global real, no solo clases sueltas. */
+.builder-pro-outliner-panel,
+.builder-pro-outliner-panel
+    button,
+.builder-pro-outliner-panel
+    input,
+.builder-pro-outliner-panel
+    select {
+    font-size: 11px !important;
+    line-height: 1.25 !important;
+}
+
+.builder-pro-outliner-panel-header
+    strong {
+    font-size: 11px !important;
+}
+
+.builder-pro-outliner-panel
+    .builder-pro-outliner-name,
+.builder-pro-outliner-panel
+    .builder-pro-outliner-item {
+    font-size: 11px !important;
+}
+
+.builder-pro-outliner-panel
+    .builder-pro-outliner-count,
+.builder-pro-outliner-panel
+    small {
+    font-size: 10px !important;
+}
+/* P13-B7.7: subvariantes Transformar y disabled contextual coherente. */
+
+/*
+ * B7.3 convirtio los grids contextuales en inline-flex!important.
+ * Eso anulaba el display:none original de las subvariantes Transformar.
+ * Primero ocultamos TODA subvariante con igual/mayor especificidad.
+ */
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-section[
+        data-builder-pro-family="transform"
+    ]
+    [data-builder-pro-tool-variant] {
+    display: none !important;
+}
+
+/* Girar furnis. */
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-sections[
+        data-builder-pro-active-variant="transform-orient"
+    ]
+    .builder-pro-section[
+        data-builder-pro-family="transform"
+    ]
+    button[
+        data-builder-pro-tool-variant="transform-orient"
+    ] {
+    display: inline-flex !important;
+}
+
+/* Estructura: solo su grid. */
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-sections[
+        data-builder-pro-active-variant="transform-structure"
+    ]
+    .builder-pro-section[
+        data-builder-pro-family="transform"
+    ]
+    .builder-pro-grid-2[
+        data-builder-pro-tool-variant="transform-structure"
+    ] {
+    display: inline-flex !important;
+}
+
+/* Espejo: los grids normal + duplicar pertenecen a la misma variante. */
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-sections[
+        data-builder-pro-active-variant="transform-mirror"
+    ]
+    .builder-pro-section[
+        data-builder-pro-family="transform"
+    ]
+    .builder-pro-grid-2[
+        data-builder-pro-tool-variant="transform-mirror"
+    ] {
+    display: inline-flex !important;
+}
+
+/*
+ * Un disabled contextual siempre es neutro.
+ * Bootstrap mantiene el background de btn-primary al deshabilitar;
+ * aqui lo normalizamos para que Rellenar no quede azul bloqueado.
+ */
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-section
+    button:disabled,
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-section
+    .btn:disabled,
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-section
+    .btn.disabled {
+    border-color: #b6b8b4 !important;
+
+    background: #e2e2de !important;
+
+    color: #777b78 !important;
+
+    box-shadow: none !important;
+
+    opacity: 0.58 !important;
+
+    cursor: default !important;
+}
+/* P13-B7.8: etiqueta contextual auto-width y botones centrados. */
+
+/* La columna del nombre se adapta al texto real. */
+.builder-pro-context-bar {
+    grid-template-columns:
+        max-content
+        minmax(0, 1fr) !important;
+}
+
+.builder-pro-context-tool-name {
+    width: auto !important;
+    min-width: max-content !important;
+    max-width: none !important;
+
+    padding:
+        0
+        9px !important;
+
+    white-space: nowrap !important;
+    overflow: visible !important;
+
+    text-align: center !important;
+}
+
+/* Todos los botones contextuales centran el contenido. */
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-section
+    button,
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-full,
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-offset-row
+    button,
+.builder-pro-selection-context
+    button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    text-align: center !important;
+    vertical-align: middle !important;
+    line-height: 1.1 !important;
+}
+
+/* Girar furnis: compacto, centrado y sin recorte. */
+.builder-pro-workspace-shell
+    .builder-pro-context-bar
+    .builder-pro-sections[
+        data-builder-pro-active-variant="transform-orient"
+    ]
+    .builder-pro-section[
+        data-builder-pro-family="transform"
+    ]
+    button[
+        data-builder-pro-tool-variant="transform-orient"
+    ] {
+    min-width: 78px !important;
+
+    padding:
+        2px
+        9px !important;
+
+    white-space: nowrap !important;
+}
+/* P13-B7.9: sistema visual contextual unico para todas las herramientas. */
+
+/*
+ * CANON VISUAL CONTEXTUAL
+ * Seleccion y todas las familias legacy comparten desde aqui:
+ * - 10px de tipografia
+ * - labels de parametro a 9px/700
+ * - controles de 24px
+ * - alineacion vertical centrada
+ * - mismo color/estado disabled
+ */
+
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool
+    ] {
+    font-size: 10px !important;
+    line-height: 1.2 !important;
+}
+
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool
+    ]
+    .builder-pro-context-tool-name {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    min-width: max-content !important;
+
+    padding:
+        0
+        9px !important;
+
+    color: #303332 !important;
+
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    line-height: 1 !important;
+
+    text-transform: uppercase !important;
+    white-space: nowrap !important;
+}
+
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool
+    ]
+    .builder-pro-tool-panel-body {
+    display: flex !important;
+    align-items: center !important;
+
+    min-width: 0 !important;
+
+    font-size: 10px !important;
+}
+
+/* Labels de parametros: MODO / CASILLAS / DESPLAZAMIENTO / ALTURA / etc. */
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool
+    ]
+    .builder-pro-context-label,
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool
+    ]
+    .builder-pro-field-row >
+    span,
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool
+    ]
+    .builder-pro-subtitle {
+    display: inline-flex !important;
+    align-items: center !important;
+
+    min-height: 24px !important;
+
+    margin: 0 !important;
+    padding:
+        0
+        5px !important;
+
+    color: #5a5d5b !important;
+
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    line-height: 1 !important;
+
+    text-transform: uppercase !important;
+    white-space: nowrap !important;
+}
+
+/* En field-row el label no necesita el padding lateral de un separador. */
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool
+    ]
+    .builder-pro-field-row >
+    span {
+    padding:
+        0
+        2px !important;
+}
+
+/* Filas y clusters siempre centrados. */
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool
+    ]
+    .builder-pro-selection-context,
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool
+    ]
+    .builder-pro-context-cluster,
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool
+    ]
+    .builder-pro-section-body,
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool
+    ]
+    .builder-pro-field-row,
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool
+    ]
+    .builder-pro-grid-2,
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool
+    ]
+    .builder-pro-grid-3,
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool
+    ]
+    .builder-pro-offset-row {
+    align-items: center !important;
+}
+
+/* Botones: misma caja y misma tipografia en TODAS las herramientas. */
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool
+    ]
+    button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    height: 24px !important;
+    min-height: 24px !important;
+
+    padding:
+        2px
+        7px !important;
+
+    border-radius: 3px !important;
+
+    box-sizing: border-box !important;
+
+    font-size: 10px !important;
+    font-weight: 400 !important;
+    line-height: 1 !important;
+
+    text-align: center !important;
+    white-space: nowrap !important;
+}
+
+/* Inputs y selects: exactamente la misma altura/fuente. */
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool
+    ]
+    input:not([type="checkbox"]),
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool
+    ]
+    select {
+    height: 24px !important;
+    min-height: 24px !important;
+
+    padding:
+        1px
+        6px !important;
+
+    box-sizing: border-box !important;
+
+    font-size: 10px !important;
+    font-weight: 400 !important;
+    line-height: 1 !important;
+}
+
+/* Checkbox centrado respecto a la barra, sin heredar dimensiones de text inputs. */
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool
+    ]
+    input[type="checkbox"] {
+    width: 14px !important;
+    height: 14px !important;
+    min-width: 14px !important;
+    min-height: 14px !important;
+
+    margin: 0 3px !important;
+}
+
+/* Estado disabled canonico para TODOS los controles contextuales. */
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool
+    ]
+    button:disabled,
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool
+    ]
+    input:disabled,
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool
+    ]
+    select:disabled {
+    border-color: #b6b8b4 !important;
+
+    background: #e2e2de !important;
+
+    color: #7b7e7b !important;
+
+    box-shadow: none !important;
+
+    opacity: 0.62 !important;
+}
+
+/*
+ * Overrides finales para Mover.
+ * Eliminan expresamente los 7px heredados de B7.2.
+ */
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool="move"
+    ]
+    .builder-pro-field-row >
+    span,
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool="move"
+    ]
+    .builder-pro-subtitle {
+    font-size: 9px !important;
+    font-weight: 700 !important;
+}
+
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool="move"
+    ]
+    button,
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool="move"
+    ]
+    input,
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool="move"
+    ]
+    select {
+    font-size: 10px !important;
+}
+
+/* Girar furnis queda exactamente en el mismo canon de botones. */
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool="transform"
+    ]
+    button[
+        data-builder-pro-tool-variant="transform-orient"
+    ] {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    height: 24px !important;
+    min-height: 24px !important;
+
+    font-size: 10px !important;
+    line-height: 1 !important;
+}
+/* P13-B7.10: sombra contextual unificada en todos los botones. */
+
+/*
+ * Todos los botones contextuales comparten la misma profundidad visual.
+ * Se elimina la diferencia accidental entre Repeticion lineal y el resto.
+ */
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool
+    ]
+    button {
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.72) inset,
+        0 1px 0 rgba(0, 0, 0, 0.18),
+        0 1px 2px rgba(0, 0, 0, 0.16) !important;
+}
+
+/* Disabled conserva profundidad, pero de forma mas suave. */
+.builder-pro-workspace-shell
+    section.builder-pro-context-bar[
+        data-builder-pro-context-tool
+    ]
+    button:disabled {
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.55) inset,
+        0 1px 0 rgba(0, 0, 0, 0.10),
+        0 1px 1px rgba(0, 0, 0, 0.08) !important;
+}

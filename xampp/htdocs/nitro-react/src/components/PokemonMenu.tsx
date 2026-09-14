@@ -27,7 +27,7 @@ export const PokemonMenu: React.FC = () => {
     return (
         <>
             {/* 🛠️ BARRA DE HERRAMIENTAS FLOTANTE VERTICAL */}
-            <div style={styles.toolbarContainer}>
+            <div className="pokemon-menu-toolbar" style={styles.toolbarContainer}>
                 <div style={styles.toolbarTitle}>MENÚ POKÉMON</div>
 
                 <div style={styles.buttonGroup}>
