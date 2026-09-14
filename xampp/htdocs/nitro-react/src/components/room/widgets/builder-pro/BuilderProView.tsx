@@ -4,7 +4,8 @@ import { FaBoxOpen, FaClone, FaCopy, FaEllipsisH, FaEye, FaEyeSlash, FaLock, FaM
 import { AddEventLinkTracker, BuilderProSelectionVisualizer, CanManipulateFurniture, ClearBuilderProInspectorState, CreateLinkEvent, GetRoomEngine, GetSessionDataManager, HasHabboClub, RemoveLinkEventTracker, SendMessageComposer, SetBuilderProInspectorState, SetBuilderProSelectionModeActive } from '../../../../api';
 import { useMessageEvent, useRoom, useRoomEngineEvent } from '../../../../hooks';
 import { useBuilderProItemLocks } from './useBuilderProItemLocks';
-import { BuilderProToolId, BuilderProToolVariantId, BuilderProTransientOperation, ResolveBuilderProToolLifecycle } from './BuilderProToolLifecycle';
+import { ClearBuilderProGhostPreview, RenderBuilderProGhostPreview, SyncBuilderProGhostPreview } from './BuilderProGhostPreview';
+import { BuilderProToolId, BuilderProToolVariantId, ResolveBuilderProToolLifecycle, ResolveBuilderProTransientChannels } from './BuilderProToolLifecycle';
 import { BuilderProGlobalToolbar } from './BuilderProGlobalToolbar';
 import { BuilderProOutlinerPanel } from './BuilderProOutlinerPanel';
 import { BuilderProSelectionContext } from './BuilderProSelectionContext';
@@ -16,6 +17,21 @@ import './BuilderProView.scss';
 const MAX_SELECTION = 100;
 const KEYBOARD_REPEAT_INTERVAL_MS = 200;
 const MOVE_CONFIRM_TIMEOUT_MS = 2500;
+const formatBuilderProServerFailure = (
+    code: number,
+    message: string,
+    fallback = 'No se pudo completar la operación.'
+): string =>
+{
+    const normalized =
+        (message || '').trim();
+
+    console.warn(
+        `[BuilderProTrace] SERVER_ERROR code=${ code } message=${ normalized || fallback }`
+    );
+
+    return normalized || fallback;
+};
 
 const TRANSFORM_HEIGHT = 1;
 const TRANSFORM_ROTATE_STRUCTURE = 2;
@@ -696,6 +712,12 @@ export const BuilderProView: FC<{}> = props =>
     const blueprintPreviewRef =
         useRef<BuilderProClipboardPreview | null>(null);
     const suppressAreaClickRef = useRef(false);
+    const outlinerRevisionFrameRef =
+        useRef<number | null>(null);
+    const invalidateRepeatPreviewsForRoomMutationRef =
+        useRef<() => void>(
+            () => undefined
+        );
     const pivotIdRef = useRef<number | null>(null);
     const pivotPickModeRef = useRef(false);
     const referencePickOperationRef =
@@ -747,6 +769,51 @@ export const BuilderProView: FC<{}> = props =>
     replacePickModeRef.current =
         replacePickMode;
     moveStepRef.current = moveStep;
+
+    const scheduleOutlinerRevision =
+        useCallback(() =>
+        {
+            if(
+                outlinerRevisionFrameRef.current !==
+                null
+            )
+            {
+                return;
+            }
+
+            outlinerRevisionFrameRef.current =
+                window.requestAnimationFrame(
+                    () =>
+                    {
+                        outlinerRevisionFrameRef.current =
+                            null;
+
+                        setOutlinerRevision(
+                            current =>
+                                current + 1
+                        );
+                    }
+                );
+        }, []);
+
+    useEffect(() =>
+    {
+        return () =>
+        {
+            if(
+                outlinerRevisionFrameRef.current !==
+                null
+            )
+            {
+                window.cancelAnimationFrame(
+                    outlinerRevisionFrameRef.current
+                );
+
+                outlinerRevisionFrameRef.current =
+                    null;
+            }
+        };
+    }, []);
 
     const sessionDataManager = GetSessionDataManager();
 
@@ -2951,7 +3018,7 @@ export const BuilderProView: FC<{}> = props =>
                 setStatus(
                     parser.success
                         ? parser.message
-                        : `Error ${ parser.code }: ${ parser.message }`
+                        : formatBuilderProServerFailure(parser.code, parser.message)
                 );
             }
         }
@@ -3481,7 +3548,7 @@ export const BuilderProView: FC<{}> = props =>
                 setStatus(
                     parser.success
                         ? parser.message
-                        : `Error ${ parser.code }: ${ parser.message }`
+                        : formatBuilderProServerFailure(parser.code, parser.message)
                 );
             }
             else if(
@@ -4729,7 +4796,7 @@ export const BuilderProView: FC<{}> = props =>
                 setStatus(
                     parser.success
                         ? parser.message
-                        : `Error ${ parser.code }: ${ parser.message }`
+                        : formatBuilderProServerFailure(parser.code, parser.message)
                 );
             }
         }
@@ -5080,7 +5147,7 @@ export const BuilderProView: FC<{}> = props =>
                 setStatus(
                     parser.success
                         ? parser.message
-                        : `Error ${ parser.code }: ${ parser.message }`
+                        : formatBuilderProServerFailure(parser.code, parser.message)
                 );
             }
         }
@@ -7677,80 +7744,6 @@ export const BuilderProView: FC<{}> = props =>
     }, [ restoreLayerVisibility ]);
 
 
-    useEffect(() =>
-    {
-        if(!active) return;
-
-        const onReferenceEscape = (
-            event: globalThis.KeyboardEvent
-        ) =>
-        {
-            if(event.key !== 'Escape')
-            {
-                return;
-            }
-
-            const target =
-                event.target;
-
-            if(
-                target instanceof HTMLInputElement ||
-                target instanceof HTMLTextAreaElement ||
-                target instanceof HTMLSelectElement ||
-                (
-                    target instanceof HTMLElement &&
-                    target.isContentEditable
-                )
-            )
-            {
-                return;
-            }
-
-            if(
-                referencePickOperationRef.current ===
-                    REFERENCE_OP_NONE &&
-                !replacePickModeRef.current
-            )
-            {
-                return;
-            }
-
-            if(event.cancelable)
-            {
-                event.preventDefault();
-            }
-
-            event.stopPropagation();
-            event.stopImmediatePropagation();
-
-            if(replacePickModeRef.current)
-            {
-                clearReplacePick();
-                return;
-            }
-
-            clearReferencePick(true);
-        };
-
-        window.addEventListener(
-            'keydown',
-            onReferenceEscape,
-            true
-        );
-
-        return () =>
-        {
-            window.removeEventListener(
-                'keydown',
-                onReferenceEscape,
-                true
-            );
-        };
-    }, [
-        active,
-        clearReferencePick,
-        clearReplacePick
-    ]);
 
     useEffect(() =>
     {
@@ -7843,16 +7836,31 @@ export const BuilderProView: FC<{}> = props =>
             if(!activeRef.current) return;
             if(event.category !== RoomObjectCategory.FLOOR) return;
 
+            if(
+                event.objectId > 0 &&
+                (
+                    event.type ===
+                        RoomEngineObjectEvent.ADDED ||
+                    event.type ===
+                        RoomEngineObjectEvent.REMOVED ||
+                    event.type ===
+                        RoomEngineObjectEvent.CONTENT_UPDATED ||
+                    event.type ===
+                        RoomEngineObjectEvent.REQUEST_MOVE
+                )
+            )
+            {
+                invalidateRepeatPreviewsForRoomMutationRef
+                    .current();
+            }
+
             if(event.type === RoomEngineObjectEvent.ADDED)
             {
                 layerOriginalAlphaRef.current.delete(
                     event.objectId
                 );
 
-                setOutlinerRevision(
-                    current =>
-                        current + 1
-                );
+                scheduleOutlinerRevision();
 
                 window.requestAnimationFrame(
                     applyLayerVisibility
@@ -8236,10 +8244,7 @@ export const BuilderProView: FC<{}> = props =>
                     );
                 }
 
-                setOutlinerRevision(
-                    current =>
-                        current + 1
-                );
+                scheduleOutlinerRevision();
 
                 if(
                     replacementSourceIdsRef.current.has(
@@ -8881,7 +8886,7 @@ export const BuilderProView: FC<{}> = props =>
             keyboardBlockedRef.current = true;
 
             setStatus(
-                `Error ${ parser.code }: ${ parser.message }`
+                formatBuilderProServerFailure(parser.code, parser.message)
             );
         }
     );
@@ -8934,7 +8939,7 @@ export const BuilderProView: FC<{}> = props =>
             }
 
             setStatus(
-                `Error ${ parser.code }: ${ parser.message }`
+                formatBuilderProServerFailure(parser.code, parser.message)
             );
         }
     );
@@ -9014,7 +9019,7 @@ export const BuilderProView: FC<{}> = props =>
             }
 
             setStatus(
-                `Error ${ parser.code }: ${ parser.message }`
+                formatBuilderProServerFailure(parser.code, parser.message)
             );
         }
     );
@@ -9098,7 +9103,7 @@ export const BuilderProView: FC<{}> = props =>
             }
 
             setStatus(
-                `Error ${ parser.code }: ${ parser.message }`
+                formatBuilderProServerFailure(parser.code, parser.message)
             );
         }
     );
@@ -9163,7 +9168,7 @@ export const BuilderProView: FC<{}> = props =>
             }
 
             setStatus(
-                `Error ${ parser.code }: ${ parser.message }`
+                formatBuilderProServerFailure(parser.code, parser.message)
             );
         }
     );
@@ -9246,7 +9251,7 @@ export const BuilderProView: FC<{}> = props =>
             }
 
             setStatus(
-                `Error ${ parser.code }: ${ parser.message }`
+                formatBuilderProServerFailure(parser.code, parser.message)
             );
         }
     );
@@ -9322,7 +9327,7 @@ export const BuilderProView: FC<{}> = props =>
                 }
 
                 setStatus(
-                    `Error ${ parser.code }: ${ parser.message }${
+                    `${ formatBuilderProServerFailure(parser.code, parser.message) }${
                         parser.needed > 0
                             ? ` Necesarios: ${ parser.needed } · Disponibles: ${ parser.available }.`
                             : ''
@@ -9503,7 +9508,7 @@ export const BuilderProView: FC<{}> = props =>
                     false;
 
                 setStatus(
-                    `Error ${ parser.code }: ${ parser.message }`
+                    formatBuilderProServerFailure(parser.code, parser.message)
                 );
 
                 return;
@@ -9705,7 +9710,7 @@ export const BuilderProView: FC<{}> = props =>
             }
 
             setStatus(
-                `Error ${ parser.code }: ${ parser.message }`
+                formatBuilderProServerFailure(parser.code, parser.message)
             );
         }
     );
@@ -9833,70 +9838,6 @@ export const BuilderProView: FC<{}> = props =>
         }
     );
 
-    useEffect(() =>
-    {
-        if(!active)
-        {
-            return;
-        }
-
-        const onPlacementEscape = (
-            event: globalThis.KeyboardEvent
-        ) =>
-        {
-            if(event.key !== 'Escape')
-            {
-                return;
-            }
-
-            const target =
-                event.target;
-
-            if(
-                target instanceof HTMLInputElement ||
-                target instanceof HTMLTextAreaElement ||
-                target instanceof HTMLSelectElement ||
-                (
-                    target instanceof HTMLElement &&
-                    target.isContentEditable
-                )
-            )
-            {
-                return;
-            }
-
-            if(!cancelCursorPlacement())
-            {
-                return;
-            }
-
-            if(event.cancelable)
-            {
-                event.preventDefault();
-            }
-
-            event.stopPropagation();
-            event.stopImmediatePropagation();
-        };
-
-        window.addEventListener(
-            'keydown',
-            onPlacementEscape,
-            true
-        );
-
-        return () =>
-        {
-            window.removeEventListener(
-                'keydown',
-                onPlacementEscape,
-                true
-            );
-        };
-    }, [
-        active,
-        cancelCursorPlacement
-    ]);
 
     const syncPastePreview = useCallback(() =>
     {
@@ -10059,203 +10000,39 @@ export const BuilderProView: FC<{}> = props =>
     const clearFillRepeatPreview =
         useCallback(() =>
         {
-            if(fillRepeatPreviewFrameRef.current !== null)
-            {
-                window.cancelAnimationFrame(
-                    fillRepeatPreviewFrameRef.current
-                );
-
-                fillRepeatPreviewFrameRef.current =
-                    null;
-            }
-
-            const currentRoomSession =
-                roomSessionRef.current;
-
-            const roomEngine =
-                GetRoomEngine();
-
-            if(currentRoomSession && roomEngine)
-            {
-                for(const ghostId of
-                    fillRepeatGhostIdsRef.current)
-                {
-                    roomEngine.removeRoomObjectFloor(
-                        currentRoomSession.roomId,
-                        ghostId
-                    );
-                }
-            }
-
-            fillRepeatGhostIdsRef.current = [];
-            fillRepeatPreviewEntriesRef.current = [];
+            ClearBuilderProGhostPreview(
+                roomSessionRef.current?.roomId ?? null,
+                fillRepeatGhostIdsRef,
+                fillRepeatPreviewEntriesRef,
+                fillRepeatPreviewFrameRef
+            );
         }, []);
-
     const syncFillRepeatPreview =
         useCallback(() =>
         {
-            const entries =
-                fillRepeatPreviewEntriesRef.current;
-
-            const currentRoomSession =
-                roomSessionRef.current;
-
-            const roomEngine =
-                GetRoomEngine();
-
-            if(
-                !entries.length ||
-                !currentRoomSession ||
-                !roomEngine
-            )
-            {
-                return;
-            }
-
-            const roomId =
-                currentRoomSession.roomId;
-
-            for(let index = 0;
-                    index < entries.length;
-                    index++)
-            {
-                const entry =
-                    entries[index];
-
-                const ghostId =
-                    BUILDER_PRO_FILL_REPEAT_GHOST_ID_BASE
-                        - index;
-
-                if(
-                    !fillRepeatGhostIdsRef.current
-                        .includes(
-                            ghostId
-                        )
-                )
-                {
-                    const queued =
-                        roomEngine.addFurnitureFloor(
-                            roomId,
-                            ghostId,
-                            entry.baseItemId,
-                            new Vector3d(
-                                entry.x,
-                                entry.y,
-                                entry.z
-                            ),
-                            new Vector3d(
-                                entry.rotation * 45
-                            ),
-                            entry.state,
-                            null,
-                            Number.NaN,
-                            -1,
-                            0,
-                            0,
-                            '',
-                            false,
-                            false
-                        );
-
-                    if(queued)
-                    {
-                        fillRepeatGhostIdsRef.current
-                            .push(
-                                ghostId
-                            );
-                    }
-                }
-
-                const roomObject =
-                    roomEngine.getRoomObject(
-                        roomId,
-                        ghostId,
-                        RoomObjectCategory.FLOOR
-                    ) as any;
-
-                if(!roomObject)
-                {
-                    continue;
-                }
-
-                roomObject.setLocation(
-                    new Vector3d(
-                        entry.x,
-                        entry.y,
-                        entry.z
-                    )
-                );
-
-                roomObject.setDirection(
-                    new Vector3d(
-                        entry.rotation * 45
-                    )
-                );
-
-                if(roomObject.model)
-                {
-                    roomObject.model.setValue(
-                        RoomObjectVariable
-                            .FURNITURE_ALPHA_MULTIPLIER,
-                        0.45
-                    );
-                }
-
-                const sprites =
-                    (
-                        roomObject.visualization as any
-                    )?.sprites;
-
-                if(Array.isArray(sprites))
-                {
-                    for(const sprite of sprites)
-                    {
-                        if(sprite)
-                        {
-                            sprite.clickHandling =
-                                false;
-                        }
-                    }
-                }
-            }
+            SyncBuilderProGhostPreview(
+                roomSessionRef.current?.roomId ?? null,
+                BUILDER_PRO_FILL_REPEAT_GHOST_ID_BASE,
+                fillRepeatGhostIdsRef,
+                fillRepeatPreviewEntriesRef
+            );
         }, []);
-
     const renderFillRepeatPreview =
         useCallback((
             entries: BuilderProFillRepeatPreviewEntry[]
         ) =>
         {
-            clearFillRepeatPreview();
-
-            fillRepeatPreviewEntriesRef.current =
-                entries.map(
-                    entry => ({
-                        ...entry
-                    })
-                );
-
-            syncFillRepeatPreview();
-
-            fillRepeatPreviewFrameRef.current =
-                window.requestAnimationFrame(
-                    () =>
-                    {
-                        fillRepeatPreviewFrameRef.current =
-                            null;
-
-                        syncFillRepeatPreview();
-
-                        window.requestAnimationFrame(
-                            () =>
-                                syncFillRepeatPreview()
-                        );
-                    }
-                );
+            RenderBuilderProGhostPreview(
+                entries,
+                fillRepeatPreviewEntriesRef,
+                fillRepeatPreviewFrameRef,
+                clearFillRepeatPreview,
+                syncFillRepeatPreview
+            );
         }, [
             clearFillRepeatPreview,
             syncFillRepeatPreview
         ]);
-
     const resetFillRepeatPreview =
         useCallback(() =>
         {
@@ -10342,10 +10119,7 @@ export const BuilderProView: FC<{}> = props =>
                         false
                     );
 
-                    setOutlinerRevision(
-                        current =>
-                            current + 1
-                    );
+                    scheduleOutlinerRevision();
 
                     requestLayerState(
                         LAYER_OP_LIST
@@ -10921,7 +10695,7 @@ export const BuilderProView: FC<{}> = props =>
                 }
 
                 setStatus(
-                    `Error ${ parser.code }: ${ parser.message }`
+                    formatBuilderProServerFailure(parser.code, parser.message)
                 );
 
                 return;
@@ -11041,202 +10815,38 @@ export const BuilderProView: FC<{}> = props =>
 
     const clearLinearRepeatPreview = useCallback(() =>
     {
-        if(linearRepeatPreviewFrameRef.current !== null)
-        {
-            window.cancelAnimationFrame(
-                linearRepeatPreviewFrameRef.current
-            );
-
-            linearRepeatPreviewFrameRef.current =
-                null;
-        }
-
-        const currentRoomSession =
-            roomSessionRef.current;
-
-        const roomEngine =
-            GetRoomEngine();
-
-        if(currentRoomSession && roomEngine)
-        {
-            for(const ghostId of
-                linearRepeatGhostIdsRef.current)
-            {
-                roomEngine.removeRoomObjectFloor(
-                    currentRoomSession.roomId,
-                    ghostId
-                );
-            }
-        }
-
-        linearRepeatGhostIdsRef.current = [];
-        linearRepeatPreviewEntriesRef.current = [];
+        ClearBuilderProGhostPreview(
+            roomSessionRef.current?.roomId ?? null,
+            linearRepeatGhostIdsRef,
+            linearRepeatPreviewEntriesRef,
+            linearRepeatPreviewFrameRef
+        );
     }, []);
-
     const syncLinearRepeatPreview = useCallback(() =>
     {
-        const entries =
-            linearRepeatPreviewEntriesRef.current;
-
-        const currentRoomSession =
-            roomSessionRef.current;
-
-        const roomEngine =
-            GetRoomEngine();
-
-        if(
-            !entries.length ||
-            !currentRoomSession ||
-            !roomEngine
-        )
-        {
-            return;
-        }
-
-        const roomId =
-            currentRoomSession.roomId;
-
-        for(let index = 0;
-                index < entries.length;
-                index++)
-        {
-            const entry =
-                entries[index];
-
-            const ghostId =
-                BUILDER_PRO_LINEAR_REPEAT_GHOST_ID_BASE
-                    - index;
-
-            if(
-                !linearRepeatGhostIdsRef.current
-                    .includes(
-                        ghostId
-                    )
-            )
-            {
-                const queued =
-                    roomEngine.addFurnitureFloor(
-                        roomId,
-                        ghostId,
-                        entry.baseItemId,
-                        new Vector3d(
-                            entry.x,
-                            entry.y,
-                            entry.z
-                        ),
-                        new Vector3d(
-                            entry.rotation * 45
-                        ),
-                        entry.state,
-                        null,
-                        Number.NaN,
-                        -1,
-                        0,
-                        0,
-                        '',
-                        false,
-                        false
-                    );
-
-                if(queued)
-                {
-                    linearRepeatGhostIdsRef.current
-                        .push(
-                            ghostId
-                        );
-                }
-            }
-
-            const roomObject =
-                roomEngine.getRoomObject(
-                    roomId,
-                    ghostId,
-                    RoomObjectCategory.FLOOR
-                ) as any;
-
-            if(!roomObject)
-            {
-                continue;
-            }
-
-            roomObject.setLocation(
-                new Vector3d(
-                    entry.x,
-                    entry.y,
-                    entry.z
-                )
-            );
-
-            roomObject.setDirection(
-                new Vector3d(
-                    entry.rotation * 45
-                )
-            );
-
-            if(roomObject.model)
-            {
-                roomObject.model.setValue(
-                    RoomObjectVariable
-                        .FURNITURE_ALPHA_MULTIPLIER,
-                    0.45
-                );
-            }
-
-            const sprites =
-                (
-                    roomObject.visualization as any
-                )?.sprites;
-
-            if(Array.isArray(sprites))
-            {
-                for(const sprite of sprites)
-                {
-                    if(sprite)
-                    {
-                        sprite.clickHandling =
-                            false;
-                    }
-                }
-            }
-        }
+        SyncBuilderProGhostPreview(
+            roomSessionRef.current?.roomId ?? null,
+            BUILDER_PRO_LINEAR_REPEAT_GHOST_ID_BASE,
+            linearRepeatGhostIdsRef,
+            linearRepeatPreviewEntriesRef
+        );
     }, []);
-
     const renderLinearRepeatPreview =
         useCallback((
             entries: BuilderProLinearRepeatPreviewEntry[]
         ) =>
         {
-            clearLinearRepeatPreview();
-
-            linearRepeatPreviewEntriesRef.current =
-                entries.map(
-                    entry => ({
-                        ...entry
-                    })
-                );
-
-            syncLinearRepeatPreview();
-
-            linearRepeatPreviewFrameRef.current =
-                window.requestAnimationFrame(
-                    () =>
-                    {
-                        linearRepeatPreviewFrameRef.current =
-                            null;
-
-                        syncLinearRepeatPreview();
-
-                        window.requestAnimationFrame(
-                            () =>
-                                syncLinearRepeatPreview()
-                        );
-                    }
-                );
+            RenderBuilderProGhostPreview(
+                entries,
+                linearRepeatPreviewEntriesRef,
+                linearRepeatPreviewFrameRef,
+                clearLinearRepeatPreview,
+                syncLinearRepeatPreview
+            );
         }, [
             clearLinearRepeatPreview,
             syncLinearRepeatPreview
         ]);
-
     const resetLinearRepeatPreview =
         useCallback((
             clearDirection: boolean = true
@@ -11332,10 +10942,7 @@ export const BuilderProView: FC<{}> = props =>
                         false
                     );
 
-                    setOutlinerRevision(
-                        current =>
-                            current + 1
-                    );
+                    scheduleOutlinerRevision();
 
                     requestLayerState(
                         LAYER_OP_LIST
@@ -11830,7 +11437,7 @@ export const BuilderProView: FC<{}> = props =>
                 }
 
                 setStatus(
-                    `Error ${ parser.code }: ${ parser.message }`
+                    formatBuilderProServerFailure(parser.code, parser.message)
                 );
 
                 return;
@@ -11964,223 +11571,41 @@ export const BuilderProView: FC<{}> = props =>
         resetLinearRepeatPreview
     ]);
 
-    useEffect(() =>
-    {
-        if(!pending) return;
-
-        if(
-            pendingLinearRepeatOperationRef.current !==
-            null
-        )
-        {
-            return;
-        }
-
-        resetLinearRepeatPreview();
-    }, [
-        pending,
-        resetLinearRepeatPreview
-    ]);
-
 
     const clearGridRepeatPreview = useCallback(() =>
     {
-        if(gridRepeatPreviewFrameRef.current !== null)
-        {
-            window.cancelAnimationFrame(
-                gridRepeatPreviewFrameRef.current
-            );
-
-            gridRepeatPreviewFrameRef.current =
-                null;
-        }
-
-        const currentRoomSession =
-            roomSessionRef.current;
-
-        const roomEngine =
-            GetRoomEngine();
-
-        if(currentRoomSession && roomEngine)
-        {
-            for(const ghostId of
-                gridRepeatGhostIdsRef.current)
-            {
-                roomEngine.removeRoomObjectFloor(
-                    currentRoomSession.roomId,
-                    ghostId
-                );
-            }
-        }
-
-        gridRepeatGhostIdsRef.current = [];
-        gridRepeatPreviewEntriesRef.current = [];
+        ClearBuilderProGhostPreview(
+            roomSessionRef.current?.roomId ?? null,
+            gridRepeatGhostIdsRef,
+            gridRepeatPreviewEntriesRef,
+            gridRepeatPreviewFrameRef
+        );
     }, []);
-
     const syncGridRepeatPreview = useCallback(() =>
     {
-        const entries =
-            gridRepeatPreviewEntriesRef.current;
-
-        const currentRoomSession =
-            roomSessionRef.current;
-
-        const roomEngine =
-            GetRoomEngine();
-
-        if(
-            !entries.length ||
-            !currentRoomSession ||
-            !roomEngine
-        )
-        {
-            return;
-        }
-
-        const roomId =
-            currentRoomSession.roomId;
-
-        for(let index = 0;
-                index < entries.length;
-                index++)
-        {
-            const entry =
-                entries[index];
-
-            const ghostId =
-                BUILDER_PRO_GRID_REPEAT_GHOST_ID_BASE
-                    - index;
-
-            if(
-                !gridRepeatGhostIdsRef.current
-                    .includes(
-                        ghostId
-                    )
-            )
-            {
-                const queued =
-                    roomEngine.addFurnitureFloor(
-                        roomId,
-                        ghostId,
-                        entry.baseItemId,
-                        new Vector3d(
-                            entry.x,
-                            entry.y,
-                            entry.z
-                        ),
-                        new Vector3d(
-                            entry.rotation * 45
-                        ),
-                        entry.state,
-                        null,
-                        Number.NaN,
-                        -1,
-                        0,
-                        0,
-                        '',
-                        false,
-                        false
-                    );
-
-                if(queued)
-                {
-                    gridRepeatGhostIdsRef.current
-                        .push(
-                            ghostId
-                        );
-                }
-            }
-
-            const roomObject =
-                roomEngine.getRoomObject(
-                    roomId,
-                    ghostId,
-                    RoomObjectCategory.FLOOR
-                ) as any;
-
-            if(!roomObject)
-            {
-                continue;
-            }
-
-            roomObject.setLocation(
-                new Vector3d(
-                    entry.x,
-                    entry.y,
-                    entry.z
-                )
-            );
-
-            roomObject.setDirection(
-                new Vector3d(
-                    entry.rotation * 45
-                )
-            );
-
-            if(roomObject.model)
-            {
-                roomObject.model.setValue(
-                    RoomObjectVariable
-                        .FURNITURE_ALPHA_MULTIPLIER,
-                    0.45
-                );
-            }
-
-            const sprites =
-                (
-                    roomObject.visualization as any
-                )?.sprites;
-
-            if(Array.isArray(sprites))
-            {
-                for(const sprite of sprites)
-                {
-                    if(sprite)
-                    {
-                        sprite.clickHandling =
-                            false;
-                    }
-                }
-            }
-        }
+        SyncBuilderProGhostPreview(
+            roomSessionRef.current?.roomId ?? null,
+            BUILDER_PRO_GRID_REPEAT_GHOST_ID_BASE,
+            gridRepeatGhostIdsRef,
+            gridRepeatPreviewEntriesRef
+        );
     }, []);
-
     const renderGridRepeatPreview =
         useCallback((
             entries: BuilderProGridRepeatPreviewEntry[]
         ) =>
         {
-            clearGridRepeatPreview();
-
-            gridRepeatPreviewEntriesRef.current =
-                entries.map(
-                    entry => ({
-                        ...entry
-                    })
-                );
-
-            syncGridRepeatPreview();
-
-            gridRepeatPreviewFrameRef.current =
-                window.requestAnimationFrame(
-                    () =>
-                    {
-                        gridRepeatPreviewFrameRef.current =
-                            null;
-
-                        syncGridRepeatPreview();
-
-                        window.requestAnimationFrame(
-                            () =>
-                                syncGridRepeatPreview()
-                        );
-                    }
-                );
+            RenderBuilderProGhostPreview(
+                entries,
+                gridRepeatPreviewEntriesRef,
+                gridRepeatPreviewFrameRef,
+                clearGridRepeatPreview,
+                syncGridRepeatPreview
+            );
         }, [
             clearGridRepeatPreview,
             syncGridRepeatPreview
         ]);
-
     const resetGridRepeatPreview =
         useCallback(() =>
         {
@@ -12267,10 +11692,7 @@ export const BuilderProView: FC<{}> = props =>
                         false
                     );
 
-                    setOutlinerRevision(
-                        current =>
-                            current + 1
-                    );
+                    scheduleOutlinerRevision();
 
                     requestLayerState(
                         LAYER_OP_LIST
@@ -12796,7 +12218,7 @@ export const BuilderProView: FC<{}> = props =>
                 }
 
                 setStatus(
-                    `Error ${ parser.code }: ${ parser.message }`
+                    formatBuilderProServerFailure(parser.code, parser.message)
                 );
 
                 return;
@@ -12948,223 +12370,41 @@ export const BuilderProView: FC<{}> = props =>
         resetGridRepeatPreview
     ]);
 
-    useEffect(() =>
-    {
-        if(!pending) return;
-
-        if(
-            pendingGridRepeatOperationRef.current !==
-            null
-        )
-        {
-            return;
-        }
-
-        resetGridRepeatPreview();
-    }, [
-        pending,
-        resetGridRepeatPreview
-    ]);
-
 
     const clearRadialRepeatPreview = useCallback(() =>
     {
-        if(radialRepeatPreviewFrameRef.current !== null)
-        {
-            window.cancelAnimationFrame(
-                radialRepeatPreviewFrameRef.current
-            );
-
-            radialRepeatPreviewFrameRef.current =
-                null;
-        }
-
-        const currentRoomSession =
-            roomSessionRef.current;
-
-        const roomEngine =
-            GetRoomEngine();
-
-        if(currentRoomSession && roomEngine)
-        {
-            for(const ghostId of
-                radialRepeatGhostIdsRef.current)
-            {
-                roomEngine.removeRoomObjectFloor(
-                    currentRoomSession.roomId,
-                    ghostId
-                );
-            }
-        }
-
-        radialRepeatGhostIdsRef.current = [];
-        radialRepeatPreviewEntriesRef.current = [];
+        ClearBuilderProGhostPreview(
+            roomSessionRef.current?.roomId ?? null,
+            radialRepeatGhostIdsRef,
+            radialRepeatPreviewEntriesRef,
+            radialRepeatPreviewFrameRef
+        );
     }, []);
-
     const syncRadialRepeatPreview = useCallback(() =>
     {
-        const entries =
-            radialRepeatPreviewEntriesRef.current;
-
-        const currentRoomSession =
-            roomSessionRef.current;
-
-        const roomEngine =
-            GetRoomEngine();
-
-        if(
-            !entries.length ||
-            !currentRoomSession ||
-            !roomEngine
-        )
-        {
-            return;
-        }
-
-        const roomId =
-            currentRoomSession.roomId;
-
-        for(let index = 0;
-                index < entries.length;
-                index++)
-        {
-            const entry =
-                entries[index];
-
-            const ghostId =
-                BUILDER_PRO_RADIAL_REPEAT_GHOST_ID_BASE
-                    - index;
-
-            if(
-                !radialRepeatGhostIdsRef.current
-                    .includes(
-                        ghostId
-                    )
-            )
-            {
-                const queued =
-                    roomEngine.addFurnitureFloor(
-                        roomId,
-                        ghostId,
-                        entry.baseItemId,
-                        new Vector3d(
-                            entry.x,
-                            entry.y,
-                            entry.z
-                        ),
-                        new Vector3d(
-                            entry.rotation * 45
-                        ),
-                        entry.state,
-                        null,
-                        Number.NaN,
-                        -1,
-                        0,
-                        0,
-                        '',
-                        false,
-                        false
-                    );
-
-                if(queued)
-                {
-                    radialRepeatGhostIdsRef.current
-                        .push(
-                            ghostId
-                        );
-                }
-            }
-
-            const roomObject =
-                roomEngine.getRoomObject(
-                    roomId,
-                    ghostId,
-                    RoomObjectCategory.FLOOR
-                ) as any;
-
-            if(!roomObject)
-            {
-                continue;
-            }
-
-            roomObject.setLocation(
-                new Vector3d(
-                    entry.x,
-                    entry.y,
-                    entry.z
-                )
-            );
-
-            roomObject.setDirection(
-                new Vector3d(
-                    entry.rotation * 45
-                )
-            );
-
-            if(roomObject.model)
-            {
-                roomObject.model.setValue(
-                    RoomObjectVariable
-                        .FURNITURE_ALPHA_MULTIPLIER,
-                    0.45
-                );
-            }
-
-            const sprites =
-                (
-                    roomObject.visualization as any
-                )?.sprites;
-
-            if(Array.isArray(sprites))
-            {
-                for(const sprite of sprites)
-                {
-                    if(sprite)
-                    {
-                        sprite.clickHandling =
-                            false;
-                    }
-                }
-            }
-        }
+        SyncBuilderProGhostPreview(
+            roomSessionRef.current?.roomId ?? null,
+            BUILDER_PRO_RADIAL_REPEAT_GHOST_ID_BASE,
+            radialRepeatGhostIdsRef,
+            radialRepeatPreviewEntriesRef
+        );
     }, []);
-
     const renderRadialRepeatPreview =
         useCallback((
             entries: BuilderProRadialRepeatPreviewEntry[]
         ) =>
         {
-            clearRadialRepeatPreview();
-
-            radialRepeatPreviewEntriesRef.current =
-                entries.map(
-                    entry => ({
-                        ...entry
-                    })
-                );
-
-            syncRadialRepeatPreview();
-
-            radialRepeatPreviewFrameRef.current =
-                window.requestAnimationFrame(
-                    () =>
-                    {
-                        radialRepeatPreviewFrameRef.current =
-                            null;
-
-                        syncRadialRepeatPreview();
-
-                        window.requestAnimationFrame(
-                            () =>
-                                syncRadialRepeatPreview()
-                        );
-                    }
-                );
+            RenderBuilderProGhostPreview(
+                entries,
+                radialRepeatPreviewEntriesRef,
+                radialRepeatPreviewFrameRef,
+                clearRadialRepeatPreview,
+                syncRadialRepeatPreview
+            );
         }, [
             clearRadialRepeatPreview,
             syncRadialRepeatPreview
         ]);
-
     const resetRadialRepeatPreview =
         useCallback(() =>
         {
@@ -13182,6 +12422,45 @@ export const BuilderProView: FC<{}> = props =>
         }, [
             clearRadialRepeatPreview
         ]);
+
+    invalidateRepeatPreviewsForRoomMutationRef.current =
+        () =>
+        {
+            const hadPreview =
+                !!fillRepeatContextRef.current ||
+                !!linearRepeatContextRef.current ||
+                !!gridRepeatContextRef.current ||
+                !!radialRepeatContextRef.current;
+
+            if(!hadPreview)
+            {
+                return;
+            }
+
+            if(fillRepeatContextRef.current)
+            {
+                resetFillRepeatPreview();
+            }
+
+            if(linearRepeatContextRef.current)
+            {
+                resetLinearRepeatPreview();
+            }
+
+            if(gridRepeatContextRef.current)
+            {
+                resetGridRepeatPreview();
+            }
+
+            if(radialRepeatContextRef.current)
+            {
+                resetRadialRepeatPreview();
+            }
+
+            setStatus(
+                'La sala cambió. Genera de nuevo la vista previa.'
+            );
+        };
 
     const finalizeRadialRepeatVisuals =
         useCallback((
@@ -13250,10 +12529,7 @@ export const BuilderProView: FC<{}> = props =>
                         false
                     );
 
-                    setOutlinerRevision(
-                        current =>
-                            current + 1
-                    );
+                    scheduleOutlinerRevision();
 
                     requestLayerState(
                         LAYER_OP_LIST
@@ -13788,7 +13064,7 @@ export const BuilderProView: FC<{}> = props =>
                 }
 
                 setStatus(
-                    `Error ${ parser.code }: ${ parser.message }`
+                    formatBuilderProServerFailure(parser.code, parser.message)
                 );
 
                 return;
@@ -13937,22 +13213,253 @@ export const BuilderProView: FC<{}> = props =>
         resetRadialRepeatPreview
     ]);
 
+    const cancelReadyRepeatPreviews =
+        useCallback((
+            updateStatus: boolean = true
+        ): boolean =>
+        {
+            const hadPreview =
+                linearRepeatPreviewReady ||
+                gridRepeatPreviewReady ||
+                radialRepeatPreviewReady ||
+                fillRepeatPreviewReady;
+
+            if(!hadPreview)
+            {
+                return false;
+            }
+
+            if(linearRepeatPreviewReady)
+            {
+                resetLinearRepeatPreview();
+            }
+
+            if(gridRepeatPreviewReady)
+            {
+                resetGridRepeatPreview();
+            }
+
+            if(radialRepeatPreviewReady)
+            {
+                resetRadialRepeatPreview();
+            }
+
+            if(fillRepeatPreviewReady)
+            {
+                resetFillRepeatPreview();
+            }
+
+            if(updateStatus)
+            {
+                setStatus(
+                    'Vista previa de repetición cancelada.'
+                );
+            }
+
+            return true;
+        }, [
+            linearRepeatPreviewReady,
+            gridRepeatPreviewReady,
+            radialRepeatPreviewReady,
+            fillRepeatPreviewReady,
+            resetLinearRepeatPreview,
+            resetGridRepeatPreview,
+            resetRadialRepeatPreview,
+            resetFillRepeatPreview
+        ]);
+
     useEffect(() =>
     {
-        if(!pending) return;
-
-        if(
-            pendingRadialRepeatOperationRef.current !==
-            null
-        )
+        if(!pending)
         {
             return;
         }
 
-        resetRadialRepeatPreview();
+        if(
+            pendingLinearRepeatOperationRef.current ===
+                null
+        )
+        {
+            resetLinearRepeatPreview();
+        }
+
+        if(
+            pendingGridRepeatOperationRef.current ===
+                null
+        )
+        {
+            resetGridRepeatPreview();
+        }
+
+        if(
+            pendingRadialRepeatOperationRef.current ===
+                null
+        )
+        {
+            resetRadialRepeatPreview();
+        }
+
+        if(
+            pendingFillRepeatOperationRef.current ===
+                null
+        )
+        {
+            resetFillRepeatPreview();
+        }
     }, [
         pending,
-        resetRadialRepeatPreview
+        resetLinearRepeatPreview,
+        resetGridRepeatPreview,
+        resetRadialRepeatPreview,
+        resetFillRepeatPreview
+    ]);
+
+    const cancelTransientOperation =
+        useCallback((): boolean =>
+        {
+            /*
+             * Unified Escape policy for transient Builder Pro modes.
+             * A tool switch alone still never cancels an operation.
+             */
+            if(replacePickModeRef.current)
+            {
+                clearReplacePick();
+                return true;
+            }
+
+            if(
+                referencePickOperationRef.current !==
+                    REFERENCE_OP_NONE
+            )
+            {
+                clearReferencePick(true);
+                return true;
+            }
+
+            if(pivotPickModeRef.current)
+            {
+                pivotPickModeRef.current =
+                    false;
+
+                setPivotPickMode(
+                    false
+                );
+
+                setStatus(
+                    pivotIdRef.current !== null
+                        ? `Selección de pivote cancelada. Pivote actual: furni #${ pivotIdRef.current }.`
+                        : 'Selección de pivote cancelada. Se mantiene el pivote automático.'
+                );
+
+                return true;
+            }
+
+            if(areaModeRef.current)
+            {
+                areaModeRef.current =
+                    false;
+
+                areaStartRef.current =
+                    null;
+
+                suppressAreaClickRef.current =
+                    false;
+
+                setAreaMode(
+                    false
+                );
+
+                setSelectionBox(
+                    null
+                );
+
+                setStatus(
+                    'Selección por área cancelada. Selección por clic activa.'
+                );
+
+                return true;
+            }
+
+            if(cancelCursorPlacement())
+            {
+                return true;
+            }
+
+            if(cancelReadyRepeatPreviews())
+            {
+                return true;
+            }
+
+            return false;
+        }, [
+            clearReferencePick,
+            clearReplacePick,
+            cancelCursorPlacement,
+            cancelReadyRepeatPreviews
+        ]);
+    useEffect(() =>
+    {
+        if(!active)
+        {
+            return;
+        }
+
+        const onTransientEscape = (
+            event: globalThis.KeyboardEvent
+        ) =>
+        {
+            if(event.key !== 'Escape')
+            {
+                return;
+            }
+
+            const target =
+                event.target;
+
+            if(
+                target instanceof HTMLInputElement ||
+                target instanceof HTMLTextAreaElement ||
+                target instanceof HTMLSelectElement ||
+                (
+                    target instanceof HTMLElement &&
+                    target.isContentEditable
+                )
+            )
+            {
+                return;
+            }
+
+            if(!cancelTransientOperation())
+            {
+                return;
+            }
+
+            if(event.cancelable)
+            {
+                event.preventDefault();
+            }
+
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+        };
+
+        window.addEventListener(
+            'keydown',
+            onTransientEscape,
+            true
+        );
+
+        return () =>
+        {
+            window.removeEventListener(
+                'keydown',
+                onTransientEscape,
+                true
+            );
+        };
+    }, [
+        active,
+        cancelTransientOperation
     ]);
 
     useMessageEvent<BuilderProCopyGroupResultEvent>(
@@ -14389,7 +13896,7 @@ export const BuilderProView: FC<{}> = props =>
             }
 
             setStatus(
-                `Error ${ parser.code }: ${ parser.message }`
+                formatBuilderProServerFailure(parser.code, parser.message)
             );
         }
     );
@@ -17226,117 +16733,96 @@ export const BuilderProView: FC<{}> = props =>
             'repeat-linear'
         );
 
-    const pendingLifecycleOperation:
-        BuilderProTransientOperation =
-        pendingFillRepeatOperationRef.current !== null
-            ? 'fill-repeat'
-            : pendingRadialRepeatOperationRef.current !== null
-                ? 'radial-repeat'
-                : pendingGridRepeatOperationRef.current !== null
-                    ? 'grid-repeat'
-                    : pendingLinearRepeatOperationRef.current !== null
-                        ? 'linear-repeat'
-                        : pendingReplaceOperationRef.current ===
-                            REPLACE_OP_EXECUTE &&
-                            pendingRef.current
-                            ? 'replace'
-                            : pendingReferenceOperationRef.current !==
-                                REFERENCE_OP_NONE
-                                ? (
-                                    pendingReferenceOperationRef.current ===
-                                        REFERENCE_OP_EQUAL_Z
-                                        ? 'reference-equal-height'
-                                        : 'reference-place-above'
-                                )
-                                : (
-                                    blueprintPendingRef.current &&
-                                    blueprintOperationRef.current ===
-                                        BLUEPRINT_OP_PLACE
-                                )
-                                    ? 'blueprint-place'
-                                    : 'none';
-
-    const pendingLifecycleIsPreview =
-        pendingFillRepeatOperationRef.current ===
-            FILL_REPEAT_OP_PREVIEW ||
-        pendingRadialRepeatOperationRef.current ===
-            RADIAL_REPEAT_OP_PREVIEW ||
-        pendingGridRepeatOperationRef.current ===
-            GRID_REPEAT_OP_PREVIEW ||
-        pendingLinearRepeatOperationRef.current ===
-            LINEAR_REPEAT_OP_PREVIEW ||
-        (
-            pendingRef.current &&
-            pendingReplaceOperationRef.current ===
-                REPLACE_OP_PREVIEW
-        ) ||
-        (
-            blueprintPendingRef.current &&
-            blueprintOperationRef.current ===
-                BLUEPRINT_OP_PREVIEW
-        );
-
-    const placementLifecycleOperation:
-        BuilderProTransientOperation =
-        blueprintPlaceMode
-            ? 'blueprint-place'
-            : (
-                duplicateMode &&
-                mirrorDuplicateModeRef.current
-            )
-                ? 'mirror-duplicate'
-                : duplicateMode
-                    ? 'duplicate'
-                    : pasteMode
-                        ? 'paste'
-                        : 'none';
-
-    const captureLifecycleOperation:
-        BuilderProTransientOperation =
-        replacePickMode
-            ? 'replace'
-            : referencePickOperation ===
-                REFERENCE_OP_EQUAL_Z
-                ? 'reference-equal-height'
-                : referencePickOperation ===
-                    REFERENCE_OP_PLACE_ABOVE
-                    ? 'reference-place-above'
-                    : pivotPickMode
-                        ? 'pivot-pick'
-                        : areaMode
-                            ? 'area-selection'
-                            : 'none';
-
-    const previewLifecycleOperation:
-        BuilderProTransientOperation =
-        fillRepeatPreviewReady
-            ? 'fill-repeat'
-            : radialRepeatPreviewReady
-                ? 'radial-repeat'
-                : gridRepeatPreviewReady
-                    ? 'grid-repeat'
-                    : linearRepeatPreviewReady
-                        ? 'linear-repeat'
-                        : replacementContextRef.current
-                            ? 'replace'
-                            : 'none';
+    const lifecycleChannels =
+        ResolveBuilderProTransientChannels({
+            pending: {
+                fillRepeat:
+                    pendingFillRepeatOperationRef.current !== null,
+                radialRepeat:
+                    pendingRadialRepeatOperationRef.current !== null,
+                gridRepeat:
+                    pendingGridRepeatOperationRef.current !== null,
+                linearRepeat:
+                    pendingLinearRepeatOperationRef.current !== null,
+                replaceExecute:
+                    pendingReplaceOperationRef.current ===
+                        REPLACE_OP_EXECUTE &&
+                    pendingRef.current,
+                referenceEqualHeight:
+                    pendingReferenceOperationRef.current ===
+                        REFERENCE_OP_EQUAL_Z,
+                referencePlaceAbove:
+                    pendingReferenceOperationRef.current ===
+                        REFERENCE_OP_PLACE_ABOVE,
+                blueprintPlace:
+                    blueprintPendingRef.current &&
+                    blueprintOperationRef.current ===
+                        BLUEPRINT_OP_PLACE,
+                fillRepeatPreview:
+                    pendingFillRepeatOperationRef.current ===
+                        FILL_REPEAT_OP_PREVIEW,
+                radialRepeatPreview:
+                    pendingRadialRepeatOperationRef.current ===
+                        RADIAL_REPEAT_OP_PREVIEW,
+                gridRepeatPreview:
+                    pendingGridRepeatOperationRef.current ===
+                        GRID_REPEAT_OP_PREVIEW,
+                linearRepeatPreview:
+                    pendingLinearRepeatOperationRef.current ===
+                        LINEAR_REPEAT_OP_PREVIEW,
+                replacePreview:
+                    pendingRef.current &&
+                    pendingReplaceOperationRef.current ===
+                        REPLACE_OP_PREVIEW,
+                blueprintPreview:
+                    blueprintPendingRef.current &&
+                    blueprintOperationRef.current ===
+                        BLUEPRINT_OP_PREVIEW
+            },
+            placement: {
+                blueprintPlace:
+                    blueprintPlaceMode,
+                duplicate:
+                    duplicateMode,
+                mirrorDuplicate:
+                    mirrorDuplicateModeRef.current,
+                paste:
+                    pasteMode
+            },
+            capture: {
+                replace:
+                    replacePickMode,
+                referenceEqualHeight:
+                    referencePickOperation ===
+                        REFERENCE_OP_EQUAL_Z,
+                referencePlaceAbove:
+                    referencePickOperation ===
+                        REFERENCE_OP_PLACE_ABOVE,
+                pivot:
+                    pivotPickMode,
+                area:
+                    areaMode
+            },
+            preview: {
+                fillRepeat:
+                    fillRepeatPreviewReady,
+                radialRepeat:
+                    radialRepeatPreviewReady,
+                gridRepeat:
+                    gridRepeatPreviewReady,
+                linearRepeat:
+                    linearRepeatPreviewReady,
+                replacePrepared:
+                    !!replacementContextRef.current
+            }
+        });
 
     const toolLifecycle =
         ResolveBuilderProToolLifecycle({
             active,
             pending,
-            pendingOperation:
-                pendingLifecycleOperation,
-            pendingIsPreview:
-                pendingLifecycleIsPreview,
-            placementOperation:
-                placementLifecycleOperation,
-            captureOperation:
-                captureLifecycleOperation,
-            previewOperation:
-                previewLifecycleOperation
+            ...lifecycleChannels
         });
-
 
     const contextualTool:
         BuilderProToolId =
@@ -17586,7 +17072,20 @@ export const BuilderProView: FC<{}> = props =>
                     { !minimized &&
                     <div className="builder-pro-shell-content">
                                         { status &&
-                        <div className="builder-pro-status-toast">
+                        <div
+                            className="builder-pro-status-toast"
+                            role="status"
+                            aria-live="polite"
+                            aria-atomic="true"
+                            data-builder-pro-phase={
+                                toolLifecycle.phase
+                            }
+                            data-builder-pro-operation={
+                                toolLifecycle.operation
+                            }
+                            data-builder-pro-source={
+                                toolLifecycle.source
+                            }>
                             { status }
                         </div> }
 <div className="builder-pro-workspace">

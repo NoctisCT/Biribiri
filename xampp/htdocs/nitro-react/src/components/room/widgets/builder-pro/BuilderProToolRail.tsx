@@ -20,7 +20,6 @@ const TOOL_GLYPHS: Record<BuilderProToolId, string> = {
     repeat: '⧉',
     replace: '⇄',
     collision: '◇',
-    layers: '▤',
     blueprints: '▣'
 };
 
@@ -42,16 +41,13 @@ export const BuilderProToolRail: FC<BuilderProToolRailProps> = props =>
     } = props;
 
     const visibleDefinitions =
-        BUILDER_PRO_TOOL_DEFINITIONS.filter(
-            definition =>
-                definition.id !== 'layers'
-        );
+        BUILDER_PRO_TOOL_DEFINITIONS;
 
     return (
         <div
             className="builder-pro-tool-rail builder-pro-floating-tool-rail"
             role="toolbar"
-            aria-label="Herramientas Builder Pro">
+            aria-label="Herramientas de Construcción Avanzada">
             { visibleDefinitions.map(definition =>
             {
                 const isDisplayed =

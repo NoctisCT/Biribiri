@@ -6,7 +6,6 @@ export type BuilderProToolId =
     | 'repeat'
     | 'replace'
     | 'collision'
-    | 'layers'
     | 'blueprints';
 
 export type BuilderProToolVariantId =
@@ -29,7 +28,6 @@ export type BuilderProToolVariantId =
     | 'repeat-fill'
     | 'replace-reference'
     | 'collision-traversal'
-    | 'layers-outliner'
     | 'blueprints-manage'
     | 'blueprints-place';
 
@@ -39,6 +37,61 @@ export type BuilderProLifecyclePhase =
     | 'preview'
     | 'applying'
     | 'invalid';
+export type BuilderProLifecycleSource =
+    | 'none'
+    | 'pending'
+    | 'placement'
+    | 'capture'
+    | 'preview';
+
+export interface BuilderProTransientChannelSignals
+{
+    pending: {
+        fillRepeat: boolean;
+        radialRepeat: boolean;
+        gridRepeat: boolean;
+        linearRepeat: boolean;
+        replaceExecute: boolean;
+        referenceEqualHeight: boolean;
+        referencePlaceAbove: boolean;
+        blueprintPlace: boolean;
+        fillRepeatPreview: boolean;
+        radialRepeatPreview: boolean;
+        gridRepeatPreview: boolean;
+        linearRepeatPreview: boolean;
+        replacePreview: boolean;
+        blueprintPreview: boolean;
+    };
+    placement: {
+        blueprintPlace: boolean;
+        duplicate: boolean;
+        mirrorDuplicate: boolean;
+        paste: boolean;
+    };
+    capture: {
+        replace: boolean;
+        referenceEqualHeight: boolean;
+        referencePlaceAbove: boolean;
+        pivot: boolean;
+        area: boolean;
+    };
+    preview: {
+        fillRepeat: boolean;
+        radialRepeat: boolean;
+        gridRepeat: boolean;
+        linearRepeat: boolean;
+        replacePrepared: boolean;
+    };
+}
+
+export interface BuilderProResolvedTransientChannels
+{
+    pendingOperation: BuilderProTransientOperation;
+    pendingIsPreview: boolean;
+    placementOperation: BuilderProTransientOperation;
+    captureOperation: BuilderProTransientOperation;
+    previewOperation: BuilderProTransientOperation;
+}
 
 export type BuilderProTransientOperation =
     | 'none'
@@ -79,6 +132,7 @@ export interface BuilderProToolLifecycle
 {
     suggestedTool: BuilderProToolId;
     operation: BuilderProTransientOperation;
+    source: BuilderProLifecycleSource;
     phase: BuilderProLifecyclePhase;
     hasPreview: boolean;
     isTransient: boolean;
@@ -149,13 +203,6 @@ export const BUILDER_PRO_TOOL_DEFINITIONS:
             ]
         },
         {
-            id: 'layers',
-            label: 'Capas',
-            variants: [
-                'layers-outliner'
-            ]
-        },
-        {
             id: 'blueprints',
             label: 'Blueprints',
             variants: [
@@ -164,6 +211,90 @@ export const BUILDER_PRO_TOOL_DEFINITIONS:
             ]
         }
     ];
+
+export const ResolveBuilderProTransientChannels = (
+    signals: BuilderProTransientChannelSignals
+): BuilderProResolvedTransientChannels =>
+{
+    const pendingOperation:
+        BuilderProTransientOperation =
+        signals.pending.fillRepeat
+            ? 'fill-repeat'
+            : signals.pending.radialRepeat
+                ? 'radial-repeat'
+                : signals.pending.gridRepeat
+                    ? 'grid-repeat'
+                    : signals.pending.linearRepeat
+                        ? 'linear-repeat'
+                        : signals.pending.replaceExecute
+                            ? 'replace'
+                            : signals.pending.referenceEqualHeight
+                                ? 'reference-equal-height'
+                                : signals.pending.referencePlaceAbove
+                                    ? 'reference-place-above'
+                                    : signals.pending.blueprintPlace
+                                        ? 'blueprint-place'
+                                        : 'none';
+
+    const pendingIsPreview =
+        signals.pending.fillRepeatPreview ||
+        signals.pending.radialRepeatPreview ||
+        signals.pending.gridRepeatPreview ||
+        signals.pending.linearRepeatPreview ||
+        signals.pending.replacePreview ||
+        signals.pending.blueprintPreview;
+
+    const placementOperation:
+        BuilderProTransientOperation =
+        signals.placement.blueprintPlace
+            ? 'blueprint-place'
+            : (
+                signals.placement.duplicate &&
+                signals.placement.mirrorDuplicate
+            )
+                ? 'mirror-duplicate'
+                : signals.placement.duplicate
+                    ? 'duplicate'
+                    : signals.placement.paste
+                        ? 'paste'
+                        : 'none';
+
+    const captureOperation:
+        BuilderProTransientOperation =
+        signals.capture.replace
+            ? 'replace'
+            : signals.capture.referenceEqualHeight
+                ? 'reference-equal-height'
+                : signals.capture.referencePlaceAbove
+                    ? 'reference-place-above'
+                    : signals.capture.pivot
+                        ? 'pivot-pick'
+                        : signals.capture.area
+                            ? 'area-selection'
+                            : 'none';
+
+    const previewOperation:
+        BuilderProTransientOperation =
+        signals.preview.fillRepeat
+            ? 'fill-repeat'
+            : signals.preview.radialRepeat
+                ? 'radial-repeat'
+                : signals.preview.gridRepeat
+                    ? 'grid-repeat'
+                    : signals.preview.linearRepeat
+                        ? 'linear-repeat'
+                        : signals.preview.replacePrepared
+                            ? 'replace'
+                            : 'none';
+
+    return {
+        pendingOperation,
+        pendingIsPreview,
+        placementOperation,
+        captureOperation,
+        previewOperation
+    };
+};
 
 const resolveSuggestedTool = (
     operation: BuilderProTransientOperation
@@ -205,6 +336,7 @@ const resolveSuggestedTool = (
 
 const createLifecycle = (
     operation: BuilderProTransientOperation,
+    source: BuilderProLifecycleSource,
     phase: BuilderProLifecyclePhase,
     hasPreview: boolean,
     canCancel: boolean
@@ -214,6 +346,7 @@ const createLifecycle = (
             operation
         ),
     operation,
+    source,
     phase,
     hasPreview,
     isTransient:
@@ -228,6 +361,7 @@ export const ResolveBuilderProToolLifecycle = (
     if(!signals.active)
     {
         return createLifecycle(
+            'none',
             'none',
             'idle',
             false,
@@ -244,6 +378,7 @@ export const ResolveBuilderProToolLifecycle = (
 
         return createLifecycle(
             operation,
+            'pending',
             signals.pendingIsPreview
                 ? 'configuring'
                 : 'applying',
@@ -256,6 +391,7 @@ export const ResolveBuilderProToolLifecycle = (
     {
         return createLifecycle(
             signals.placementOperation,
+            'placement',
             'preview',
             true,
             true
@@ -266,6 +402,7 @@ export const ResolveBuilderProToolLifecycle = (
     {
         return createLifecycle(
             signals.captureOperation,
+            'capture',
             'configuring',
             false,
             true
@@ -277,12 +414,14 @@ export const ResolveBuilderProToolLifecycle = (
         return createLifecycle(
             signals.previewOperation,
             'preview',
+            'preview',
             true,
             true
         );
     }
 
     return createLifecycle(
+        'none',
         'none',
         'idle',
         false,
