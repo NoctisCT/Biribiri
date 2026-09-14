@@ -10957,31 +10957,6 @@ export const BuilderProView: FC<{}> = props =>
                 return;
             }
 
-            /*
-             * P13_5_FILL_EXECUTE_UNDO_READY
-             *
-             * El servidor ya ha confirmado OP_EXECUTE en este punto.
-             * La disponibilidad de Undo no debe depender de que Nitro haya
-             * terminado de materializar visualmente todos los RoomObjects.
-             *
-             * Esto cubre tanto Fill Sala como Fill Area porque ambos usan
-             * el mismo flujo FillRepeat.
-             */
-            setCanUndo(
-                true
-            );
-
-            setCanRedo(
-                false
-            );
-
-            /*
-             * El servidor ya confirmó el EXECUTE. Undo no debe depender
-             * de que Nitro termine de sincronizar visualmente los furnis.
-             */
-            setCanUndo(true);
-            setCanRedo(false);
-
             const repeatedIds =
                 parser.itemIds;
 

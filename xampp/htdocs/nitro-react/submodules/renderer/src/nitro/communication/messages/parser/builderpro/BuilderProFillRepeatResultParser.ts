@@ -23,6 +23,8 @@ export class BuilderProFillRepeatResultParser implements IMessageParser
     private _placedCount = 0;
     private _previewEntries: BuilderProFillRepeatPreviewEntry[] = [];
     private _itemIds: number[] = [];
+    private _canUndo = false;
+    private _canRedo = false;
 
     public flush(): boolean
     {
@@ -38,6 +40,8 @@ export class BuilderProFillRepeatResultParser implements IMessageParser
         this._placedCount = 0;
         this._previewEntries = [];
         this._itemIds = [];
+        this._canUndo = false;
+        this._canRedo = false;
 
         return true;
     }
@@ -122,6 +126,9 @@ export class BuilderProFillRepeatResultParser implements IMessageParser
             );
         }
 
+        this._canUndo = wrapper.readBoolean();
+        this._canRedo = wrapper.readBoolean();
+
         return true;
     }
 
@@ -135,6 +142,8 @@ export class BuilderProFillRepeatResultParser implements IMessageParser
     public get spacing(): number { return this._spacing; }
     public get copies(): number { return this._copies; }
     public get placedCount(): number { return this._placedCount; }
+    public get canUndo(): boolean { return this._canUndo; }
+    public get canRedo(): boolean { return this._canRedo; }
 
     public get previewEntries(): BuilderProFillRepeatPreviewEntry[]
     {
