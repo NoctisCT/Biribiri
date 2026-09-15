@@ -1418,3 +1418,263 @@
         }
     }
 }
+
+
+/* BIRIBIRI_CLOTHING_FAVORITES_V1
+   Reutiliza el coraz?n ORIGINAL del Holo. */
+.clothing-container {
+    .avatar-container {
+        position: relative;
+    }
+
+    .biribiri-clothing-favorite {
+        position: absolute;
+        z-index: 20;
+        top: -1px;
+        right: -1px;
+        width: 16px;
+        height: 14px;
+        border: 0;
+        background:
+            url('@/assets/images/friends/icon-heart.png')
+            center
+            center /
+            contain
+            no-repeat;
+        cursor: pointer;
+        filter: grayscale(1);
+        opacity: .28;
+        transition:
+            opacity .08s linear,
+            filter .08s linear,
+            transform .08s linear;
+
+        &:hover {
+            opacity: .8;
+            transform: scale(1.08);
+        }
+
+        &.is-favorite {
+            filter: none;
+            opacity: 1;
+        }
+    }
+}
+
+
+/* BIRIBIRI_CLOTHING_FAVORITES_GROUP_HEARTS */
+.clothing-container {
+    .biribiri-clothing-favorite {
+        width: 14px !important;
+        height: 14px !important;
+        background-image:
+            url('@/assets/images/groups/icons/group_notfavorite.png') !important;
+        background-repeat: no-repeat !important;
+        background-position: center !important;
+        background-size: auto !important;
+        filter: none !important;
+        opacity: 1 !important;
+
+        &.is-favorite {
+            background-image:
+                url('@/assets/images/groups/icons/group_favorite.png') !important;
+            filter: none !important;
+            opacity: 1 !important;
+        }
+    }
+}
+/* END_BIRIBIRI_CLOTHING_FAVORITES_GROUP_HEARTS */
+
+
+/* BIRIBIRI_CLOTHING_SEARCH_METADATA_V1 */
+.biribiri-clothing-browser {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+
+    .biribiri-clothing-search-wrap {
+        flex: 0 0 auto;
+        padding: 2px 4px 4px;
+    }
+
+    .biribiri-clothing-search {
+        width: 100%;
+        min-height: 27px;
+        font-size: 11px;
+    }
+
+    .clothing-container {
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+}
+/* END_BIRIBIRI_CLOTHING_SEARCH_METADATA_V1 */
+
+
+/* BIRIBIRI_CLOTHING_FILTERS_V1 */
+.biribiri-clothing-filters {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 4px;
+    padding: 2px 4px 3px;
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    .biribiri-clothing-filter {
+        flex: 0 0 auto;
+        border: 1px solid rgba(0, 0, 0, 0.35);
+        border-radius: 3px;
+        padding: 2px 7px;
+        font-size: 10px;
+        line-height: 16px;
+        white-space: nowrap;
+        cursor: pointer;
+
+        &.is-active {
+            font-weight: 700;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+        }
+    }
+}
+/* END_BIRIBIRI_CLOTHING_FILTERS_V1 */
+
+
+/* BIRIBIRI_WARDROBE_DELETE_UNDO_V1 */
+
+.biribiri-wardrobe-named {
+    .biribiri-wardrobe-slot {
+        &:hover {
+            .wardrobe-outfit-delete {
+                opacity: 1;
+                pointer-events: auto;
+            }
+        }
+    }
+}
+
+.wardrobe-outfit-delete {
+    position: absolute;
+    z-index: 5;
+    top: 2px;
+    right: 18px;
+    display: flex;
+    width: 14px;
+    height: 14px;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #6b3e3e;
+    border-radius: 2px;
+    background: linear-gradient(#e0c4bd, #b98980);
+    color: #5d2929;
+    font-size: 10px;
+    line-height: 1;
+    box-shadow:
+        inset 1px 1px 0 rgba(255, 255, 255, .65),
+        inset -1px -1px 0 rgba(0, 0, 0, .14);
+    opacity: 0;
+    pointer-events: none;
+
+    &:hover {
+        filter: brightness(1.08);
+    }
+
+    &:disabled {
+        cursor: default;
+        opacity: .45;
+    }
+}
+
+.wardrobe-undo-strip {
+    display: flex;
+    width: 100%;
+    min-height: 24px;
+    margin-top: 4px;
+    padding: 3px 5px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 5px;
+    border: 1px solid #5c5952;
+    border-radius: 3px;
+    background: #bcb7aa;
+    box-shadow:
+        inset 1px 1px 0 rgba(255, 255, 255, .62),
+        inset -1px -1px 0 rgba(0, 0, 0, .12);
+    font-size: 8px;
+}
+
+.wardrobe-undo-message {
+    overflow: hidden;
+    flex: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wardrobe-undo-button {
+    display: flex;
+    min-height: 17px;
+    padding: 1px 5px;
+    align-items: center;
+    gap: 2px;
+    border: 1px solid #515b66;
+    border-radius: 2px;
+    background: linear-gradient(#dbe2e8, #aab6c0);
+    color: #2e3943;
+    font-size: 8px;
+    font-weight: 700;
+
+    &:hover {
+        filter: brightness(1.07);
+    }
+}
+
+/* END_BIRIBIRI_WARDROBE_DELETE_UNDO_V1 */
+
+
+/* BIRIBIRI_WARDROBE_UNDO_V2_VISIBLE */
+
+.biribiri-wardrobe-named {
+    position: relative;
+}
+
+.wardrobe-undo-floating {
+    position: absolute;
+    z-index: 60;
+    left: 4px;
+    right: 4px;
+    bottom: 4px;
+    display: flex;
+    min-height: 25px;
+    padding: 4px 5px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 5px;
+    border: 1px solid #4e5660;
+    border-radius: 3px;
+    background: #c7c3b8;
+    box-shadow:
+        0 2px 5px rgba(0, 0, 0, .35),
+        inset 1px 1px 0 rgba(255, 255, 255, .7),
+        inset -1px -1px 0 rgba(0, 0, 0, .12);
+    color: #343434;
+    font-size: 8px;
+    pointer-events: auto;
+}
+
+.wardrobe-undo-floating {
+    .wardrobe-undo-message {
+        min-width: 0;
+        overflow: hidden;
+        flex: 1;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .wardrobe-undo-button {
+        flex: 0 0 auto;
+    }
+}
+
+/* END_BIRIBIRI_WARDROBE_UNDO_V2_VISIBLE */

@@ -4,9 +4,12 @@ import com.eu.habbo.Emulator;
 import com.eu.habbo.habbohotel.users.Habbo;
 import com.eu.habbo.messages.ICallable;
 import com.eu.habbo.messages.incoming.MessageHandler;
+import com.eu.habbo.plugin.EventHandler;
+import com.eu.habbo.plugin.EventListener;
 import com.eu.habbo.plugin.HabboPlugin;
+import com.eu.habbo.plugin.events.emulator.EmulatorLoadedEvent;
 
-public final class BiribiriWardrobePlugin extends HabboPlugin
+public final class BiribiriWardrobePlugin extends HabboPlugin implements EventListener
 {
     public static final int PACKET_STATE_REQUEST = 6200;
     public static final int PACKET_STATE_RESPONSE = 6201;
@@ -15,8 +18,15 @@ public final class BiribiriWardrobePlugin extends HabboPlugin
     public static final int PACKET_NAME_SAVE = 6204;
     public static final int PACKET_PURCHASE_REQUEST = 6205;
     public static final int PACKET_PURCHASE_RESULT = 6206;
+    public static final int PACKET_CLOTHING_FAVORITES_REQUEST = 6207;
+    public static final int PACKET_CLOTHING_FAVORITES_RESPONSE = 6208;
+    public static final int PACKET_CLOTHING_FAVORITE_SET = 6209;
+    public static final int PACKET_CLOTHING_METADATA_REQUEST = 6210;
+    public static final int PACKET_CLOTHING_METADATA_RESPONSE = 6211;
+    public static final int PACKET_DELETE_REQUEST = 6212;
+    public static final int PACKET_DELETE_RESULT = 6213;
 
-    public static final String BUILD = "BIRIBIRI_WARDROBE_V4_2_EXTRA_SLOT_PURCHASE";
+    public static final String BUILD = "BIRIBIRI_WARDROBE_V4_4_CLOTHING_METADATA_SEARCH";
 
     private static BiribiriWardrobePlugin instance;
     private final WardrobeManager manager = new WardrobeManager();
@@ -25,6 +35,10 @@ public final class BiribiriWardrobePlugin extends HabboPlugin
     private boolean namesPacketRegistered = false;
     private boolean nameSavePacketRegistered = false;
     private boolean purchasePacketRegistered = false;
+    private boolean clothingFavoritesRequestPacketRegistered = false;
+    private boolean clothingFavoriteSetPacketRegistered = false;
+    private boolean clothingMetadataRequestPacketRegistered = false;
+    private boolean deletePacketRegistered = false;
     private boolean saveGuardRegistered = false;
 
     private final ICallable saveGuard = new ICallable()
@@ -78,67 +92,137 @@ public final class BiribiriWardrobePlugin extends HabboPlugin
     {
         instance = this;
 
+        Emulator.getPluginManager().registerEvents(this, this);
+
+        System.out.println(
+            "[BiribiriWardrobe] plugin cargado; esperando GameServer."
+        );
+
+        if(Emulator.getGameServer() != null)
+        {
+            try
+            {
+                initializePlugin();
+            }
+            catch(Throwable throwable)
+            {
+                throw new RuntimeException(throwable);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onEmulatorLoaded(EmulatorLoadedEvent event)
+    {
         try
         {
-            this.manager.initializeDatabase();
-
-            if(!this.statePacketRegistered)
-            {
-                Emulator.getGameServer().getPacketManager().registerHandler(
-                    PACKET_STATE_REQUEST,
-                    WardrobeStateRequest.class
-                );
-                this.statePacketRegistered = true;
-            }
-
-            if(!this.namesPacketRegistered)
-            {
-                Emulator.getGameServer().getPacketManager().registerHandler(
-                    PACKET_NAMES_REQUEST,
-                    WardrobeNamesRequest.class
-                );
-                this.namesPacketRegistered = true;
-            }
-
-            if(!this.nameSavePacketRegistered)
-            {
-                Emulator.getGameServer().getPacketManager().registerHandler(
-                    PACKET_NAME_SAVE,
-                    WardrobeNameSave.class
-                );
-                this.nameSavePacketRegistered = true;
-            }
-
-            if(!this.purchasePacketRegistered)
-            {
-                Emulator.getGameServer().getPacketManager().registerHandler(
-                    PACKET_PURCHASE_REQUEST,
-                    WardrobePurchaseRequest.class
-                );
-                this.purchasePacketRegistered = true;
-            }
-
-            if(!this.saveGuardRegistered)
-            {
-                Emulator.getGameServer().getPacketManager().registerCallable(
-                    800,
-                    this.saveGuard
-                );
-                this.saveGuardRegistered = true;
-            }
-
-            System.out.println(
-                "[BiribiriWardrobe] habilitado build=" + BUILD +
-                " state=" + PACKET_STATE_REQUEST + "/" + PACKET_STATE_RESPONSE +
-                " names=" + PACKET_NAMES_REQUEST + "/" + PACKET_NAMES_RESPONSE +
-                " saveName=" + PACKET_NAME_SAVE +
-                " purchase=" + PACKET_PURCHASE_REQUEST + "/" + PACKET_PURCHASE_RESULT
-            );
+            initializePlugin();
         }
         catch(Throwable throwable)
         {
             throw new RuntimeException(throwable);
         }
+    }
+
+    private synchronized void initializePlugin() throws Exception
+    {
+        this.manager.initializeDatabase();
+
+        if(!this.statePacketRegistered)
+        {
+            Emulator.getGameServer().getPacketManager().registerHandler(
+                PACKET_STATE_REQUEST,
+                WardrobeStateRequest.class
+            );
+            this.statePacketRegistered = true;
+        }
+
+        if(!this.namesPacketRegistered)
+        {
+            Emulator.getGameServer().getPacketManager().registerHandler(
+                PACKET_NAMES_REQUEST,
+                WardrobeNamesRequest.class
+            );
+            this.namesPacketRegistered = true;
+        }
+
+        if(!this.nameSavePacketRegistered)
+        {
+            Emulator.getGameServer().getPacketManager().registerHandler(
+                PACKET_NAME_SAVE,
+                WardrobeNameSave.class
+            );
+            this.nameSavePacketRegistered = true;
+        }
+
+        if(!this.purchasePacketRegistered)
+        {
+            Emulator.getGameServer().getPacketManager().registerHandler(
+                PACKET_PURCHASE_REQUEST,
+                WardrobePurchaseRequest.class
+            );
+            this.purchasePacketRegistered = true;
+        }
+
+        if(!this.clothingFavoritesRequestPacketRegistered)
+        {
+            Emulator.getGameServer().getPacketManager().registerHandler(
+                PACKET_CLOTHING_FAVORITES_REQUEST,
+                WardrobeClothingFavoritesRequest.class
+            );
+
+            this.clothingFavoritesRequestPacketRegistered = true;
+        }
+
+        if(!this.clothingFavoriteSetPacketRegistered)
+        {
+            Emulator.getGameServer().getPacketManager().registerHandler(
+                PACKET_CLOTHING_FAVORITE_SET,
+                WardrobeClothingFavoriteSet.class
+            );
+
+            this.clothingFavoriteSetPacketRegistered = true;
+        }
+
+        if(!this.clothingMetadataRequestPacketRegistered)
+        {
+            Emulator.getGameServer().getPacketManager().registerHandler(
+                PACKET_CLOTHING_METADATA_REQUEST,
+                WardrobeClothingMetadataRequest.class
+            );
+
+            this.clothingMetadataRequestPacketRegistered = true;
+        }
+
+        if(!this.deletePacketRegistered)
+        {
+            Emulator.getGameServer()
+                .getPacketManager()
+                .registerHandler(
+                    PACKET_DELETE_REQUEST,
+                    WardrobeDeleteRequest.class
+                );
+
+            this.deletePacketRegistered =
+                true;
+        }
+
+        if(!this.saveGuardRegistered)
+        {
+            Emulator.getGameServer().getPacketManager().registerCallable(
+                800,
+                this.saveGuard
+            );
+            this.saveGuardRegistered = true;
+        }
+
+        System.out.println(
+            "[BiribiriWardrobe] habilitado build=" + BUILD +
+            " state=" + PACKET_STATE_REQUEST + "/" + PACKET_STATE_RESPONSE +
+            " names=" + PACKET_NAMES_REQUEST + "/" + PACKET_NAMES_RESPONSE +
+            " saveName=" + PACKET_NAME_SAVE +
+            " purchase=" + PACKET_PURCHASE_REQUEST + "/" + PACKET_PURCHASE_RESULT
+        );
     }
 
     @Override

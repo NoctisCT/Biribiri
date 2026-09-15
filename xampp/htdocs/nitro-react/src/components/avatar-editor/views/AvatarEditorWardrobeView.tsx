@@ -1,3 +1,4 @@
+// BIRIBIRI_WARDROBE_DELETE_UNDO_V1
 // BIRIBIRI_WARDROBE_V4_2_2_PURCHASE_ACK_FIX
 // BIRIBIRI_WARDROBE_V4_2_EXTRA_SLOT_PURCHASE
 // BIRIBIRI_WARDROBE_V4_1_3_MATCH_WARDROBE_PREVIEW
@@ -5,15 +6,24 @@
 // BIRIBIRI_WARDROBE_V4_1_1_FULL_AVATAR_PREVIEW
 // BIRIBIRI_WARDROBE_V2_PAGED_SECTIONS
 // BIRIBIRI_WARDROBE_V4_1_NAMED_OUTFITS
-import { BiribiriWardrobeNameSaveComposer, BiribiriWardrobePurchaseRequestComposer, BiribiriWardrobePurchaseResultEvent, IAvatarFigureContainer, SaveWardrobeOutfitMessageComposer } from '@nitrots/nitro-renderer';
-import { Dispatch, FC, SetStateAction, useCallback, useEffect, useMemo, useState } from 'react';
-import { MdEdit, MdKeyboardArrowLeft, MdKeyboardArrowRight } from 'react-icons/md';
+import { BiribiriWardrobeDeleteResultEvent, BiribiriWardrobeDeleteRequestComposer, BiribiriWardrobeNameSaveComposer, BiribiriWardrobePurchaseRequestComposer, BiribiriWardrobePurchaseResultEvent, IAvatarFigureContainer, SaveWardrobeOutfitMessageComposer } from '@nitrots/nitro-renderer';
+import { Dispatch, FC, SetStateAction, useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import { MdEdit, MdKeyboardArrowLeft, MdKeyboardArrowRight, MdDeleteOutline, MdUndo} from 'react-icons/md';
 import { CreateLinkEvent, FigureData, GetAvatarRenderManager, GetClubMemberLevel, GetConfiguration, LocalizeText, SendMessageComposer } from '../../../api';
 import { Flex, LayoutAvatarImageView } from '../../../common';
 import { useMessageEvent } from '../../../hooks';
 
 type WardrobeSection = 'base' | 'hc' | 'extra';
 type WardrobeDialogMode = 'save' | 'rename';
+
+interface WardrobeDeletedSnapshot
+{
+    reason: 'delete' | 'replace';
+    slotIndex: number;
+    figure: string;
+    gender: string;
+    name: string;
+}
 
 export interface AvatarEditorWardrobeViewProps
 {
@@ -91,6 +101,19 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
     const [ purchasePending, setPurchasePending ] = useState(false);
     const [ purchaseError, setPurchaseError ] = useState('');
     const [ purchaseStartSlots, setPurchaseStartSlots ] = useState<number>(-1);
+
+    const pendingDeleteRef =
+        useRef<WardrobeDeletedSnapshot | null>(null);
+
+    const [ deletePending, setDeletePending ] =
+        useState(false);
+
+    const [ deleteError, setDeleteError ] =
+        useState('');
+
+    const [ undoSnapshot, setUndoSnapshot ] =
+        useState<WardrobeDeletedSnapshot | null>(null);
+
 
     const extraPageCount = useMemo(
         () =>
@@ -183,6 +206,118 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
         return () =>
             window.clearTimeout(timeout);
     }, [ purchasePending ]);
+
+
+    useMessageEvent<BiribiriWardrobeDeleteResultEvent>(
+        BiribiriWardrobeDeleteResultEvent,
+        event =>
+        {
+            const parser =
+                event.getParser();
+
+            const snapshot =
+                pendingDeleteRef.current;
+
+            if(
+                !snapshot ||
+                parser.slotId !==
+                    (snapshot.slotIndex + 1)
+            )
+            {
+                return;
+            }
+
+            pendingDeleteRef.current =
+                null;
+
+            setDeletePending(false);
+
+            if(parser.status !== 0)
+            {
+                if(parser.status === 1)
+                {
+                    setDeleteError(
+                        'No puedes eliminar este espacio.'
+                    );
+                }
+                else if(parser.status === 2)
+                {
+                    setDeleteError(
+                        'El conjunto ya no existe.'
+                    );
+                }
+                else
+                {
+                    setDeleteError(
+                        'No se pudo eliminar el conjunto.'
+                    );
+                }
+
+                return;
+            }
+
+            setSavedFigures(
+                previous =>
+                {
+                    const next =
+                        [ ...(previous || []) ];
+
+                    delete (next as any)[
+                        snapshot.slotIndex
+                    ];
+
+                    return next;
+                }
+            );
+
+            setOutfitNames(
+                previous =>
+                {
+                    const next = {
+                        ...(previous || {})
+                    };
+
+                    delete next[
+                        snapshot.slotIndex + 1
+                    ];
+
+                    return next;
+                }
+            );
+
+            setUndoSnapshot(
+                snapshot
+            );
+
+            setDeleteError('');
+        }
+    );
+
+    useEffect(() =>
+    {
+        if(!deletePending) return;
+
+        const timeout =
+            window.setTimeout(
+                () =>
+                {
+                    pendingDeleteRef.current =
+                        null;
+
+                    setDeletePending(false);
+
+                    setDeleteError(
+                        'El servidor no confirmo el borrado.'
+                    );
+                },
+                5000
+            );
+
+        return () =>
+            window.clearTimeout(
+                timeout
+            );
+    }, [ deletePending ]);
 
     const getSlotType = useCallback(
         (index: number): WardrobeSection =>
@@ -422,6 +557,7 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
 
             if(dialogMode === 'save')
             {
+
                 if(
                     !figureData ||
                     dialogSlotIndex >=
@@ -436,6 +572,64 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
 
                 const gender =
                     figureData.gender;
+
+
+                // BIRIBIRI_WARDROBE_UNDO_REPLACE_V2
+                const previousTupleForUndo =
+                    savedFigures[
+                        dialogSlotIndex
+                    ];
+
+                if(
+                    previousTupleForUndo &&
+                    previousTupleForUndo[0]
+                )
+                {
+                    const previousFigure =
+                        previousTupleForUndo[0]
+                            .getFigureString();
+
+                    const previousGender =
+                        previousTupleForUndo[1];
+
+                    const previousName =
+                        outfitNames[slotId] ||
+                        '';
+
+                    const actuallyChanged =
+                        previousFigure !== figure ||
+                        previousGender !== gender ||
+                        previousName !== finalName;
+
+                    if(actuallyChanged)
+                    {
+                        // Al sustituir un look, este pasa a ser
+                        // el UNICO estado recuperable.
+                        setUndoSnapshot({
+                            reason: 'replace',
+                            slotIndex:
+                                dialogSlotIndex,
+                            figure:
+                                previousFigure,
+                            gender:
+                                previousGender,
+                            name:
+                                previousName
+                        });
+
+                        setDeleteError('');
+                    }
+                }
+                else if(
+                    undoSnapshot &&
+                    undoSnapshot.slotIndex ===
+                        dialogSlotIndex
+                )
+                {
+                    // Si era un slot borrado y ya lo reutilizamos,
+                    // aquel borrado deja de ser recuperable.
+                    setUndoSnapshot(null);
+                }
 
                 newFigures[dialogSlotIndex] = [
                     GetAvatarRenderManager()
@@ -483,7 +677,196 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
             isSlotUnlocked,
             requestSlotAccess,
             getFallbackName,
-            closeDialog
+            closeDialog,
+            outfitNames,
+            undoSnapshot
+        ]
+    );
+
+
+    const requestDeleteOutfit = useCallback(
+        (index: number) =>
+        {
+            if(
+                deletePending ||
+                index < 0
+            )
+            {
+                return;
+            }
+
+            if(!isSlotUnlocked(index))
+            {
+                requestSlotAccess(index);
+                return;
+            }
+
+            const tuple =
+                savedFigures[index];
+
+            if(
+                !tuple ||
+                !tuple[0]
+            )
+            {
+                return;
+            }
+
+            const snapshot:
+                WardrobeDeletedSnapshot =
+            {
+                reason: 'delete',
+                slotIndex: index,
+                figure:
+                    tuple[0]
+                        .getFigureString(),
+                gender:
+                    tuple[1],
+                name:
+                    outfitNames[index + 1] ||
+                    ''
+            };
+
+            // Nuevo borrado = el Undo anterior deja
+            // de estar disponible inmediatamente.
+            setUndoSnapshot(null);
+
+            pendingDeleteRef.current =
+                snapshot;
+
+            setDeletePending(true);
+            setDeleteError('');
+
+            SendMessageComposer(
+                new BiribiriWardrobeDeleteRequestComposer(
+                    index + 1
+                )
+            );
+        },
+        [
+            deletePending,
+            savedFigures,
+            outfitNames,
+            isSlotUnlocked,
+            requestSlotAccess
+        ]
+    );
+
+    const undoLastDelete = useCallback(
+        () =>
+        {
+            const snapshot =
+                undoSnapshot;
+
+            if(!snapshot)
+            {
+                return;
+            }
+
+            if(
+                !isSlotUnlocked(
+                    snapshot.slotIndex
+                )
+            )
+            {
+                requestSlotAccess(
+                    snapshot.slotIndex
+                );
+
+                return;
+            }
+
+            const existing =
+                savedFigures[
+                    snapshot.slotIndex
+                ];
+
+            // Para un DELETE esperamos que el slot siga vacio.
+            // Para un REPLACE es normal que contenga el look nuevo.
+            if(
+                snapshot.reason === 'delete' &&
+                existing &&
+                existing[0]
+            )
+            {
+                setUndoSnapshot(null);
+
+                setDeleteError(
+                    'Ese espacio ya contiene otro conjunto.'
+                );
+
+                return;
+            }
+
+            const nextFigures =
+                [ ...savedFigures ];
+
+            nextFigures[
+                snapshot.slotIndex
+            ] = [
+                GetAvatarRenderManager()
+                    .createFigureContainer(
+                        snapshot.figure
+                    ),
+                snapshot.gender
+            ];
+
+            setSavedFigures(
+                nextFigures
+            );
+
+            // Persistencia real del look recuperado.
+            SendMessageComposer(
+                new SaveWardrobeOutfitMessageComposer(
+                    snapshot.slotIndex + 1,
+                    snapshot.figure,
+                    snapshot.gender
+                )
+            );
+
+            // Restauramos tambien el nombre exacto.
+            // Cadena vacia = quitar metadata del nombre.
+            setOutfitNames(
+                previous =>
+                {
+                    const next = {
+                        ...(previous || {})
+                    };
+
+                    if(snapshot.name)
+                    {
+                        next[
+                            snapshot.slotIndex + 1
+                        ] = snapshot.name;
+                    }
+                    else
+                    {
+                        delete next[
+                            snapshot.slotIndex + 1
+                        ];
+                    }
+
+                    return next;
+                }
+            );
+
+            SendMessageComposer(
+                new BiribiriWardrobeNameSaveComposer(
+                    snapshot.slotIndex + 1,
+                    snapshot.name || ''
+                )
+            );
+
+            setUndoSnapshot(null);
+            setDeleteError('');
+        },
+        [
+            undoSnapshot,
+            savedFigures,
+            setSavedFigures,
+            setOutfitNames,
+            isSlotUnlocked,
+            requestSlotAccess
         ]
     );
 
@@ -682,7 +1065,7 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
                                     !isNextExtraPurchase &&
                                     <span
                                         className={ `wardrobe-slot-lock is-${ slotType }` }>
-                                        { slotType === 'hc' ? 'HC' : '×' }
+                                        { slotType === 'hc' ? 'BC' : '\u00D7' }
                                     </span> }
 
                                 { isNextExtraPurchase &&
@@ -724,6 +1107,25 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
                                                 <MdEdit />
                                             </button> }
 
+                                        { slotUnlocked &&
+                                            <button
+                                                type="button"
+                                                className="wardrobe-outfit-delete"
+                                                title="Eliminar conjunto"
+                                                disabled={ deletePending }
+                                                onClick={
+                                                    event =>
+                                                    {
+                                                        event.stopPropagation();
+
+                                                        requestDeleteOutfit(
+                                                            index
+                                                        );
+                                                    }
+                                                }>
+                                                <MdDeleteOutline />
+                                            </button> }
+
                                         { outfitName &&
                                             <span className="wardrobe-outfit-name-tooltip">
                                                 { outfitName }
@@ -750,7 +1152,9 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
             purchasedSlots,
             nextExtraSlotIndex,
             nextExtraPrice,
-            openPurchaseDialog
+            openPurchaseDialog,
+            requestDeleteOutfit,
+            deletePending
         ]
     );
 
@@ -793,7 +1197,7 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
                         }
                         onClick={ () => setActiveSection('hc') }>
                         <span className="wardrobe-section-icon is-hc" />
-                        <span>HC</span>
+                        <span title="Biri Club">BC</span>
                     </button>
 
                     <button
@@ -817,6 +1221,34 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
                     { figures }
                 </div>
             </div>
+
+            { (undoSnapshot || deleteError) &&
+                <div className="wardrobe-undo-floating">
+                    <span className="wardrobe-undo-message">
+                        {
+                            deleteError ||
+                            (
+                                undoSnapshot
+                                    ? (
+                                        undoSnapshot.reason === 'replace'
+                                            ? `Conjunto ${ undoSnapshot.slotIndex + 1 } sustituido`
+                                            : `Conjunto ${ undoSnapshot.slotIndex + 1 } eliminado`
+                                    )
+                                    : ''
+                            )
+                        }
+                    </span>
+
+                    { undoSnapshot &&
+                        <button
+                            type="button"
+                            className="wardrobe-undo-button"
+                            disabled={ deletePending }
+                            onClick={ undoLastDelete }>
+                            <MdUndo />
+                            <span>Deshacer</span>
+                        </button> }
+                </div> }
 
             { activeSection === 'extra' &&
                 <div className="biribiri-wardrobe-pages">

@@ -1,3 +1,5 @@
+import { BiribiriWardrobeDeleteResultEvent, BiribiriWardrobeClothingMetadataEvent, BiribiriWardrobeClothingFavoritesEvent } from './messages/incoming';
+import { BiribiriWardrobeClothingFavoriteSetComposer, BiribiriWardrobeDeleteRequestComposer, BiribiriWardrobeClothingMetadataRequestComposer, BiribiriWardrobeClothingFavoritesRequestComposer } from './messages/outgoing';
 import { BiribiriWardrobePurchaseRequestComposer } from './messages/outgoing';
 import { BiribiriWardrobePurchaseResultEvent } from './messages/incoming';
 import { BiribiriWardrobeNamesEvent } from './messages/incoming';
@@ -741,6 +743,17 @@ export class NitroMessages implements IMessageConfiguration {
         this._events.set(IncomingHeader.BIRIBIRI_WARDROBE_STATE, BiribiriWardrobeStateEvent);
         this._events.set(IncomingHeader.BIRIBIRI_WARDROBE_NAMES, BiribiriWardrobeNamesEvent);
         this._events.set(IncomingHeader.BIRIBIRI_WARDROBE_PURCHASE_RESULT, BiribiriWardrobePurchaseResultEvent);
+        this._events.set(IncomingHeader.BIRIBIRI_WARDROBE_CLOTHING_FAVORITES, BiribiriWardrobeClothingFavoritesEvent);
+
+        this._events.set(
+            IncomingHeader.BIRIBIRI_WARDROBE_CLOTHING_METADATA,
+            BiribiriWardrobeClothingMetadataEvent
+        );
+
+        this._events.set(
+            IncomingHeader.BIRIBIRI_WARDROBE_DELETE_RESULT,
+            BiribiriWardrobeDeleteResultEvent
+        );
     }
 
     private registerComposers(): void {
@@ -1412,6 +1425,18 @@ export class NitroMessages implements IMessageConfiguration {
         this._composers.set(OutgoingHeader.BIRIBIRI_WARDROBE_NAME_SAVE, BiribiriWardrobeNameSaveComposer);
         this._composers.set(OutgoingHeader.BIRIBIRI_WARDROBE_PURCHASE_REQUEST, BiribiriWardrobePurchaseRequestComposer);
         this._composers.set(OutgoingHeader.BIRIBIRI_WARDROBE_NAMES_REQUEST, BiribiriWardrobeNamesRequestComposer);
+        this._composers.set(OutgoingHeader.BIRIBIRI_WARDROBE_CLOTHING_FAVORITES_REQUEST, BiribiriWardrobeClothingFavoritesRequestComposer);
+
+        this._composers.set(
+            OutgoingHeader.BIRIBIRI_WARDROBE_CLOTHING_METADATA_REQUEST,
+            BiribiriWardrobeClothingMetadataRequestComposer
+        );
+
+        this._composers.set(
+            OutgoingHeader.BIRIBIRI_WARDROBE_DELETE_REQUEST,
+            BiribiriWardrobeDeleteRequestComposer
+        );
+        this._composers.set(OutgoingHeader.BIRIBIRI_WARDROBE_CLOTHING_FAVORITE_SET, BiribiriWardrobeClothingFavoriteSetComposer);
     }
 
     public get events(): Map<number, Function> {

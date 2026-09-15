@@ -1,4 +1,5 @@
-import { FC, useEffect, useState } from 'react';
+// BIRIBIRI_CLOTHING_FAVORITES_V1
+import { FC, MouseEvent, useEffect, useState } from 'react';
 import { AvatarEditorGridPartItem, GetConfiguration } from '../../../../api';
 import { LayoutCurrencyIcon, LayoutGridItem, LayoutGridItemProps } from '../../../../common';
 import { AvatarEditorIcon } from '../AvatarEditorIcon';
@@ -6,11 +7,19 @@ import { AvatarEditorIcon } from '../AvatarEditorIcon';
 export interface AvatarEditorFigureSetItemViewProps extends LayoutGridItemProps
 {
     partItem: AvatarEditorGridPartItem;
+    isFavorite?: boolean;
+    onFavoriteToggle?: (event: MouseEvent<HTMLElement>) => void;
 }
 
 export const AvatarEditorFigureSetItemView: FC<AvatarEditorFigureSetItemViewProps> = props =>
 {
-    const { partItem = null, children = null, ...rest } = props;
+    const {
+        partItem = null,
+        isFavorite = false,
+        onFavoriteToggle = null,
+        children = null,
+        ...rest
+    } = props;
     const [ updateId, setUpdateId ] = useState(-1);
 
     const hcDisabled = GetConfiguration<boolean>('hc.disabled', false);
@@ -30,6 +39,33 @@ export const AvatarEditorFigureSetItemView: FC<AvatarEditorFigureSetItemViewProp
                 { !hcDisabled && partItem.isHC && <i className="icon hc-icon position-absolute" /> }
                 { partItem.isClear && <AvatarEditorIcon icon="clear" /> }
                 { partItem.isSellable && <AvatarEditorIcon icon="sellable" position="absolute" className="end-1 bottom-1" /> }
+
+                { !partItem.isClear &&
+                    <i
+                        className={
+                            `biribiri-clothing-favorite${
+                                isFavorite
+                                    ? ' is-favorite'
+                                    : ''
+                            }`
+                        }
+                        title={
+                            isFavorite
+                                ? 'Quitar de favoritas'
+                                : 'A?adir a favoritas'
+                        }
+                        onClick={
+                            event =>
+                            {
+                                event.stopPropagation();
+
+                                if(onFavoriteToggle)
+                                {
+                                    onFavoriteToggle(event);
+                                }
+                            }
+                        } /> }
+
                 { children }
             </LayoutGridItem>
         </div>

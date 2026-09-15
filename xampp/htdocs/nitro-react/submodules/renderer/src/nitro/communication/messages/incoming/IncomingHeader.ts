@@ -1,4 +1,7 @@
 export class IncomingHeader {
+    public static BIRIBIRI_WARDROBE_CLOTHING_FAVORITES = 6208;
+    public static BIRIBIRI_WARDROBE_CLOTHING_METADATA = 6211;
+    public static BIRIBIRI_WARDROBE_DELETE_RESULT = 6213;
     public static COMBAT_GRID = 3500; // Tu paquete personalizado de BHRPG
     public static ACHIEVEMENT_LIST = 305;
     public static AUTHENTICATED = 2491;
