@@ -97,6 +97,75 @@ public final class WardrobeManager
     public static final int DELETE_NOT_FOUND = 2;
     public static final int DELETE_FAILED = 3;
 
+    // BIRIBIRI_WARDROBE_P6_FOLDERS
+    public static final int FOLDER_ACTION_CREATE = 1;
+    public static final int FOLDER_ACTION_RENAME = 2;
+    public static final int FOLDER_ACTION_DELETE = 3;
+    public static final int FOLDER_ACTION_ASSIGN = 4;
+
+    public static final int FOLDER_SUCCESS = 0;
+    public static final int FOLDER_CLUB_REQUIRED = 1;
+    public static final int FOLDER_INVALID = 2;
+    public static final int FOLDER_FULL = 3;
+    public static final int FOLDER_NOT_FOUND = 4;
+    public static final int FOLDER_NAME_EXISTS = 5;
+    public static final int FOLDER_FAILED = 6;
+    public static final int FOLDER_LIMIT_REACHED = 7;
+
+    public static final int FOLDER_CAPACITY = 10;
+    public static final int MAX_FOLDERS = 10;
+    public static final int MAX_FOLDER_NAME_LENGTH = 32;
+
+    public static final class WardrobeFolderData
+    {
+        private final int id;
+        private final String name;
+        private final Map<Integer, Integer> slots =
+            new LinkedHashMap<Integer, Integer>();
+
+        public WardrobeFolderData(
+            int id,
+            String name
+        )
+        {
+            this.id = id;
+            this.name = name == null ? "" : name;
+        }
+
+        public int getId()
+        {
+            return this.id;
+        }
+
+        public String getName()
+        {
+            return this.name;
+        }
+
+        public Map<Integer, Integer> getSlots()
+        {
+            return this.slots;
+        }
+
+        public void putSlot(
+            int position,
+            int slotId
+        )
+        {
+            if(
+                position > 0 &&
+                position <= FOLDER_CAPACITY &&
+                slotId > 0
+            )
+            {
+                this.slots.put(
+                    position,
+                    slotId
+                );
+            }
+        }
+    }
+
 
     public static final class PurchaseResult
     {
@@ -160,6 +229,45 @@ public final class WardrobeManager
                 "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP," +
                 "PRIMARY KEY (user_id, slot_id)," +
                 "INDEX idx_biribiri_wardrobe_meta_user (user_id)" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;"
+            )
+        )
+        {
+            statement.execute();
+        }
+
+        try(
+            Connection connection = Emulator.getDatabase().getDataSource().getConnection();
+            PreparedStatement statement = connection.prepareStatement(
+                "CREATE TABLE IF NOT EXISTS biribiri_wardrobe_folders (" +
+                "id INT NOT NULL AUTO_INCREMENT," +
+                "user_id INT NOT NULL," +
+                "folder_name VARCHAR(32) NOT NULL," +
+                "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP," +
+                "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP," +
+                "PRIMARY KEY (id)," +
+                "UNIQUE KEY uq_biribiri_wardrobe_folder_name (user_id, folder_name)," +
+                "INDEX idx_biribiri_wardrobe_folders_user (user_id)" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;"
+            )
+        )
+        {
+            statement.execute();
+        }
+
+        try(
+            Connection connection = Emulator.getDatabase().getDataSource().getConnection();
+            PreparedStatement statement = connection.prepareStatement(
+                "CREATE TABLE IF NOT EXISTS biribiri_wardrobe_folder_slots (" +
+                "user_id INT NOT NULL," +
+                "folder_id INT NOT NULL," +
+                "slot_id INT NOT NULL," +
+                "position TINYINT UNSIGNED NOT NULL," +
+                "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP," +
+                "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP," +
+                "PRIMARY KEY (user_id, folder_id, position)," +
+                "UNIQUE KEY uq_biribiri_wardrobe_folder_slot (user_id, slot_id)," +
+                "INDEX idx_biribiri_wardrobe_folder_slots_folder (user_id, folder_id)" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;"
             )
         )
@@ -794,6 +902,687 @@ public final class WardrobeManager
             );
 
             return false;
+        }
+    }
+
+    public String sanitizeFolderName(String raw)
+    {
+        if(raw == null) return "";
+
+        String value =
+            raw
+                .replace('\n', ' ')
+                .replace('\r', ' ')
+                .replace('\t', ' ')
+                .trim();
+
+        while(value.contains("  "))
+        {
+            value = value.replace("  ", " ");
+        }
+
+        if(value.length() > MAX_FOLDER_NAME_LENGTH)
+        {
+            value =
+                value.substring(
+                    0,
+                    MAX_FOLDER_NAME_LENGTH
+                ).trim();
+        }
+
+        return value;
+    }
+
+    public List<WardrobeFolderData> getFolders(
+        Habbo habbo
+    )
+    {
+        Map<Integer, WardrobeFolderData> byId =
+            new LinkedHashMap<Integer, WardrobeFolderData>();
+
+        if(
+            habbo == null ||
+            habbo.getHabboInfo() == null
+        )
+        {
+            return new ArrayList<WardrobeFolderData>();
+        }
+
+        int userId =
+            habbo.getHabboInfo().getId();
+
+        try(
+            Connection connection =
+                Emulator.getDatabase()
+                    .getDataSource()
+                    .getConnection();
+            PreparedStatement folders =
+                connection.prepareStatement(
+                    "SELECT id, folder_name " +
+                    "FROM biribiri_wardrobe_folders " +
+                    "WHERE user_id = ? " +
+                    "ORDER BY id ASC"
+                )
+        )
+        {
+            folders.setInt(1, userId);
+
+            try(ResultSet set = folders.executeQuery())
+            {
+                while(set.next())
+                {
+                    int folderId = set.getInt("id");
+
+                    if(folderId <= 0) continue;
+
+                    byId.put(
+                        folderId,
+                        new WardrobeFolderData(
+                            folderId,
+                            set.getString("folder_name")
+                        )
+                    );
+                }
+            }
+
+            if(!byId.isEmpty())
+            {
+                try(
+                    PreparedStatement slots =
+                        connection.prepareStatement(
+                            "SELECT s.folder_id, s.position, s.slot_id " +
+                            "FROM biribiri_wardrobe_folder_slots s " +
+                            "INNER JOIN users_wardrobe w " +
+                            "ON w.user_id = s.user_id " +
+                            "AND w.slot_id = s.slot_id " +
+                            "WHERE s.user_id = ? " +
+                            "ORDER BY s.folder_id ASC, s.position ASC"
+                        )
+                )
+                {
+                    slots.setInt(1, userId);
+
+                    try(ResultSet set = slots.executeQuery())
+                    {
+                        while(set.next())
+                        {
+                            WardrobeFolderData folder =
+                                byId.get(
+                                    set.getInt("folder_id")
+                                );
+
+                            if(folder == null) continue;
+
+                            folder.putSlot(
+                                set.getInt("position"),
+                                set.getInt("slot_id")
+                            );
+                        }
+                    }
+                }
+            }
+        }
+        catch(SQLException exception)
+        {
+            System.out.println(
+                "[BiribiriWardrobe] folders read error user=" +
+                userId + " - " + exception.getMessage()
+            );
+        }
+
+        return new ArrayList<WardrobeFolderData>(
+            byId.values()
+        );
+    }
+
+    public int createFolder(
+        Habbo habbo,
+        String rawName
+    )
+    {
+        if(!this.hasActiveClub(habbo))
+        {
+            return FOLDER_CLUB_REQUIRED;
+        }
+
+        if(
+            habbo == null ||
+            habbo.getHabboInfo() == null
+        )
+        {
+            return FOLDER_INVALID;
+        }
+
+        String name =
+            this.sanitizeFolderName(rawName);
+
+        if(name.isEmpty())
+        {
+            return FOLDER_INVALID;
+        }
+
+        int userId =
+            habbo.getHabboInfo().getId();
+
+        Connection connection = null;
+
+        try
+        {
+            connection =
+                Emulator.getDatabase()
+                    .getDataSource()
+                    .getConnection();
+
+            connection.setAutoCommit(false);
+
+            int folderCount = 0;
+
+            try(
+                PreparedStatement folders =
+                    connection.prepareStatement(
+                        "SELECT id " +
+                        "FROM biribiri_wardrobe_folders " +
+                        "WHERE user_id = ? FOR UPDATE"
+                    )
+            )
+            {
+                folders.setInt(1, userId);
+
+                try(ResultSet set = folders.executeQuery())
+                {
+                    while(set.next())
+                    {
+                        folderCount++;
+                    }
+                }
+            }
+
+            if(folderCount >= MAX_FOLDERS)
+            {
+                connection.rollback();
+                return FOLDER_LIMIT_REACHED;
+            }
+
+            try(
+                PreparedStatement insert =
+                    connection.prepareStatement(
+                        "INSERT INTO biribiri_wardrobe_folders " +
+                        "(user_id, folder_name) VALUES (?, ?)"
+                    )
+            )
+            {
+                insert.setInt(1, userId);
+                insert.setString(2, name);
+                insert.executeUpdate();
+            }
+
+            connection.commit();
+            return FOLDER_SUCCESS;
+        }
+        catch(SQLException exception)
+        {
+            try
+            {
+                if(connection != null)
+                {
+                    connection.rollback();
+                }
+            }
+            catch(Exception ignored)
+            {
+            }
+
+            if(
+                "23000".equals(exception.getSQLState()) ||
+                exception.getErrorCode() == 1062
+            )
+            {
+                return FOLDER_NAME_EXISTS;
+            }
+
+            System.out.println(
+                "[BiribiriWardrobe] folder create error user=" +
+                userId + " - " + exception.getMessage()
+            );
+
+            return FOLDER_FAILED;
+        }
+        finally
+        {
+            if(connection != null)
+            {
+                try
+                {
+                    connection.setAutoCommit(true);
+                    connection.close();
+                }
+                catch(Exception ignored)
+                {
+                }
+            }
+        }
+    }
+
+    public int renameFolder(
+        Habbo habbo,
+        int folderId,
+        String rawName
+    )
+    {
+        if(!this.hasActiveClub(habbo))
+        {
+            return FOLDER_CLUB_REQUIRED;
+        }
+
+        if(folderId <= 0)
+        {
+            return FOLDER_INVALID;
+        }
+
+        String name =
+            this.sanitizeFolderName(rawName);
+
+        if(name.isEmpty())
+        {
+            return FOLDER_INVALID;
+        }
+
+        int userId =
+            habbo.getHabboInfo().getId();
+
+        try(
+            Connection connection =
+                Emulator.getDatabase()
+                    .getDataSource()
+                    .getConnection();
+            PreparedStatement statement =
+                connection.prepareStatement(
+                    "UPDATE biribiri_wardrobe_folders " +
+                    "SET folder_name = ?, updated_at = CURRENT_TIMESTAMP " +
+                    "WHERE id = ? AND user_id = ?"
+                )
+        )
+        {
+            statement.setString(1, name);
+            statement.setInt(2, folderId);
+            statement.setInt(3, userId);
+
+            return statement.executeUpdate() == 1
+                ? FOLDER_SUCCESS
+                : FOLDER_NOT_FOUND;
+        }
+        catch(SQLException exception)
+        {
+            if(
+                "23000".equals(exception.getSQLState()) ||
+                exception.getErrorCode() == 1062
+            )
+            {
+                return FOLDER_NAME_EXISTS;
+            }
+
+            System.out.println(
+                "[BiribiriWardrobe] folder rename error user=" +
+                userId + " folder=" + folderId +
+                " - " + exception.getMessage()
+            );
+
+            return FOLDER_FAILED;
+        }
+    }
+
+    public int deleteFolder(
+        Habbo habbo,
+        int folderId
+    )
+    {
+        if(!this.hasActiveClub(habbo))
+        {
+            return FOLDER_CLUB_REQUIRED;
+        }
+
+        if(folderId <= 0)
+        {
+            return FOLDER_INVALID;
+        }
+
+        int userId =
+            habbo.getHabboInfo().getId();
+
+        Connection connection = null;
+
+        try
+        {
+            connection =
+                Emulator.getDatabase()
+                    .getDataSource()
+                    .getConnection();
+
+            connection.setAutoCommit(false);
+
+            try(
+                PreparedStatement slots =
+                    connection.prepareStatement(
+                        "DELETE FROM biribiri_wardrobe_folder_slots " +
+                        "WHERE user_id = ? AND folder_id = ?"
+                    )
+            )
+            {
+                slots.setInt(1, userId);
+                slots.setInt(2, folderId);
+                slots.executeUpdate();
+            }
+
+            int deleted;
+
+            try(
+                PreparedStatement folder =
+                    connection.prepareStatement(
+                        "DELETE FROM biribiri_wardrobe_folders " +
+                        "WHERE user_id = ? AND id = ?"
+                    )
+            )
+            {
+                folder.setInt(1, userId);
+                folder.setInt(2, folderId);
+                deleted = folder.executeUpdate();
+            }
+
+            if(deleted != 1)
+            {
+                connection.rollback();
+                return FOLDER_NOT_FOUND;
+            }
+
+            connection.commit();
+            return FOLDER_SUCCESS;
+        }
+        catch(Exception error)
+        {
+            try
+            {
+                if(connection != null)
+                {
+                    connection.rollback();
+                }
+            }
+            catch(Exception ignored)
+            {
+            }
+
+            System.out.println(
+                "[BiribiriWardrobe] folder delete error user=" +
+                userId + " folder=" + folderId +
+                " - " + error.getMessage()
+            );
+
+            return FOLDER_FAILED;
+        }
+        finally
+        {
+            if(connection != null)
+            {
+                try
+                {
+                    connection.setAutoCommit(true);
+                    connection.close();
+                }
+                catch(Exception ignored)
+                {
+                }
+            }
+        }
+    }
+
+    public int assignSlotToFolder(
+        Habbo habbo,
+        int folderId,
+        int slotId
+    )
+    {
+        if(!this.hasActiveClub(habbo))
+        {
+            return FOLDER_CLUB_REQUIRED;
+        }
+
+        if(
+            habbo == null ||
+            habbo.getHabboInfo() == null ||
+            slotId <= 0 ||
+            !this.isSlotUnlocked(habbo, slotId)
+        )
+        {
+            return FOLDER_INVALID;
+        }
+
+        int userId =
+            habbo.getHabboInfo().getId();
+
+        Connection connection = null;
+
+        try
+        {
+            connection =
+                Emulator.getDatabase()
+                    .getDataSource()
+                    .getConnection();
+
+            connection.setAutoCommit(false);
+
+            if(folderId <= 0)
+            {
+                try(
+                    PreparedStatement remove =
+                        connection.prepareStatement(
+                            "DELETE FROM biribiri_wardrobe_folder_slots " +
+                            "WHERE user_id = ? AND slot_id = ?"
+                        )
+                )
+                {
+                    remove.setInt(1, userId);
+                    remove.setInt(2, slotId);
+                    remove.executeUpdate();
+                }
+
+                connection.commit();
+                return FOLDER_SUCCESS;
+            }
+
+            boolean lookExists = false;
+
+            try(
+                PreparedStatement look =
+                    connection.prepareStatement(
+                        "SELECT slot_id FROM users_wardrobe " +
+                        "WHERE user_id = ? AND slot_id = ? LIMIT 1"
+                    )
+            )
+            {
+                look.setInt(1, userId);
+                look.setInt(2, slotId);
+
+                try(ResultSet set = look.executeQuery())
+                {
+                    lookExists = set.next();
+                }
+            }
+
+            if(!lookExists)
+            {
+                connection.rollback();
+                return FOLDER_INVALID;
+            }
+
+            try(
+                PreparedStatement folder =
+                    connection.prepareStatement(
+                        "SELECT id FROM biribiri_wardrobe_folders " +
+                        "WHERE user_id = ? AND id = ? FOR UPDATE"
+                    )
+            )
+            {
+                folder.setInt(1, userId);
+                folder.setInt(2, folderId);
+
+                try(ResultSet set = folder.executeQuery())
+                {
+                    if(!set.next())
+                    {
+                        connection.rollback();
+                        return FOLDER_NOT_FOUND;
+                    }
+                }
+            }
+
+            int currentFolderId = 0;
+
+            try(
+                PreparedStatement current =
+                    connection.prepareStatement(
+                        "SELECT folder_id FROM biribiri_wardrobe_folder_slots " +
+                        "WHERE user_id = ? AND slot_id = ? FOR UPDATE"
+                    )
+            )
+            {
+                current.setInt(1, userId);
+                current.setInt(2, slotId);
+
+                try(ResultSet set = current.executeQuery())
+                {
+                    if(set.next())
+                    {
+                        currentFolderId =
+                            set.getInt("folder_id");
+                    }
+                }
+            }
+
+            if(currentFolderId == folderId)
+            {
+                connection.commit();
+                return FOLDER_SUCCESS;
+            }
+
+            boolean[] used =
+                new boolean[FOLDER_CAPACITY + 1];
+
+            try(
+                PreparedStatement positions =
+                    connection.prepareStatement(
+                        "SELECT position FROM biribiri_wardrobe_folder_slots " +
+                        "WHERE user_id = ? AND folder_id = ? FOR UPDATE"
+                    )
+            )
+            {
+                positions.setInt(1, userId);
+                positions.setInt(2, folderId);
+
+                try(ResultSet set = positions.executeQuery())
+                {
+                    while(set.next())
+                    {
+                        int position =
+                            set.getInt("position");
+
+                        if(
+                            position > 0 &&
+                            position <= FOLDER_CAPACITY
+                        )
+                        {
+                            used[position] = true;
+                        }
+                    }
+                }
+            }
+
+            int freePosition = 0;
+
+            for(
+                int position = 1;
+                position <= FOLDER_CAPACITY;
+                position++
+            )
+            {
+                if(!used[position])
+                {
+                    freePosition = position;
+                    break;
+                }
+            }
+
+            if(freePosition == 0)
+            {
+                connection.rollback();
+                return FOLDER_FULL;
+            }
+
+            try(
+                PreparedStatement remove =
+                    connection.prepareStatement(
+                        "DELETE FROM biribiri_wardrobe_folder_slots " +
+                        "WHERE user_id = ? AND slot_id = ?"
+                    )
+            )
+            {
+                remove.setInt(1, userId);
+                remove.setInt(2, slotId);
+                remove.executeUpdate();
+            }
+
+            try(
+                PreparedStatement insert =
+                    connection.prepareStatement(
+                        "INSERT INTO biribiri_wardrobe_folder_slots " +
+                        "(user_id, folder_id, slot_id, position) " +
+                        "VALUES (?, ?, ?, ?)"
+                    )
+            )
+            {
+                insert.setInt(1, userId);
+                insert.setInt(2, folderId);
+                insert.setInt(3, slotId);
+                insert.setInt(4, freePosition);
+                insert.executeUpdate();
+            }
+
+            connection.commit();
+            return FOLDER_SUCCESS;
+        }
+        catch(Exception error)
+        {
+            try
+            {
+                if(connection != null)
+                {
+                    connection.rollback();
+                }
+            }
+            catch(Exception ignored)
+            {
+            }
+
+            System.out.println(
+                "[BiribiriWardrobe] folder assign error user=" +
+                userId + " folder=" + folderId +
+                " slot=" + slotId +
+                " - " + error.getMessage()
+            );
+
+            return FOLDER_FAILED;
+        }
+        finally
+        {
+            if(connection != null)
+            {
+                try
+                {
+                    connection.setAutoCommit(true);
+                    connection.close();
+                }
+                catch(Exception ignored)
+                {
+                }
+            }
         }
     }
 
@@ -1509,6 +2298,21 @@ public final class WardrobeManager
                 statement.executeUpdate();
             }
 
+            // La carpeta solo organiza el slot: al borrar el look,
+            // se elimina tambien su referencia.
+            try(
+                PreparedStatement statement =
+                    connection.prepareStatement(
+                        "DELETE FROM biribiri_wardrobe_folder_slots " +
+                        "WHERE user_id = ? AND slot_id = ?"
+                    )
+            )
+            {
+                statement.setInt(1, userId);
+                statement.setInt(2, slotId);
+                statement.executeUpdate();
+            }
+
             connection.commit();
 
             if(
@@ -1572,6 +2376,25 @@ public final class WardrobeManager
                 }
             }
         }
+    }
+
+    public void sendFolders(GameClient client)
+    {
+        if(
+            client == null ||
+            client.getHabbo() == null
+        ) return;
+
+        client.sendResponse(
+            new WardrobeFoldersComposer(
+                this.hasActiveClub(
+                    client.getHabbo()
+                ),
+                this.getFolders(
+                    client.getHabbo()
+                )
+            )
+        );
     }
 
     public void sendState(GameClient client)

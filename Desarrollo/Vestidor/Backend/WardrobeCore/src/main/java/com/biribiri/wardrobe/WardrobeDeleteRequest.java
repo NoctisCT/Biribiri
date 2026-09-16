@@ -36,6 +36,17 @@ extends MessageHandler
                 slotId
             )
         );
+
+        if(
+            status ==
+            WardrobeManager.DELETE_SUCCESS
+        )
+        {
+            plugin.getManager()
+                .sendFolders(
+                    this.client
+                );
+        }
     }
 
     @Override

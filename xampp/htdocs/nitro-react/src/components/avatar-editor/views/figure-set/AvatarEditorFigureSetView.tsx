@@ -1,11 +1,11 @@
 // BIRIBIRI_CLOTHING_FILTERS_V1
+// BIRIBIRI_WARDROBE_HC_FREE_V1
 import {
     BiribiriWardrobeClothingFavoriteSetComposer,
     BiribiriWardrobeClothingFavoritesEvent,
     BiribiriWardrobeClothingFavoritesRequestComposer,
     BiribiriWardrobeClothingMetadataEvent,
-    BiribiriWardrobeClothingMetadataRequestComposer,
-    HabboClubLevelEnum
+    BiribiriWardrobeClothingMetadataRequestComposer
 } from '@nitrots/nitro-renderer';
 import {
     Dispatch,
@@ -20,8 +20,7 @@ import {
 import {
     AvatarEditorGridPartItem,
     CategoryData,
-    CreateLinkEvent,
-    GetSessionDataManager,
+    GetClothingCategoryDefinition,
     IAvatarEditorCategoryModel,
     SendMessageComposer
 } from '../../../../api';
@@ -48,24 +47,6 @@ interface ClothingMetadataEntry
     name: string;
     tags: string[];
 }
-
-const CLOTHING_TYPE_NAMES:
-Record<string, string> =
-{
-    hd: 'Cara',
-    hr: 'Pelo',
-    ha: 'Sombrero',
-    he: 'Accesorio de cabeza',
-    ea: 'Accesorio de ojos',
-    fa: 'Accesorio facial',
-    cc: 'Chaqueta',
-    ch: 'Camiseta',
-    ca: 'Accesorio de torso',
-    cp: 'Estampado',
-    lg: 'Pantal\u00f3n',
-    sh: 'Zapatos',
-    wa: 'Accesorio de cintura'
-};
 
 const canonicalId = (
     value: number
@@ -335,18 +316,6 @@ FC<AvatarEditorFigureSetViewProps> = props =>
                 if(index === -1)
                 {
                     return;
-                }
-
-                if(
-                    item.isHC &&
-                    GetSessionDataManager()
-                        .clubLevel ===
-                        HabboClubLevelEnum.NO_CLUB
-                )
-                {
-                    return CreateLinkEvent(
-                        'habboUI/open/hccenter'
-                    );
                 }
 
                 model.selectPart(
@@ -639,9 +608,9 @@ FC<AvatarEditorFigureSetViewProps> = props =>
                         }
 
                         const typeName =
-                            CLOTHING_TYPE_NAMES[
+                            GetClothingCategoryDefinition(
                                 category.name
-                            ] ||
+                            )?.label ||
                             'Prenda';
 
                         const haystack =
@@ -810,9 +779,9 @@ FC<AvatarEditorFigureSetViewProps> = props =>
                                 );
 
                         const typeName =
-                            CLOTHING_TYPE_NAMES[
+                            GetClothingCategoryDefinition(
                                 category.name
-                            ] ||
+                            )?.label ||
                             'Prenda';
 
                         const displayName =

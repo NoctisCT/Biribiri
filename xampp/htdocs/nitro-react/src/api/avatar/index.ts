@@ -6,6 +6,8 @@ export * from './AvatarEditorUtilities';
 export * from './BodyModel';
 export * from './CategoryBaseModel';
 export * from './CategoryData';
+export * from './ClothingCategoryRegistry';
+export * from './ExtrasModel';
 export * from './FigureData';
 export * from './FigureGenerator';
 export * from './HeadModel';

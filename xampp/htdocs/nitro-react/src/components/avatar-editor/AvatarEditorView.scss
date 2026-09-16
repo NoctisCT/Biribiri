@@ -1678,3 +1678,1302 @@
 }
 
 /* END_BIRIBIRI_WARDROBE_UNDO_V2_VISIBLE */
+
+
+/* BIRIBIRI_EXTENDED_CLOTHING_ARCH_V1_1 */
+
+.biribiri-avatar-category-strip {
+    flex-wrap: wrap;
+    row-gap: 3px !important;
+    align-content: flex-start;
+    overflow: visible;
+}
+
+.nitro-avatar-editor-spritesheet.biribiri-category-fallback {
+    display: flex;
+    width: 24px;
+    height: 24px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(44, 44, 44, .7);
+    border-radius: 3px;
+    background: linear-gradient(#d7d4cb, #9f9b91) !important;
+    box-shadow:
+        inset 1px 1px 0 rgba(255, 255, 255, .65),
+        inset -1px -1px 0 rgba(0, 0, 0, .14);
+
+    &.selected,
+    &:hover {
+        background: linear-gradient(#f1eee4, #bcb7aa) !important;
+    }
+
+    .biribiri-category-code {
+        color: #333;
+        font-size: 8px;
+        font-weight: 800;
+        line-height: 1;
+        text-transform: uppercase;
+        pointer-events: none;
+    }
+}
+
+/* END_BIRIBIRI_EXTENDED_CLOTHING_ARCH_V1_1 */
+
+
+/* BIRIBIRI_EXTENDED_CLOTHING_EXTRAS_V1_2 */
+
+.avatar-editor-tabs {
+    .extras {
+        position: relative;
+        width: 34px;
+        height: 22px;
+        background: none !important;
+
+        &::before {
+            content: '';
+            position: absolute;
+            left: 11px;
+            top: 3px;
+            width: 9px;
+            height: 15px;
+            border-radius: 5px 5px 3px 3px;
+            background: #77a82a;
+            box-shadow:
+                0 -4px 0 -1px #77a82a,
+                inset 1px 1px 0 rgba(255, 255, 255, .28);
+        }
+
+        &::after {
+            content: '+';
+            position: absolute;
+            right: 4px;
+            top: 0;
+            color: #4f7017;
+            font-size: 15px;
+            font-weight: 900;
+            line-height: 15px;
+            text-shadow: 1px 1px 0 rgba(255, 255, 255, .55);
+        }
+    }
+}
+
+/* END_BIRIBIRI_EXTENDED_CLOTHING_EXTRAS_V1_2 */
+
+/* BIRIBIRI_WARDROBE_P4_2_RANDOM_POPOVER_ES */
+/* BIRIBIRI_WARDROBE_P4_3_RANDOM_UX_ES */
+/* BIRIBIRI_WARDROBE_P4_4_RANDOM_SIDE_PANEL */
+.biribiri-random-side-panel {
+    height: 100%;
+    min-width: 190px;
+    min-height: 0;
+    padding: 7px;
+    border: 1px solid #77756f;
+    border-radius: 4px;
+    background: #efeee8;
+    box-shadow:
+        inset 1px 1px 0 rgba(255, 255, 255, .75);
+}
+
+.biribiri-random-popover-header {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 5px;
+    padding: 1px 1px 6px;
+
+    > div {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+    }
+
+    strong {
+        color: #333;
+        font-size: 11px;
+        line-height: 14px;
+    }
+
+    span {
+        color: #68665f;
+        font-size: 9px;
+        line-height: 12px;
+    }
+}
+
+.biribiri-random-popover-close {
+    display: inline-flex;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #85827a;
+    border-radius: 3px;
+    background: #d8d6cf;
+    color: #444;
+    cursor: pointer;
+
+    .fa-icon {
+        font-size: 9px;
+    }
+}
+
+.biribiri-random-lock-grid {
+    display: grid;
+    min-height: 0;
+    flex: 1 1 auto;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3px;
+    padding-right: 2px;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.biribiri-random-lock-option {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    min-height: 25px;
+    height: auto;
+    padding: 3px 5px;
+    align-items: center;
+    gap: 5px;
+    overflow: hidden;
+    border: 1px solid #a09e96;
+    border-radius: 3px;
+    background: #dddcd6;
+    color: #484640;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 11px;
+    text-align: left;
+    cursor: pointer;
+
+    > span:last-child {
+        min-width: 0;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    &:hover {
+        filter: brightness(1.04);
+    }
+
+    &.is-locked {
+        border-color: #657684;
+        background: #8999a6;
+        color: #fff;
+    }
+}
+
+.biribiri-random-lock-state {
+    display: inline-flex;
+    width: 14px;
+    flex: 0 0 14px;
+    align-items: center;
+    justify-content: center;
+
+    .fa-icon {
+        font-size: 9px;
+    }
+}
+
+.biribiri-random-popover-actions {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid #cbc9c1;
+}
+
+.biribiri-random-unlock-all,
+.biribiri-random-run {
+    width: 100%;
+    min-height: 25px;
+    padding: 3px 6px;
+    border: 1px solid #85827a;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.biribiri-random-unlock-all {
+    background: #d8d6cf;
+    color: #45433e;
+}
+
+.biribiri-random-run {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: #7f9c56;
+    color: #fff;
+
+    .fa-icon {
+        font-size: 9px;
+    }
+}
+/* END_BIRIBIRI_WARDROBE_P4_2_RANDOM_POPOVER_ES */
+
+/* BIRIBIRI_WARDROBE_P5_ADVANCED_PREVIEW */
+.nitro-avatar-editor {
+    .figure-preview-container.biribiri-advanced-preview {
+        .arrow-container {
+            bottom: 58px;
+        }
+    }
+}
+
+.biribiri-preview-controls {
+    position: absolute;
+    z-index: 7;
+    left: 0;
+    right: 0;
+    bottom: 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 4px;
+    border: 1px solid rgba(90, 88, 82, .65);
+    border-radius: 3px;
+    background: rgba(239, 238, 232, .92);
+}
+
+.biribiri-preview-control {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+
+    > span {
+        width: 42px;
+        flex: 0 0 42px;
+        color: #55524d;
+        font-size: 9px;
+        font-weight: 700;
+        line-height: 18px;
+    }
+
+    > select {
+        width: 100%;
+        min-width: 0;
+        height: 20px;
+        padding: 0 18px 0 4px;
+        border: 1px solid #9b9890;
+        border-radius: 3px;
+        background-color: #f7f6f1;
+        color: #3f3d38;
+        font-size: 9px;
+        line-height: 18px;
+    }
+}
+/* END_BIRIBIRI_WARDROBE_P5_ADVANCED_PREVIEW */
+
+/* BIRIBIRI_WARDROBE_P5_1_PREVIEW_POLISH */
+.nitro-avatar-editor {
+    .figure-preview-container {
+        .avatar-image.biribiri-advanced-preview-avatar {
+            &.is-sitting {
+                bottom: 106px;
+            }
+
+            &.is-laying {
+                bottom: 48px;
+            }
+        }
+    }
+}
+/* END_BIRIBIRI_WARDROBE_P5_1_PREVIEW_POLISH */
+
+/* BIRIBIRI_WARDROBE_P6_FOLDERS */
+.biribiri-wardrobe-named {
+    .wardrobe-section-tab {
+        min-width: 52px;
+        padding-left: 5px;
+        padding-right: 5px;
+
+        &.is-folders {
+            border-color: #766b8d;
+
+            svg {
+                font-size: 13px;
+            }
+        }
+
+        &.is-folders.is-active {
+            background: linear-gradient(#c4b9d8, #9485ad);
+            border-color: #68597f;
+            color: #352d43;
+        }
+
+        &.is-folders.is-locked:not(.is-active) {
+            opacity: .58;
+        }
+    }
+
+    .wardrobe-folder-toolbar {
+        display: flex;
+        width: 100%;
+        height: 27px;
+        margin-top: 4px;
+        align-items: center;
+        gap: 3px;
+    }
+
+    .wardrobe-folder-list {
+        display: flex;
+        min-width: 0;
+        height: 25px;
+        flex: 1 1 auto;
+        align-items: center;
+        gap: 2px;
+        overflow-x: auto;
+        overflow-y: hidden;
+
+        button {
+            display: inline-flex;
+            max-width: 90px;
+            height: 21px;
+            flex: 0 0 auto;
+            padding: 2px 5px;
+            align-items: center;
+            gap: 3px;
+            border: 1px solid #68645d;
+            border-radius: 2px;
+            background: #c8c4ba;
+            color: #4b4842;
+            font-size: 7px;
+            font-weight: 900;
+
+            span {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            &.is-active {
+                border-color: #68597f;
+                background: #9485ad;
+                color: #fff;
+            }
+        }
+    }
+
+    .wardrobe-folder-empty-label {
+        padding-left: 4px;
+        color: #6a665e;
+        font-size: 8px;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .wardrobe-folder-actions {
+        display: flex;
+        flex: 0 0 auto;
+        gap: 2px;
+
+        button {
+            display: inline-flex;
+            width: 22px;
+            height: 22px;
+            padding: 0;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #615d56;
+            border-radius: 2px;
+            background: #cbc7bc;
+            color: #44413c;
+            font-size: 12px;
+        }
+    }
+
+    .saved-outfit-container.is-folder-view {
+        height: calc(91.5% - 31px);
+
+        .nitro-avatar-editor-wardrobe-container {
+            height: 355px;
+        }
+    }
+
+    .biribiri-wardrobe-slot.is-folder {
+        .wardrobe-folder-position {
+            position: absolute;
+            z-index: 8;
+            top: 2px;
+            left: 3px;
+            color: #6c675f;
+            font-size: 7px;
+            font-weight: 900;
+        }
+
+        &.is-folder-empty {
+            .avatar-container {
+                background:
+                    linear-gradient(
+                        135deg,
+                        rgba(255,255,255,.16),
+                        rgba(0,0,0,.04)
+                    ),
+                    #a7a6a2;
+            }
+
+            .avatar-container::after {
+                content: '';
+                position: absolute;
+                inset: 7px;
+                border: 1px dashed rgba(85,82,76,.38);
+                border-radius: 2px;
+            }
+        }
+    }
+
+    .wardrobe-folder-error {
+        min-height: 12px;
+        margin-top: 2px;
+        color: #8b2f2f;
+        font-size: 7px;
+        font-weight: 800;
+        text-align: center;
+    }
+
+    .wardrobe-name-dialog-fields {
+        select {
+            width: 100%;
+            height: 19px;
+            padding: 1px 3px;
+            border: 1px solid #66635d;
+            border-radius: 2px;
+            outline: none;
+            background: #eeeae0;
+            color: #302f2c;
+            font-size: 8px;
+            font-weight: 700;
+
+            &:focus {
+                border-color: #4e6f8f;
+                background: #fffdf8;
+            }
+
+            &:disabled {
+                opacity: .6;
+            }
+        }
+    }
+
+    .wardrobe-folder-dialog {
+        width: 190px;
+    }
+
+    .wardrobe-folder-dialog-body {
+        display: flex;
+        padding: 7px;
+        flex-direction: column;
+        gap: 4px;
+
+        label {
+            margin: 0;
+            font-size: 7px;
+            font-weight: 900;
+        }
+
+        input {
+            width: 100%;
+            height: 20px;
+            padding: 2px 4px;
+            border: 1px solid #66635d;
+            border-radius: 2px;
+            background: #eeeae0;
+            color: #302f2c;
+            font-size: 8px;
+            font-weight: 700;
+        }
+
+        .wardrobe-name-dialog-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 3px;
+        }
+
+        .is-delete {
+            border-color: #713a3a;
+            background: linear-gradient(#a85f5f, #7d4141);
+            color: #fff;
+        }
+    }
+
+    .wardrobe-folder-delete-copy {
+        color: #514d46;
+        font-size: 8px;
+        line-height: 11px;
+        text-align: center;
+    }
+
+    .wardrobe-folder-dialog-error {
+        min-height: 10px;
+        color: #8b2f2f;
+        font-size: 7px;
+        font-weight: 800;
+        text-align: center;
+    }
+}
+/* END_BIRIBIRI_WARDROBE_P6_FOLDERS */
+
+/* BIRIBIRI_WARDROBE_P6_2_FOLDER_BROWSER */
+.biribiri-wardrobe-named {
+    min-width: 0;
+
+    .biribiri-wardrobe-sections {
+        min-width: 0;
+        padding: 0 1px;
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+
+    .wardrobe-section-tab {
+        min-width: 0 !important;
+        flex: 1 1 0;
+        padding-left: 4px !important;
+        padding-right: 4px !important;
+
+        &.is-folders {
+            width: 30px;
+            min-width: 30px !important;
+            max-width: 30px;
+            flex: 0 0 30px;
+            padding: 0 !important;
+
+            svg {
+                font-size: 15px;
+            }
+        }
+    }
+
+    .wardrobe-folder-browser-header {
+        display: flex;
+        width: 100%;
+        height: 27px;
+        margin-top: 4px;
+        min-width: 0;
+        align-items: center;
+        gap: 3px;
+        box-sizing: border-box;
+
+        button {
+            display: inline-flex;
+            width: 23px;
+            height: 22px;
+            padding: 0;
+            flex: 0 0 23px;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #615d56;
+            border-radius: 2px;
+            background: linear-gradient(#d7d4cb, #aaa69b);
+            color: #44413c;
+            font-size: 12px;
+            box-shadow:
+                inset 1px 1px 0 rgba(255,255,255,.72),
+                inset -1px -1px 0 rgba(0,0,0,.14);
+
+            &:disabled {
+                opacity: .45;
+                cursor: default;
+            }
+
+            &:not(:disabled):hover {
+                filter: brightness(1.06);
+            }
+        }
+    }
+
+    .wardrobe-folder-browser-title {
+        display: flex;
+        min-width: 0;
+        height: 22px;
+        flex: 1 1 auto;
+        padding: 2px 5px;
+        align-items: center;
+        gap: 4px;
+        border: 1px solid #726985;
+        border-radius: 2px;
+        background: linear-gradient(#c7bfd6, #a193b8);
+        color: #40374e;
+        font-size: 8px;
+        font-weight: 900;
+        line-height: 12px;
+        box-shadow:
+            inset 1px 1px 0 rgba(255,255,255,.55),
+            inset -1px -1px 0 rgba(0,0,0,.12);
+
+        svg {
+            flex: 0 0 auto;
+            font-size: 12px;
+        }
+
+        span {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        small {
+            margin-left: auto;
+            flex: 0 0 auto;
+            color: #5d526d;
+            font-size: 7px;
+            font-weight: 900;
+        }
+    }
+
+    .wardrobe-folder-browser-actions {
+        display: flex;
+        flex: 0 0 auto;
+        gap: 2px;
+    }
+
+    .saved-outfit-container.is-folder-view {
+        height: calc(91.5% - 31px);
+    }
+
+    .biribiri-wardrobe-slot.is-folder-directory {
+        .wardrobe-folder-tile {
+            position: relative;
+            display: flex;
+            width: 64px;
+            height: 50px;
+            padding: 4px 3px 3px;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 1px;
+            border: 1px solid #77716a;
+            border-radius: 3px;
+            background: linear-gradient(#c9c5bb, #aaa69d);
+            color: #46413b;
+            box-shadow:
+                inset 1px 1px 0 rgba(255,255,255,.62),
+                inset -1px -1px 0 rgba(0,0,0,.1);
+
+            &:not(:disabled):hover {
+                filter: brightness(1.06);
+            }
+
+            &:disabled {
+                cursor: default;
+            }
+        }
+
+        &.has-folder {
+            .wardrobe-folder-tile {
+                border-color: #746986;
+                background: linear-gradient(#c9c1d7, #a99bbd);
+            }
+        }
+
+        &.is-create {
+            .wardrobe-folder-tile {
+                border-style: dashed;
+                background: #bbb8b0;
+            }
+        }
+
+        &.is-empty {
+            .wardrobe-folder-tile {
+                border-style: dashed;
+                border-color: rgba(90,86,80,.35);
+                background: rgba(167,166,162,.42);
+                box-shadow: none;
+                opacity: .55;
+            }
+        }
+    }
+
+    .wardrobe-folder-tile-icon {
+        flex: 0 0 auto;
+        font-size: 18px;
+
+        &.is-add {
+            font-size: 17px;
+        }
+    }
+
+    .wardrobe-folder-tile-name {
+        display: block;
+        width: 100%;
+        overflow: hidden;
+        font-size: 7px;
+        font-weight: 900;
+        line-height: 9px;
+        text-align: center;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .wardrobe-folder-tile-count {
+        color: #625a6d;
+        font-size: 7px;
+        font-weight: 900;
+        line-height: 8px;
+    }
+
+    .wardrobe-folder-tile-placeholder {
+        display: block;
+        width: 42px;
+        height: 30px;
+        border: 1px dashed rgba(80,77,72,.28);
+        border-radius: 2px;
+    }
+
+    /* Los dialogos nunca pueden superar el ancho real del panel del vestidor. */
+    .wardrobe-purchase-dialog,
+    .wardrobe-folder-dialog {
+        width: calc(100% - 8px) !important;
+        max-width: 190px !important;
+        box-sizing: border-box;
+    }
+}
+/* END_BIRIBIRI_WARDROBE_P6_2_FOLDER_BROWSER */
+
+/* BIRIBIRI_WARDROBE_P6_3_READABILITY */
+
+/* Solo el Vestidor usa este ancho extra; Random conserva P4.4. */
+.nitro-avatar-editor.expanded.wardrobe-expanded {
+    min-width: $avatar-editor-width + 360px !important;
+    max-width: $avatar-editor-width + 360px !important;
+}
+
+.biribiri-wardrobe-named {
+    width: 100%;
+    min-width: 245px;
+
+    .saved-outfits-title {
+        font-size: 11px;
+        line-height: 14px;
+    }
+
+    .biribiri-wardrobe-sections {
+        gap: 4px;
+        overflow: visible;
+    }
+
+    .wardrobe-section-tab {
+        height: 34px;
+        min-width: 0 !important;
+        padding: 3px 7px !important;
+        gap: 4px;
+        font-size: 9px;
+        line-height: 11px;
+
+        &.is-folders {
+            width: 36px;
+            min-width: 36px !important;
+            max-width: 36px;
+            flex: 0 0 36px;
+
+            svg {
+                font-size: 17px;
+            }
+        }
+    }
+
+    .wardrobe-folder-browser-header {
+        height: 34px;
+        margin-top: 5px;
+        gap: 4px;
+
+        button {
+            width: 27px;
+            height: 27px;
+            flex: 0 0 27px;
+            font-size: 14px;
+        }
+    }
+
+    .wardrobe-folder-browser-title {
+        height: 27px;
+        padding: 3px 7px;
+        gap: 5px;
+        font-size: 10px !important;
+        line-height: 13px;
+
+        svg {
+            font-size: 14px;
+        }
+
+        span {
+            font-size: 10px;
+            line-height: 13px;
+        }
+
+        small {
+            font-size: 9px;
+            line-height: 11px;
+        }
+    }
+
+    .wardrobe-folder-browser-actions {
+        gap: 3px;
+    }
+
+    .saved-outfit-container.is-folder-view {
+        height: calc(91.5% - 38px);
+    }
+
+    .biribiri-wardrobe-slot.is-folder-directory {
+        .wardrobe-folder-tile {
+            width: 92px;
+            height: 58px;
+            padding: 5px 5px 4px;
+            gap: 2px;
+        }
+    }
+
+    .wardrobe-folder-tile-icon {
+        font-size: 21px;
+
+        &.is-add {
+            font-size: 19px;
+        }
+    }
+
+    .wardrobe-folder-tile-name {
+        font-size: 9px;
+        line-height: 11px;
+    }
+
+    .wardrobe-folder-tile-count {
+        font-size: 9px;
+        line-height: 10px;
+    }
+
+    .wardrobe-folder-position {
+        font-size: 9px !important;
+        line-height: 11px;
+    }
+
+    .wardrobe-outfit-name-tooltip {
+        max-width: 90px;
+        padding: 2px 5px;
+        font-size: 9px;
+        line-height: 11px;
+    }
+
+    .wardrobe-folder-error {
+        min-height: 14px;
+        font-size: 9px;
+        line-height: 12px;
+    }
+
+    /*
+     * Dialogos contenidos dentro del nuevo panel pero ya con espacio
+     * suficiente para texto real.
+     */
+    .wardrobe-name-dialog,
+    .wardrobe-purchase-dialog,
+    .wardrobe-folder-dialog {
+        width: calc(100% - 14px) !important;
+        max-width: 230px !important;
+        box-sizing: border-box;
+    }
+
+    .wardrobe-name-dialog {
+        .wardrobe-name-dialog-title {
+            height: 22px;
+            padding: 4px 7px;
+            font-size: 10px;
+            line-height: 13px;
+        }
+
+        .wardrobe-name-dialog-body {
+            padding: 8px;
+            gap: 7px;
+        }
+
+        .wardrobe-name-dialog-fields {
+            label {
+                font-size: 9px;
+                line-height: 11px;
+            }
+
+            input,
+            select {
+                height: 23px;
+                font-size: 9px;
+                line-height: 13px;
+            }
+        }
+
+        .wardrobe-name-dialog-actions {
+            gap: 5px;
+
+            button {
+                min-height: 21px;
+                padding: 3px 8px;
+                font-size: 9px;
+                line-height: 12px;
+            }
+        }
+    }
+
+    .wardrobe-folder-dialog-body {
+        padding: 9px;
+
+        label {
+            font-size: 9px;
+            line-height: 11px;
+        }
+
+        input {
+            height: 23px;
+            font-size: 9px;
+            line-height: 13px;
+        }
+    }
+
+    .wardrobe-folder-delete-copy,
+    .wardrobe-folder-dialog-error {
+        font-size: 9px;
+        line-height: 12px;
+    }
+
+    .wardrobe-purchase-dialog {
+        .wardrobe-purchase-dialog-title {
+            height: 22px !important;
+            padding: 4px 7px !important;
+            font-size: 10px !important;
+            line-height: 13px !important;
+        }
+
+        .wardrobe-purchase-dialog-body {
+            padding: 9px 11px 10px !important;
+        }
+
+        .wardrobe-purchase-slot-label,
+        .wardrobe-purchase-copy {
+            font-size: 9px !important;
+            line-height: 12px !important;
+        }
+
+        .wardrobe-purchase-price {
+            font-size: 10px !important;
+            line-height: 13px !important;
+        }
+
+        .wardrobe-purchase-error {
+            font-size: 9px !important;
+            line-height: 12px !important;
+        }
+
+        .wardrobe-purchase-actions button {
+            height: 22px !important;
+            padding: 3px 9px !important;
+            font-size: 9px !important;
+            line-height: 12px !important;
+        }
+    }
+}
+/* END_BIRIBIRI_WARDROBE_P6_3_READABILITY */
+
+/* BIRIBIRI_WARDROBE_P6_4_TEXT_READABILITY */
+
+/*
+ * Segunda pasada de legibilidad.
+ * El panel ya tiene mas ancho en P6.3, asi que dejamos de comprimir
+ * tipografia a 7-9px y llevamos los textos funcionales a 10-12px.
+ */
+.biribiri-wardrobe-named {
+    .saved-outfits-title {
+        font-size: 12px !important;
+        line-height: 15px !important;
+    }
+
+    .wardrobe-section-tab {
+        font-size: 10px !important;
+        line-height: 12px !important;
+    }
+
+    .biribiri-wardrobe-pages {
+        button {
+            min-width: 22px;
+            height: 21px;
+            padding: 0 6px;
+            font-size: 10px;
+            line-height: 19px;
+        }
+    }
+
+    .wardrobe-folder-browser-title {
+        font-size: 11px !important;
+        line-height: 14px !important;
+
+        span {
+            font-size: 11px !important;
+            line-height: 14px !important;
+        }
+
+        small {
+            font-size: 10px !important;
+            line-height: 12px !important;
+        }
+    }
+
+    .wardrobe-folder-tile-name {
+        font-size: 10px !important;
+        line-height: 12px !important;
+    }
+
+    .wardrobe-folder-tile-count {
+        font-size: 10px !important;
+        line-height: 11px !important;
+    }
+
+    .wardrobe-folder-position {
+        font-size: 10px !important;
+        line-height: 12px !important;
+    }
+
+    .wardrobe-outfit-name-tooltip {
+        max-width: 100px;
+        padding: 3px 6px;
+        font-size: 10px !important;
+        line-height: 12px !important;
+    }
+
+    .wardrobe-folder-error,
+    .wardrobe-folder-dialog-error {
+        font-size: 10px !important;
+        line-height: 13px !important;
+    }
+
+    .wardrobe-undo-floating {
+        min-height: 29px;
+        padding: 5px 7px;
+
+        .wardrobe-undo-message {
+            font-size: 10px !important;
+            line-height: 13px !important;
+        }
+
+        .wardrobe-undo-button {
+            min-height: 22px;
+            padding: 3px 7px;
+            gap: 4px;
+            font-size: 10px !important;
+            line-height: 12px !important;
+        }
+    }
+
+    .wardrobe-extra-buy-slot {
+        .wardrobe-extra-buy-plus {
+            font-size: 20px !important;
+            line-height: 18px !important;
+        }
+
+        .wardrobe-extra-buy-price {
+            margin-top: 2px;
+            font-size: 10px !important;
+            line-height: 12px !important;
+        }
+    }
+
+    /*
+     * Dialogos: ahora hay ancho suficiente para que el copy no necesite
+     * tipografia diminuta.
+     */
+    .wardrobe-name-dialog,
+    .wardrobe-purchase-dialog,
+    .wardrobe-folder-dialog {
+        width: calc(100% - 10px) !important;
+        max-width: 260px !important;
+    }
+
+    .wardrobe-name-dialog {
+        .wardrobe-name-dialog-title {
+            height: 24px !important;
+            padding: 5px 8px !important;
+            font-size: 11px !important;
+            line-height: 14px !important;
+        }
+
+        .wardrobe-name-dialog-body {
+            padding: 9px !important;
+            gap: 8px !important;
+        }
+
+        .wardrobe-name-dialog-fields {
+            label {
+                font-size: 10px !important;
+                line-height: 12px !important;
+            }
+
+            input,
+            select {
+                height: 25px !important;
+                padding: 3px 5px !important;
+                font-size: 10px !important;
+                line-height: 14px !important;
+            }
+        }
+
+        .wardrobe-name-dialog-actions {
+            gap: 6px !important;
+
+            button {
+                min-height: 23px !important;
+                padding: 4px 9px !important;
+                font-size: 10px !important;
+                line-height: 13px !important;
+            }
+        }
+    }
+
+    .wardrobe-folder-dialog-body {
+        padding: 10px !important;
+        gap: 6px !important;
+
+        label {
+            font-size: 10px !important;
+            line-height: 12px !important;
+        }
+
+        input {
+            height: 25px !important;
+            padding: 3px 5px !important;
+            font-size: 10px !important;
+            line-height: 14px !important;
+        }
+
+        .wardrobe-name-dialog-actions {
+            button {
+                min-height: 23px !important;
+                padding: 4px 9px !important;
+                font-size: 10px !important;
+                line-height: 13px !important;
+            }
+        }
+    }
+
+    .wardrobe-folder-delete-copy {
+        font-size: 10px !important;
+        line-height: 14px !important;
+    }
+
+    .wardrobe-purchase-dialog {
+        .wardrobe-purchase-dialog-title {
+            height: 24px !important;
+            padding: 5px 8px !important;
+            font-size: 11px !important;
+            line-height: 14px !important;
+        }
+
+        .wardrobe-purchase-dialog-body {
+            padding: 11px 13px 12px !important;
+        }
+
+        .wardrobe-purchase-slot-label {
+            margin-bottom: 6px !important;
+            font-size: 11px !important;
+            line-height: 14px !important;
+        }
+
+        .wardrobe-purchase-copy {
+            margin-bottom: 9px !important;
+            font-size: 11px !important;
+            line-height: 15px !important;
+        }
+
+        .wardrobe-purchase-price {
+            min-width: 92px !important;
+            margin-bottom: 9px !important;
+            padding: 5px 10px !important;
+            font-size: 11px !important;
+            line-height: 14px !important;
+        }
+
+        .wardrobe-purchase-error {
+            font-size: 10px !important;
+            line-height: 13px !important;
+        }
+
+        .wardrobe-purchase-actions {
+            gap: 7px !important;
+
+            button {
+                height: 24px !important;
+                padding: 4px 10px !important;
+                font-size: 10px !important;
+                line-height: 13px !important;
+            }
+        }
+    }
+}
+/* END_BIRIBIRI_WARDROBE_P6_4_TEXT_READABILITY */
+
+/* BIRIBIRI_WARDROBE_P6_5_FOLDERS_FINAL */
+.biribiri-wardrobe-named {
+    .biribiri-wardrobe-slot.is-folder {
+        position: relative;
+
+        /*
+         * El boton de vestir deja de participar en el flujo horizontal:
+         * el avatar ocupa el mismo centro tanto si hay flecha como si no.
+         */
+        > .button-container {
+            position: absolute;
+            z-index: 9;
+            left: 50%;
+            top: 50%;
+            width: 20px;
+            margin: 0 !important;
+            transform: translate(-37px, -50%);
+
+            .saved-outfit-button {
+                margin: 0 !important;
+            }
+        }
+
+        > .avatar-container {
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Compatibilidad defensiva con cache/build anterior. */
+        .wardrobe-folder-position {
+            display: none !important;
+        }
+    }
+}
+/* END_BIRIBIRI_WARDROBE_P6_5_FOLDERS_FINAL */
+
+/* BIRIBIRI_WARDROBE_COMMUNITY_C1_4_2 */
+.nitro-avatar-editor {
+    .avatar-editor-tabs {
+        .biribiri-community-category-tab {
+            margin-left: auto !important;
+            min-width: 52px;
+            justify-content: center;
+        }
+
+        .biribiri-community-people-icon {
+            width: 25px;
+            height: 25px;
+            color: #f4f0e6;
+            filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .75));
+        }
+
+        .biribiri-community-category-tab:hover {
+            .biribiri-community-people-icon {
+                color: #ffffff;
+            }
+        }
+    }
+}
+/* END_BIRIBIRI_WARDROBE_COMMUNITY_C1_4_2 */

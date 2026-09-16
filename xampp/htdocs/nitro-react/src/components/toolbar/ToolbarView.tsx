@@ -93,6 +93,7 @@ export const ToolbarView: FC<{ isInRoom: boolean }> = props =>
                             <Base pointer className="navigation-item icon icon-catalog" title="Subastas" onClick={ event => CreateLinkEvent('subastas/toggle') } />
                         </Flex>
 
+
                         { GetConfiguration('game.center.enabled') &&
                             <Flex center className="holo-toolbar-slot">
                                 <Base pointer className="navigation-item icon icon-game" onClick={ event => CreateLinkEvent('games/toggle') } />

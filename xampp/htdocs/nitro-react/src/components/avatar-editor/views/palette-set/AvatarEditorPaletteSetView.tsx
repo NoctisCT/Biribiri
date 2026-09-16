@@ -3,16 +3,14 @@
 // BIRIBIRI_WARDROBE_V3_2_RGB_RESPONSIVE
 // BIRIBIRI_WARDROBE_V3_3_COMMIT_ON_RELEASE
 // BIRIBIRI_WARDROBE_V3_4_DEFERRED_COLOR_AND_LAZY_INIT
-import { HabboClubLevelEnum } from '@nitrots/nitro-renderer';
+// BIRIBIRI_WARDROBE_HC_FREE_V1
 import { FC, useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import {
     AvatarEditorGridColorItem,
     BiribiriHexToRgbInt,
     BiribiriRgbIntToHex,
     CategoryData,
-    CreateLinkEvent,
     EncodeBiribiriCustomColor,
-    GetSessionDataManager,
     IAvatarEditorCategoryModel,
     IsBiribiriCustomColorId,
     NormalizeBiribiriHex
@@ -259,20 +257,6 @@ export const AvatarEditorPaletteSetView: FC<AvatarEditorPaletteSetViewProps> = p
             paletteSet.indexOf(item);
 
         if(index === -1) return;
-
-        if(
-            item.isHC &&
-            GetSessionDataManager()
-                .clubLevel ===
-                HabboClubLevelEnum.NO_CLUB
-        )
-        {
-            CreateLinkEvent(
-                'habboUI/open/hccenter'
-            );
-
-            return;
-        }
 
         clearSettleTimer();
 

@@ -1,3 +1,7 @@
+// BIRIBIRI_WARDROBE_P6_FOLDERS
+// BIRIBIRI_WARDROBE_P6_2_FOLDER_BROWSER
+// BIRIBIRI_WARDROBE_P6_5_FOLDERS_FINAL
+// BIRIBIRI_WARDROBE_P6_3_READABILITY
 // BIRIBIRI_WARDROBE_DELETE_UNDO_V1
 // BIRIBIRI_WARDROBE_V4_2_2_PURCHASE_ACK_FIX
 // BIRIBIRI_WARDROBE_V4_2_EXTRA_SLOT_PURCHASE
@@ -7,13 +11,28 @@
 // BIRIBIRI_WARDROBE_V2_PAGED_SECTIONS
 // BIRIBIRI_WARDROBE_V4_1_NAMED_OUTFITS
 import { BiribiriWardrobeDeleteResultEvent, BiribiriWardrobeDeleteRequestComposer, BiribiriWardrobeNameSaveComposer, BiribiriWardrobePurchaseRequestComposer, BiribiriWardrobePurchaseResultEvent, IAvatarFigureContainer, SaveWardrobeOutfitMessageComposer } from '@nitrots/nitro-renderer';
+import {
+    BiribiriWardrobeFolderMutationComposer,
+    BiribiriWardrobeFolderMutationResultEvent,
+    BiribiriWardrobeFoldersEvent,
+    BiribiriWardrobeFoldersRequestComposer,
+    RegisterBiribiriWardrobeFolderMessages
+} from '../../../api/avatar/WardrobeFolderMessages';
 import { Dispatch, FC, SetStateAction, useCallback, useEffect, useMemo, useState, useRef } from 'react';
-import { MdEdit, MdKeyboardArrowLeft, MdKeyboardArrowRight, MdDeleteOutline, MdUndo} from 'react-icons/md';
+import { MdAdd, MdDeleteOutline, MdEdit, MdFolder, MdKeyboardArrowLeft, MdKeyboardArrowRight, MdUndo } from 'react-icons/md';
 import { CreateLinkEvent, FigureData, GetAvatarRenderManager, GetClubMemberLevel, GetConfiguration, LocalizeText, SendMessageComposer } from '../../../api';
 import { Flex, LayoutAvatarImageView } from '../../../common';
 import { useMessageEvent } from '../../../hooks';
 
-type WardrobeSection = 'base' | 'hc' | 'extra';
+type WardrobeSection = 'base' | 'hc' | 'extra' | 'folders';
+type WardrobeFolderDialogMode = 'create' | 'rename' | 'delete';
+
+interface WardrobeFolderData
+{
+    id: number;
+    name: string;
+    slots: Map<number, number>;
+}
 type WardrobeDialogMode = 'save' | 'rename';
 
 interface WardrobeDeletedSnapshot
@@ -23,6 +42,7 @@ interface WardrobeDeletedSnapshot
     figure: string;
     gender: string;
     name: string;
+    folderId: number;
 }
 
 export interface AvatarEditorWardrobeViewProps
@@ -54,16 +74,23 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
         setOutfitNames = null
     } = props;
 
+    // Registra 6214-6217 contra la conexion Nitro ya activa.
+    // Es idempotente y evita depender de una copia stale en node_modules.
+    RegisterBiribiriWardrobeFolderMessages();
+
     const hcDisabled =
         GetConfiguration<boolean>(
             'hc.disabled',
             false
         );
 
+    // Biri Club usa el estado premium real enviado por el servidor.
+    // hc.disabled solo libera ropa legacy; NO debe regalar slots BC ni carpetas.
+    const biriClubActive =
+        !!hcActive;
+
     const clientHcActive =
-        hcDisabled ||
-        hcActive ||
-        (GetClubMemberLevel() > 0);
+        biriClubActive;
 
     const maxExtraSlots = 80;
 
@@ -114,6 +141,27 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
     const [ undoSnapshot, setUndoSnapshot ] =
         useState<WardrobeDeletedSnapshot | null>(null);
 
+
+    const [ folders, setFolders ] =
+        useState<WardrobeFolderData[]>([]);
+
+    const [ activeFolderId, setActiveFolderId ] =
+        useState(0);
+
+    const [ dialogFolderId, setDialogFolderId ] =
+        useState(0);
+
+    const [ folderDialogMode, setFolderDialogMode ] =
+        useState<WardrobeFolderDialogMode>(null);
+
+    const [ folderDialogName, setFolderDialogName ] =
+        useState('');
+
+    const [ folderMutationPending, setFolderMutationPending ] =
+        useState(false);
+
+    const [ folderActionError, setFolderActionError ] =
+        useState('');
 
     const extraPageCount = useMemo(
         () =>
@@ -319,6 +367,298 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
             );
     }, [ deletePending ]);
 
+    useMessageEvent<BiribiriWardrobeFoldersEvent>(
+        BiribiriWardrobeFoldersEvent,
+        event =>
+        {
+            const parser =
+                event.getParser();
+
+            const nextFolders: WardrobeFolderData[] =
+                parser.folders.map(
+                    folder => ({
+                        id: folder.id,
+                        name: folder.name,
+                        slots: new Map<number, number>(
+                            folder.slots
+                        )
+                    })
+                );
+
+            setFolders(nextFolders);
+
+            setActiveFolderId(
+                previous =>
+                {
+                    if(
+                        previous > 0 &&
+                        nextFolders.some(
+                            folder =>
+                                folder.id === previous
+                        )
+                    )
+                    {
+                        return previous;
+                    }
+
+                    return 0;
+                }
+            );
+        }
+    );
+
+    useMessageEvent<BiribiriWardrobeFolderMutationResultEvent>(
+        BiribiriWardrobeFolderMutationResultEvent,
+        event =>
+        {
+            const parser =
+                event.getParser();
+
+            setFolderMutationPending(false);
+
+            if(parser.status === 0)
+            {
+                setFolderActionError('');
+                setFolderDialogMode(null);
+                setFolderDialogName('');
+                return;
+            }
+
+            if(parser.status === 1)
+            {
+                setFolderActionError(
+                    'Necesitas Biri Club activo.'
+                );
+                return;
+            }
+
+            if(parser.status === 3)
+            {
+                setFolderActionError(
+                    'Esa carpeta ya tiene 10 conjuntos.'
+                );
+                return;
+            }
+
+            if(parser.status === 4)
+            {
+                setFolderActionError(
+                    'La carpeta ya no existe.'
+                );
+                return;
+            }
+
+            if(parser.status === 5)
+            {
+                setFolderActionError(
+                    'Ya tienes una carpeta con ese nombre.'
+                );
+                return;
+            }
+
+            if(parser.status === 7)
+            {
+                setFolderActionError(
+                    'Puedes tener un m??ximo de 10 carpetas.'
+                );
+                return;
+            }
+
+            setFolderActionError(
+                'No se pudo actualizar la carpeta.'
+            );
+        }
+    );
+
+    useEffect(() =>
+    {
+        SendMessageComposer(
+            new BiribiriWardrobeFoldersRequestComposer()
+        );
+    }, []);
+
+    const getFolderIdForSlot =
+        useCallback(
+            (slotId: number): number =>
+            {
+                if(slotId <= 0) return 0;
+
+                for(const folder of folders)
+                {
+                    for(
+                        const assignedSlotId
+                        of folder.slots.values()
+                    )
+                    {
+                        if(assignedSlotId === slotId)
+                        {
+                            return folder.id;
+                        }
+                    }
+                }
+
+                return 0;
+            },
+            [ folders ]
+        );
+
+    const activeFolder =
+        useMemo(
+            () =>
+                folders.find(
+                    folder =>
+                        folder.id === activeFolderId
+                ) || null,
+            [
+                folders,
+                activeFolderId
+            ]
+        );
+
+    const openFoldersSection =
+        useCallback(
+            () =>
+            {
+                if(!biriClubActive)
+                {
+                    CreateLinkEvent(
+                        'habboUI/open/hccenter'
+                    );
+                    return;
+                }
+
+                setFolderActionError('');
+                setActiveSection('folders');
+                setActiveFolderId(0);
+            },
+            [
+                biriClubActive
+            ]
+        );
+
+    const openFolderDialog =
+        useCallback(
+            (
+                mode: WardrobeFolderDialogMode,
+                folder: WardrobeFolderData = null
+            ) =>
+            {
+                if(!biriClubActive)
+                {
+                    CreateLinkEvent(
+                        'habboUI/open/hccenter'
+                    );
+                    return;
+                }
+
+                setFolderActionError('');
+                setFolderDialogMode(mode);
+                setFolderDialogName(
+                    folder
+                        ? folder.name
+                        : ''
+                );
+            },
+            [ biriClubActive ]
+        );
+
+    const closeFolderDialog =
+        useCallback(
+            () =>
+            {
+                if(folderMutationPending) return;
+
+                setFolderDialogMode(null);
+                setFolderDialogName('');
+                setFolderActionError('');
+            },
+            [ folderMutationPending ]
+        );
+
+    const confirmFolderDialog =
+        useCallback(
+            () =>
+            {
+                if(
+                    folderMutationPending ||
+                    !folderDialogMode
+                ) return;
+
+                if(!biriClubActive)
+                {
+                    CreateLinkEvent(
+                        'habboUI/open/hccenter'
+                    );
+                    return;
+                }
+
+                let action = 0;
+                let folderId = 0;
+                let name = '';
+
+                if(folderDialogMode === 'create')
+                {
+                    if(folders.length >= 10)
+                    {
+                        setFolderActionError(
+                            'Puedes tener un m??ximo de 10 carpetas.'
+                        );
+                        return;
+                    }
+
+                    action = 1;
+                    name =
+                        folderDialogName
+                            .replace(/\s+/g, ' ')
+                            .trim()
+                            .slice(0, 32);
+
+                    if(!name) return;
+                }
+                else if(folderDialogMode === 'rename')
+                {
+                    if(!activeFolder) return;
+
+                    action = 2;
+                    folderId = activeFolder.id;
+                    name =
+                        folderDialogName
+                            .replace(/\s+/g, ' ')
+                            .trim()
+                            .slice(0, 32);
+
+                    if(!name) return;
+                }
+                else
+                {
+                    if(!activeFolder) return;
+
+                    action = 3;
+                    folderId = activeFolder.id;
+                }
+
+                setFolderMutationPending(true);
+                setFolderActionError('');
+
+                SendMessageComposer(
+                    new BiribiriWardrobeFolderMutationComposer(
+                        action,
+                        folderId,
+                        0,
+                        name
+                    )
+                );
+            },
+            [
+                folderMutationPending,
+                folderDialogMode,
+                folderDialogName,
+                biriClubActive,
+                activeFolder,
+                folders
+            ]
+        );
+
     const getSlotType = useCallback(
         (index: number): WardrobeSection =>
         {
@@ -439,13 +779,19 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
                 outfitNames[index + 1] ||
                 getFallbackName(index)
             );
+            setDialogFolderId(
+                getFolderIdForSlot(
+                    index + 1
+                )
+            );
         },
         [
             figureData,
             outfitNames,
             isSlotUnlocked,
             requestSlotAccess,
-            getFallbackName
+            getFallbackName,
+            getFolderIdForSlot
         ]
     );
 
@@ -471,13 +817,19 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
                 outfitNames[index + 1] ||
                 getFallbackName(index)
             );
+            setDialogFolderId(
+                getFolderIdForSlot(
+                    index + 1
+                )
+            );
         },
         [
             savedFigures,
             outfitNames,
             isSlotUnlocked,
             requestSlotAccess,
-            getFallbackName
+            getFallbackName,
+            getFolderIdForSlot
         ]
     );
 
@@ -487,6 +839,7 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
             setDialogMode(null);
             setDialogSlotIndex(-1);
             setDialogName('');
+            setDialogFolderId(0);
         },
         []
     );
@@ -545,6 +898,11 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
 
             const slotId =
                 dialogSlotIndex + 1;
+
+            const previousFolderId =
+                getFolderIdForSlot(
+                    slotId
+                );
 
             const finalName =
                 dialogName
@@ -614,7 +972,9 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
                             gender:
                                 previousGender,
                             name:
-                                previousName
+                                previousName,
+                            folderId:
+                                previousFolderId
                         });
 
                         setDeleteError('');
@@ -664,6 +1024,21 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
                 )
             );
 
+            if(
+                biriClubActive &&
+                dialogFolderId !== previousFolderId
+            )
+            {
+                SendMessageComposer(
+                    new BiribiriWardrobeFolderMutationComposer(
+                        4,
+                        dialogFolderId,
+                        slotId,
+                        ''
+                    )
+                );
+            }
+
             closeDialog();
         },
         [
@@ -679,7 +1054,10 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
             getFallbackName,
             closeDialog,
             outfitNames,
-            undoSnapshot
+            undoSnapshot,
+            dialogFolderId,
+            getFolderIdForSlot,
+            biriClubActive
         ]
     );
 
@@ -724,7 +1102,11 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
                     tuple[1],
                 name:
                     outfitNames[index + 1] ||
-                    ''
+                    '',
+                folderId:
+                    getFolderIdForSlot(
+                        index + 1
+                    )
             };
 
             // Nuevo borrado = el Undo anterior deja
@@ -748,7 +1130,8 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
             savedFigures,
             outfitNames,
             isSlotUnlocked,
-            requestSlotAccess
+            requestSlotAccess,
+            getFolderIdForSlot
         ]
     );
 
@@ -857,6 +1240,18 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
                 )
             );
 
+            if(biriClubActive)
+            {
+                SendMessageComposer(
+                    new BiribiriWardrobeFolderMutationComposer(
+                        4,
+                        snapshot.folderId || 0,
+                        snapshot.slotIndex + 1,
+                        ''
+                    )
+                );
+            }
+
             setUndoSnapshot(null);
             setDeleteError('');
         },
@@ -866,13 +1261,19 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
             setSavedFigures,
             setOutfitNames,
             isSlotUnlocked,
-            requestSlotAccess
+            requestSlotAccess,
+            biriClubActive
         ]
     );
 
     const visibleIndexes = useMemo(
         () =>
         {
+            if(activeSection === 'folders')
+            {
+                return [];
+            }
+
             let startIndex = 0;
 
             if(activeSection === 'hc')
@@ -1158,10 +1559,253 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
         ]
     );
 
+    const folderFigures = useMemo(
+        () =>
+        {
+            const items: JSX.Element[] = [];
+
+            for(
+                let position = 1;
+                position <= 10;
+                position++
+            )
+            {
+                const slotId =
+                    activeFolder
+                        ? (
+                            activeFolder.slots.get(
+                                position
+                            ) || 0
+                        )
+                        : 0;
+
+                const index =
+                    slotId > 0
+                        ? slotId - 1
+                        : -1;
+
+                const tuple =
+                    index >= 0
+                        ? (
+                            savedFigures[index] ||
+                            [ null, null ]
+                        )
+                        : [ null, null ];
+
+                const figureContainer =
+                    tuple[0] as IAvatarFigureContainer;
+
+                const gender =
+                    tuple[1] as string;
+
+                const canUse =
+                    index >= 0 &&
+                    isSlotUnlocked(index);
+
+                const outfitName =
+                    slotId > 0
+                        ? (
+                            outfitNames[slotId] ||
+                            ''
+                        )
+                        : '';
+
+                items.push(
+                    <Flex
+                        key={ position }
+                        alignItems={ 'center' }
+                        justifyContent={ 'center' }
+                        className={
+                            `biribiri-wardrobe-slot is-folder${
+                                figureContainer
+                                    ? ''
+                                    : ' is-folder-empty'
+                            }`
+                        }>
+                        { figureContainer &&
+                            <Flex
+                                gap={ 1 }
+                                column={ true }
+                                className="button-container">
+                                <button
+                                    className="saved-outfit-button"
+                                    title="Vestir conjunto"
+                                    onClick={
+                                        () =>
+                                            wearFigureAtIndex(
+                                                index
+                                            )
+                                    }
+                                    disabled={ !canUse }>
+                                    <MdKeyboardArrowLeft />
+                                </button>
+                            </Flex> }
+
+                        <div className="avatar-container">
+                            { figureContainer &&
+                                <>
+                                    <LayoutAvatarImageView
+                                        className="avatar-figure"
+                                        figure={
+                                            figureContainer
+                                                .getFigureString()
+                                        }
+                                        gender={ gender }
+                                        direction={ 4 } />
+
+                                    { canUse &&
+                                        <button
+                                            type="button"
+                                            className="wardrobe-outfit-rename"
+                                            title="Editar conjunto"
+                                            onClick={
+                                                event =>
+                                                {
+                                                    event.stopPropagation();
+
+                                                    openRenameDialog(
+                                                        index
+                                                    );
+                                                }
+                                            }>
+                                            <MdEdit />
+                                        </button> }
+
+                                    { outfitName &&
+                                        <span className="wardrobe-outfit-name-tooltip">
+                                            { outfitName }
+                                        </span> }
+                                </> }
+                        </div>
+                    </Flex>
+                );
+            }
+
+            return items;
+        },
+        [
+            activeFolder,
+            savedFigures,
+            outfitNames,
+            isSlotUnlocked,
+            wearFigureAtIndex,
+            openRenameDialog
+        ]
+    );
+
+    const folderDirectory = useMemo(
+        () =>
+        {
+            const items: JSX.Element[] = [];
+
+            for(
+                let position = 0;
+                position < 10;
+                position++
+            )
+            {
+                const folder =
+                    folders[position] ||
+                    null;
+
+                const isCreateSlot =
+                    !folder &&
+                    position === folders.length &&
+                    folders.length < 10;
+
+                items.push(
+                    <Flex
+                        key={
+                            folder
+                                ? folder.id
+                                : `folder-directory-${ position }`
+                        }
+                        alignItems={ 'center' }
+                        justifyContent={ 'center' }
+                        className={
+                            `biribiri-wardrobe-slot is-folder-directory${
+                                folder
+                                    ? ' has-folder'
+                                    : (
+                                        isCreateSlot
+                                            ? ' is-create'
+                                            : ' is-empty'
+                                    )
+                            }`
+                        }>
+                        <button
+                            type="button"
+                            className="wardrobe-folder-tile"
+                            disabled={
+                                !folder &&
+                                !isCreateSlot
+                            }
+                            title={
+                                folder
+                                    ? `${ folder.name } (${ folder.slots.size }/10)`
+                                    : (
+                                        isCreateSlot
+                                            ? 'Nueva carpeta'
+                                            : ''
+                                    )
+                            }
+                            onClick={
+                                () =>
+                                {
+                                    if(folder)
+                                    {
+                                        setFolderActionError('');
+                                        setActiveFolderId(
+                                            folder.id
+                                        );
+                                        return;
+                                    }
+
+                                    if(isCreateSlot)
+                                    {
+                                        openFolderDialog(
+                                            'create'
+                                        );
+                                    }
+                                }
+                            }>
+                            { folder
+                                ? <>
+                                    <MdFolder className="wardrobe-folder-tile-icon" />
+                                    <span className="wardrobe-folder-tile-name">
+                                        { folder.name }
+                                    </span>
+                                    <span className="wardrobe-folder-tile-count">
+                                        { `${ folder.slots.size }/10` }
+                                    </span>
+                                </>
+                                : (
+                                    isCreateSlot
+                                        ? <>
+                                            <MdAdd className="wardrobe-folder-tile-icon is-add" />
+                                            <span className="wardrobe-folder-tile-name">
+                                                Nueva carpeta
+                                            </span>
+                                        </>
+                                        : <span className="wardrobe-folder-tile-placeholder" />
+                                )
+                            }
+                        </button>
+                    </Flex>
+                );
+            }
+
+            return items;
+        },
+        [
+            folders,
+            openFolderDialog
+        ]
+    );
+
     return (
         <div
-            className="biribiri-wardrobe-v2 biribiri-wardrobe-named"
-            data-biribiri-wardrobe={ 'v4-2-extra-slot-purchase' }>
+            className="biribiri-wardrobe-v2 biribiri-wardrobe-named"             data-biribiri-wardrobe={ 'v6-2-folder-browser' }>
             <div className="d-flex flex-column align-items-center">
                 <span className="saved-outfits-title">
                     { LocalizeText('avatareditor.wardrobe.title') }
@@ -1213,14 +1857,149 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
                         <span className="wardrobe-extra-plus">+</span>
                         <span>EXTRA</span>
                     </button>
+
+                    <button
+                        type="button"
+                        className={
+                            `wardrobe-section-tab is-folders${
+                                activeSection === 'folders'
+                                    ? ' is-active'
+                                    : ''
+                            }${
+                                biriClubActive
+                                    ? ''
+                                    : ' is-locked'
+                            }`
+                        }
+                        title={
+                            biriClubActive
+                                ? 'Carpetas'
+                                : 'Carpetas ?? Biri Club'
+                        }
+                        aria-label="Carpetas"
+                        onClick={ openFoldersSection }>
+                        <MdFolder />
+                    </button>
+
                 </div>
             </div>
 
-            <div className="saved-outfit-container mt-2">
+            { activeSection === 'folders' &&
+                biriClubActive &&
+                <div
+                    className={
+                        `wardrobe-folder-browser-header${
+                            activeFolder
+                                ? ' is-open'
+                                : ' is-root'
+                        }`
+                    }>
+                    { activeFolder
+                        ? <>
+                            <button
+                                type="button"
+                                className="wardrobe-folder-browser-back"
+                                title="Volver a carpetas"
+                                onClick={
+                                    () =>
+                                    {
+                                        setFolderActionError('');
+                                        setActiveFolderId(0);
+                                    }
+                                }>
+                                <MdKeyboardArrowLeft />
+                            </button>
+
+                            <div
+                                className="wardrobe-folder-browser-title"
+                                title={ activeFolder.name }>
+                                <MdFolder />
+                                <span>{ activeFolder.name }</span>
+                                <small>{ `${ activeFolder.slots.size }/10` }</small>
+                            </div>
+
+                            <div className="wardrobe-folder-browser-actions">
+                                <button
+                                    type="button"
+                                    title="Renombrar carpeta"
+                                    onClick={
+                                        () =>
+                                            openFolderDialog(
+                                                'rename',
+                                                activeFolder
+                                            )
+                                    }>
+                                    <MdEdit />
+                                </button>
+
+                                <button
+                                    type="button"
+                                    title="Eliminar carpeta"
+                                    onClick={
+                                        () =>
+                                            openFolderDialog(
+                                                'delete',
+                                                activeFolder
+                                            )
+                                    }>
+                                    <MdDeleteOutline />
+                                </button>
+                            </div>
+                        </>
+                        : <>
+                            <div className="wardrobe-folder-browser-title">
+                                <MdFolder />
+                                <span>Mis carpetas</span>
+                                <small>{ `${ folders.length }/10` }</small>
+                            </div>
+
+                            <div className="wardrobe-folder-browser-actions">
+                                <button
+                                    type="button"
+                                    title={
+                                        folders.length >= 10
+                                            ? 'M??ximo de 10 carpetas'
+                                            : 'Nueva carpeta'
+                                    }
+                                    disabled={ folders.length >= 10 }
+                                    onClick={
+                                        () =>
+                                            openFolderDialog(
+                                                'create'
+                                            )
+                                    }>
+                                    <MdAdd />
+                                </button>
+                            </div>
+                        </>
+                    }
+                </div> }
+
+            <div
+                className={
+                    `saved-outfit-container mt-2${
+                        activeSection === 'folders'
+                            ? ' is-folder-view'
+                            : ''
+                    }`
+                }>
                 <div className="nitro-avatar-editor-wardrobe-container">
-                    { figures }
+                    {
+                        activeSection === 'folders'
+                            ? (
+                                activeFolder
+                                    ? folderFigures
+                                    : folderDirectory
+                            )
+                            : figures
+                    }
                 </div>
             </div>
+
+            { folderActionError &&
+                <div className="wardrobe-folder-error">
+                    { folderActionError }
+                </div> }
 
             { (undoSnapshot || deleteError) &&
                 <div className="wardrobe-undo-floating">
@@ -1306,6 +2085,93 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
                     </div>
                 </div> }
 
+            { folderDialogMode &&
+                <div
+                    className="wardrobe-name-dialog wardrobe-folder-dialog"
+                    onKeyDown={
+                        event =>
+                        {
+                            if(event.key === 'Enter')
+                            {
+                                event.preventDefault();
+                                confirmFolderDialog();
+                            }
+                            else if(event.key === 'Escape')
+                            {
+                                event.preventDefault();
+                                closeFolderDialog();
+                            }
+                        }
+                    }>
+                    <div className="wardrobe-name-dialog-title">
+                        {
+                            folderDialogMode === 'create'
+                                ? 'NUEVA CARPETA'
+                                : (
+                                    folderDialogMode === 'rename'
+                                        ? 'RENOMBRAR CARPETA'
+                                        : 'ELIMINAR CARPETA'
+                                )
+                        }
+                    </div>
+
+                    <div className="wardrobe-folder-dialog-body">
+                        { folderDialogMode !== 'delete'
+                            ? <>
+                                <label>NOMBRE</label>
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    value={ folderDialogName }
+                                    maxLength={ 32 }
+                                    onChange={
+                                        event =>
+                                            setFolderDialogName(
+                                                event.target.value
+                                            )
+                                    } />
+                            </>
+                            : <div className="wardrobe-folder-delete-copy">
+                                { 'Los conjuntos no se eliminar\u00e1n. Solo se borrar\u00e1 la carpeta.' }
+                            </div> }
+
+                        { folderActionError &&
+                            <div className="wardrobe-folder-dialog-error">
+                                { folderActionError }
+                            </div> }
+
+                        <div className="wardrobe-name-dialog-actions">
+                            <button
+                                type="button"
+                                className="is-cancel"
+                                disabled={ folderMutationPending }
+                                onClick={ closeFolderDialog }>
+                                Cancelar
+                            </button>
+
+                            <button
+                                type="button"
+                                className={
+                                    folderDialogMode === 'delete'
+                                        ? 'is-delete'
+                                        : 'is-save'
+                                }
+                                disabled={ folderMutationPending }
+                                onClick={ confirmFolderDialog }>
+                                {
+                                    folderMutationPending
+                                        ? 'Guardando...'
+                                        : (
+                                            folderDialogMode === 'delete'
+                                                ? 'Eliminar'
+                                                : 'Guardar'
+                                        )
+                                }
+                            </button>
+                        </div>
+                    </div>
+                </div> }
+
             { dialogMode &&
                 dialogSlotIndex >= 0 &&
                 <div
@@ -1357,6 +2223,53 @@ export const AvatarEditorWardrobeView: FC<AvatarEditorWardrobeViewProps> = props
                                             event.target.value
                                         )
                                 } />
+
+                            <label>CARPETA</label>
+
+                            <select
+                                value={ dialogFolderId }
+                                disabled={ !biriClubActive }
+                                title={
+                                    biriClubActive
+                                        ? 'Asignar a una carpeta'
+                                        : 'Requiere Biri Club'
+                                }
+                                onChange={
+                                    event =>
+                                        setDialogFolderId(
+                                            parseInt(
+                                                event.target.value,
+                                                10
+                                            ) || 0
+                                        )
+                                }>
+                                <option value={ 0 }>
+                                    Sin carpeta
+                                </option>
+
+                                { folders.map(
+                                    folder =>
+                                    {
+                                        const currentFolderId =
+                                            getFolderIdForSlot(
+                                                dialogSlotIndex + 1
+                                            );
+
+                                        const full =
+                                            folder.slots.size >= 10 &&
+                                            currentFolderId !== folder.id;
+
+                                        return (
+                                            <option
+                                                key={ folder.id }
+                                                value={ folder.id }
+                                                disabled={ full }>
+                                                { `${ folder.name } (${ folder.slots.size }/10)` }
+                                            </option>
+                                        );
+                                    }
+                                ) }
+                            </select>
 
                             <div className="wardrobe-name-dialog-actions">
                                 <button

@@ -15,6 +15,7 @@ import { Base, TransitionAnimation, TransitionAnimationTypes } from '../../commo
 import { useRoomSessionManagerEvent } from '../../hooks';
 import { AchievementsView } from '../achievements/AchievementsView';
 import { SubastasView } from '../subastas/SubastasView';
+import { CommunityOutfitsView } from '../community-outfits/CommunityOutfitsView'; // BIRIBIRI_WARDROBE_COMMUNITY_C1
 import { SlotMachineView } from '../tragaperras/SlotMachineView';
 import { AirHockeyView } from '../air-hockey/AirHockeyView';
 import { AvatarEditorView } from '../avatar-editor/AvatarEditorView';
@@ -118,6 +119,7 @@ export const MainView: FC<{}> = props => {
             <AvatarEditorView />
             <AchievementsView />
  <SubastasView />
+            <CommunityOutfitsView />
             <SlotMachineView />
             <AirHockeyView />
             <SpaceInvadersView />

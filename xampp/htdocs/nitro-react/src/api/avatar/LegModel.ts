@@ -1,6 +1,6 @@
 import { AvatarEditorFigureCategory } from '@nitrots/nitro-renderer';
 import { CategoryBaseModel } from './CategoryBaseModel';
-import { FigureData } from './FigureData';
+import { GetClothingCategoryTypesByGroup } from './ClothingCategoryRegistry';
 
 export class LegModel extends CategoryBaseModel
 {
@@ -8,9 +8,10 @@ export class LegModel extends CategoryBaseModel
     {
         super.init();
 
-        this.addCategory(FigureData.TROUSERS);
-        this.addCategory(FigureData.SHOES);
-        this.addCategory(FigureData.TROUSER_ACCESSORIES);
+        for(const type of GetClothingCategoryTypesByGroup('legs'))
+        {
+            this.addCategory(type);
+        }
 
         this._isInitalized = true;
     }

@@ -1,6 +1,7 @@
 // BIRIBIRI_CLOTHING_FAVORITES_V1
+// BIRIBIRI_WARDROBE_HC_FREE_V1
 import { FC, MouseEvent, useEffect, useState } from 'react';
-import { AvatarEditorGridPartItem, GetConfiguration } from '../../../../api';
+import { AvatarEditorGridPartItem } from '../../../../api';
 import { LayoutCurrencyIcon, LayoutGridItem, LayoutGridItemProps } from '../../../../common';
 import { AvatarEditorIcon } from '../AvatarEditorIcon';
 
@@ -22,8 +23,6 @@ export const AvatarEditorFigureSetItemView: FC<AvatarEditorFigureSetItemViewProp
     } = props;
     const [ updateId, setUpdateId ] = useState(-1);
 
-    const hcDisabled = GetConfiguration<boolean>('hc.disabled', false);
-
     useEffect(() =>
     {
         const rerender = () => setUpdateId(prevValue => (prevValue + 1));
@@ -36,7 +35,6 @@ export const AvatarEditorFigureSetItemView: FC<AvatarEditorFigureSetItemViewProp
     return (
         <div className="avatar-container">
             <LayoutGridItem className={ `avatar-parts ${ partItem.isSelected ? 'part-selected' : '' }` } itemImage={ (partItem.isClear ? undefined : partItem.imageUrl) } { ...rest }>
-                { !hcDisabled && partItem.isHC && <i className="icon hc-icon position-absolute" /> }
                 { partItem.isClear && <AvatarEditorIcon icon="clear" /> }
                 { partItem.isSellable && <AvatarEditorIcon icon="sellable" position="absolute" className="end-1 bottom-1" /> }
 
@@ -52,7 +50,7 @@ export const AvatarEditorFigureSetItemView: FC<AvatarEditorFigureSetItemViewProp
                         title={
                             isFavorite
                                 ? 'Quitar de favoritas'
-                                : 'A?adir a favoritas'
+                                : 'A\u00f1adir a favoritas'
                         }
                         onClick={
                             event =>

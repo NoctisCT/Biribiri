@@ -1,17 +1,39 @@
 // BIRIBIRI_WARDROBE_V4_1_NAMED_OUTFITS
 // BIRIBIRI_WARDROBE_V1_SERVER_SLOTS
-import { AvatarEditorFigureCategory, BiribiriWardrobeStateEvent, BiribiriWardrobeStateRequestComposer, FigureSetIdsMessageEvent, GetWardrobeMessageComposer, IAvatarFigureContainer, ILinkEventTracker, SetClothingChangeDataMessageComposer, UserFigureComposer, UserWardrobePageEvent, BiribiriWardrobeNamesEvent, BiribiriWardrobeNamesRequestComposer } from '@nitrots/nitro-renderer';
-import { FC, useCallback, useEffect, useMemo, useState } from 'react';
-import { FaDice, FaTrash, FaUndo } from 'react-icons/fa';
-import { AddEventLinkTracker, AvatarEditorAction, AvatarEditorUtilities, BodyModel, FigureData, GetAvatarRenderManager, GetClubMemberLevel, GetConfiguration, GetSessionDataManager, HeadModel, IAvatarEditorCategoryModel, LegModel, LocalizeText, RemoveLinkEventTracker, SendMessageComposer, SetLocalStorage, TorsoModel, generateRandomFigure } from '../../api';
+import { AvatarEditorFigureCategory, AvatarRenderEvent, BiribiriWardrobeStateEvent, BiribiriWardrobeStateRequestComposer, FigureSetIdsMessageEvent, GetWardrobeMessageComposer, IAvatarFigureContainer, ILinkEventTracker, SetClothingChangeDataMessageComposer, UserFigureComposer, UserWardrobePageEvent, BiribiriWardrobeNamesEvent, BiribiriWardrobeNamesRequestComposer } from '@nitrots/nitro-renderer';
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FaDice, FaLock, FaLockOpen, FaTimes, FaTrash, FaUndo, FaUsers } from 'react-icons/fa';
+import { AddEventLinkTracker, AvatarEditorAction, AvatarEditorUtilities, BodyModel, ExtrasModel, FigureData, GetAvatarRenderManager, GetAvatarSetType, CLOTHING_CATEGORY_DEFINITIONS, GetClothingCategoryDefinition, GetClothingCategoryTypesByGroup, GetConfiguration, GetSessionDataManager, HeadModel, IAvatarEditorCategoryModel, LegModel, LocalizeText, RemoveLinkEventTracker, SendMessageComposer, SetLocalStorage, TorsoModel, generateRandomFigure, CreateLinkEvent } from '../../api';
 import { Button, ButtonGroup, Column, Flex, Grid, NitroCardContentView, NitroCardHeaderView, NitroCardTabsItemView, NitroCardTabsView, NitroCardView } from '../../common';
-import { useMessageEvent } from '../../hooks';
+import { useAvatarEvent, useMessageEvent } from '../../hooks';
 import { AvatarEditorFigurePreviewView } from './views/AvatarEditorFigurePreviewView';
 import { AvatarEditorModelView } from './views/AvatarEditorModelView';
 import { AvatarEditorWardrobeView } from './views/AvatarEditorWardrobeView';
 
 const DEFAULT_MALE_FIGURE: string = 'hr-100.hd-180-7.ch-215-66.lg-270-79.sh-305-62.ha-1002-70.wa-2007';
 const DEFAULT_FEMALE_FIGURE: string = 'hr-515-33.hd-600-1.ch-635-70.lg-716-66-62.sh-735-68';
+
+// BIRIBIRI_WARDROBE_P5_ADVANCED_PREVIEW
+const RANDOM_CATEGORY_GROUP_ORDER: Record<string, number> =
+{
+    generic: 0,
+    head: 1,
+    torso: 2,
+    legs: 3,
+    extras: 4
+};
+
+// BIRIBIRI_WARDROBE_P4_2_RANDOM_POPOVER_ES
+// BIRIBIRI_WARDROBE_P4_3_RANDOM_UX_ES
+const AVATAR_EDITOR_GROUP_LABELS: Record<string, string> =
+{
+    hd: 'Avatar',
+    generic: 'Avatar',
+    head: 'Cabeza',
+    torso: 'Torso',
+    legs: 'Piernas',
+    extras: 'Extras'
+};
 
 export const AvatarEditorView: FC<{}> = props =>
 {
@@ -20,7 +42,19 @@ export const AvatarEditorView: FC<{}> = props =>
     const [ figureData, setFigureData ] = useState<FigureData>(null);
     const [ categories, setCategories ] = useState<Map<string, IAvatarEditorCategoryModel>>(null);
     const [ activeCategory, setActiveCategory ] = useState<IAvatarEditorCategoryModel>(null);
+    // BIRIBIRI_WARDROBE_P4_1_UX_HOTFIX
+    // Conserva la pestana superior al reconstruir los modelos tras Random.
+    const activeCategoryNameRef = useRef<string>(null);
     const [ figureSetIds, setFigureSetIds ] = useState<number[]>([]);
+    // BIRIBIRI_WARDROBE_P4_CONTROLLED_RANDOM_V2
+    // La cara conserva el comportamiento historico: empieza bloqueada.
+    const [ lockedFigureTypes, setLockedFigureTypes ] =
+        useState<Set<string>>(
+            () => new Set<string>([ FigureData.FACE ])
+        );
+    const [ isRandomMenuVisible, setIsRandomMenuVisible ] =
+        useState(false);
+
     const [ boundFurnitureNames, setBoundFurnitureNames ] = useState<string[]>([]);
     const [ savedFigures, setSavedFigures ] = useState<[ IAvatarFigureContainer, string ][]>([]);
     const [ isWardrobeVisible, setIsWardrobeVisible ] = useState(false);
@@ -133,6 +167,10 @@ export const AvatarEditorView: FC<{}> = props =>
         const nextCategory =
             categories.get(name);
 
+        if(!nextCategory) return;
+
+        activeCategoryNameRef.current = name;
+
         setActiveCategory(previous =>
         {
             if(
@@ -147,6 +185,67 @@ export const AvatarEditorView: FC<{}> = props =>
         });
     }, [ categories ]);
 
+    const randomizableClothingCategories =
+        useMemo(
+            () =>
+                CLOTHING_CATEGORY_DEFINITIONS
+                    .filter(
+                        definition =>
+                            definition.randomizable &&
+                            !!GetAvatarSetType(
+                                definition.type
+                            )
+                    )
+                    .sort(
+                        (a, b) =>
+                            (
+                                RANDOM_CATEGORY_GROUP_ORDER[
+                                    a.group
+                                ] ?? 99
+                            ) -
+                            (
+                                RANDOM_CATEGORY_GROUP_ORDER[
+                                    b.group
+                                ] ?? 99
+                            )
+                    ),
+            [ categories ]
+        );
+
+    const toggleFigureTypeLock =
+        useCallback(
+            (figureType: string) =>
+            {
+                const definition =
+                    GetClothingCategoryDefinition(
+                        figureType
+                    );
+
+                if(
+                    !definition ||
+                    !definition.randomizable
+                ) return;
+
+                setLockedFigureTypes(previous =>
+                {
+                    const next =
+                        new Set<string>(previous);
+
+                    if(next.has(figureType))
+                    {
+                        next.delete(figureType);
+                    }
+                    else
+                    {
+                        next.add(figureType);
+                    }
+
+                    return next;
+                });
+            },
+            []
+        );
+
     const resetCategories = useCallback(() =>
     {
         const categories = new Map();
@@ -157,6 +256,15 @@ export const AvatarEditorView: FC<{}> = props =>
             categories.set(AvatarEditorFigureCategory.HEAD, new HeadModel());
             categories.set(AvatarEditorFigureCategory.TORSO, new TorsoModel());
             categories.set(AvatarEditorFigureCategory.LEGS, new LegModel());
+
+            const hasExtras =
+                GetClothingCategoryTypesByGroup('extras')
+                    .some(type => !!GetAvatarSetType(type));
+
+            if(hasExtras)
+            {
+                categories.set('extras', new ExtrasModel());
+            }
         }
         else
         {
@@ -166,6 +274,17 @@ export const AvatarEditorView: FC<{}> = props =>
 
         setCategories(categories);
     }, [ genderFootballGate ]);
+
+    // BIRIBIRI_EXTRAS_AVATAR_READY_V1
+    const onAvatarRenderReady = useCallback(() =>
+    {
+        resetCategories();
+    }, [ resetCategories ]);
+
+    useAvatarEvent(
+        AvatarRenderEvent.AVATAR_RENDER_READY,
+        onAvatarRenderReady
+    );
 
     const setupFigures = useCallback(() =>
     {
@@ -216,9 +335,19 @@ export const AvatarEditorView: FC<{}> = props =>
                 resetCategories();
                 return;
             case AvatarEditorAction.ACTION_RANDOMIZE:
-                const figure = generateRandomFigure(figureData, figureData.gender, GetClubMemberLevel(), figureSetIds, [ FigureData.FACE ]);
+                const figure = generateRandomFigure(
+                    figureData,
+                    figureData.gender,
+                    0,
+                    figureSetIds,
+                    Array.from(lockedFigureTypes)
+                );
 
-                loadAvatarInEditor(figure, figureData.gender, false);
+                loadAvatarInEditor(
+                    figure,
+                    figureData.gender,
+                    false
+                );
                 resetCategories();
                 return;
             case AvatarEditorAction.ACTION_SAVE:
@@ -227,7 +356,7 @@ export const AvatarEditorView: FC<{}> = props =>
                 onClose();
                 return;
         }
-    }, [ loadAvatarInEditor, figureData, resetCategories, lastFigure, lastGender, figureSetIds, genderFootballGate, objectFootballGate ])
+    }, [ loadAvatarInEditor, figureData, resetCategories, lastFigure, lastGender, figureSetIds, lockedFigureTypes, genderFootballGate, objectFootballGate ])
 
     const setGender = useCallback((gender: string) =>
     {
@@ -251,6 +380,13 @@ export const AvatarEditorView: FC<{}> = props =>
                 switch(parts[1])
                 {
                     case 'show':
+                        setIsVisible(true);
+                        return;
+                    case 'community-preview':
+                        // BIRIBIRI_WARDROBE_COMMUNITY_C2_2_PREVIEW
+                        setGenderFootballGate(null);
+                        setObjectFootballGate(null);
+                        setNeedsReset(true);
                         setIsVisible(true);
                         return;
                     case 'hide':
@@ -293,7 +429,23 @@ export const AvatarEditorView: FC<{}> = props =>
     {
         if(!categories) return;
 
-        selectCategory(!genderFootballGate ? AvatarEditorFigureCategory.GENERIC : AvatarEditorFigureCategory.TORSO);
+        const preferred =
+            activeCategoryNameRef.current;
+
+        if(
+            preferred &&
+            categories.has(preferred)
+        )
+        {
+            selectCategory(preferred);
+            return;
+        }
+
+        selectCategory(
+            !genderFootballGate
+                ? AvatarEditorFigureCategory.GENERIC
+                : AvatarEditorFigureCategory.TORSO
+        );
     }, [ categories, genderFootballGate, selectCategory ]);
 
     useEffect(() =>
@@ -339,8 +491,52 @@ export const AvatarEditorView: FC<{}> = props =>
     {
         if(!isVisible || !isInitalized || !needsReset) return;
 
-        if (!genderFootballGate) loadAvatarInEditor(GetSessionDataManager().figure, GetSessionDataManager().gender);
-        if (genderFootballGate) loadAvatarInEditor(genderFootballGate === FigureData.MALE ? DEFAULT_MALE_FOOTBALL_GATE : DEFAULT_FEMALE_FOOTBALL_GATE, genderFootballGate);
+        const communityPreviewRaw = window.sessionStorage.getItem('biribiri.community.preview');
+        let communityPreviewApplied = false;
+
+        if(communityPreviewRaw && !genderFootballGate)
+        {
+            try
+            {
+                const communityPreview = JSON.parse(communityPreviewRaw);
+
+                if(communityPreview?.figure && communityPreview?.gender)
+                {
+                    setLastFigure(GetSessionDataManager().figure);
+                    setLastGender(GetSessionDataManager().gender);
+                    loadAvatarInEditor(
+                        String(communityPreview.figure),
+                        String(communityPreview.gender),
+                        false
+                    );
+                    communityPreviewApplied = true;
+                }
+            }
+            catch(error)
+            {
+                communityPreviewApplied = false;
+            }
+
+            window.sessionStorage.removeItem('biribiri.community.preview');
+        }
+
+        if(!communityPreviewApplied && !genderFootballGate)
+        {
+            loadAvatarInEditor(
+                GetSessionDataManager().figure,
+                GetSessionDataManager().gender
+            );
+        }
+
+        if(!communityPreviewApplied && genderFootballGate)
+        {
+            loadAvatarInEditor(
+                genderFootballGate === FigureData.MALE
+                    ? DEFAULT_MALE_FOOTBALL_GATE
+                    : DEFAULT_FEMALE_FOOTBALL_GATE,
+                genderFootballGate
+            );
+        }
         setNeedsReset(false);
     }, [ isVisible, isInitalized, needsReset, loadAvatarInEditor, genderFootballGate, DEFAULT_MALE_FOOTBALL_GATE, DEFAULT_FEMALE_FOOTBALL_GATE ]);
 
@@ -360,6 +556,12 @@ export const AvatarEditorView: FC<{}> = props =>
     {
         if(isVisible) return;
 
+        // Los locks son locales/efimeros: al cerrar vuelve solo Cara.
+        setLockedFigureTypes(
+            new Set<string>([ FigureData.FACE ])
+        );
+        setIsRandomMenuVisible(false);
+
         return () =>
         {
             setNeedsReset(true);
@@ -368,7 +570,20 @@ export const AvatarEditorView: FC<{}> = props =>
 
     if(!isVisible || !figureData) return null;
 
-    const avatarEditorClasses = `nitro-avatar-editor no-resize ${ isWardrobeVisible ? 'expanded' : '' }`;
+    const isAuxiliaryPanelVisible =
+        (isWardrobeVisible || isRandomMenuVisible);
+
+    // BIRIBIRI_WARDROBE_P4_4_RANDOM_SIDE_PANEL
+    const avatarEditorClasses =
+        `nitro-avatar-editor no-resize ${
+            isAuxiliaryPanelVisible
+                ? 'expanded'
+                : ''
+        }${
+            isWardrobeVisible
+                ? ' wardrobe-expanded'
+                : ''
+        }`;
 
     return (
         <NitroCardView uniqueKey="avatar-editor" className={ avatarEditorClasses }>
@@ -380,37 +595,105 @@ export const AvatarEditorView: FC<{}> = props =>
 
                     return (
                         <NitroCardTabsItemView key={ category } isActive={ isActive } onClick={ event => selectCategory(category) }>
-                            <div className={ `tab ${ category }` }></div>
+                            <div
+                                className={ `tab ${ category }` }
+                                title={
+                                    AVATAR_EDITOR_GROUP_LABELS[
+                                        category
+                                    ] || 'Categor\u00eda'
+                                }></div>
                         </NitroCardTabsItemView>
                     );
                 }) }
                 { (!genderFootballGate) &&
-                    <NitroCardTabsItemView onClick={ event => setIsWardrobeVisible(!isWardrobeVisible) }>
-                        <div className="tab-wardrobe"></div>
+                    <NitroCardTabsItemView
+                        onClick={
+                            () =>
+                            {
+                                setIsRandomMenuVisible(false);
+                                setIsWardrobeVisible(
+                                    previous => !previous
+                                );
+                            }
+                        }>
+                        <div
+                            className="tab-wardrobe"
+                            title="Vestidor"></div>
                     </NitroCardTabsItemView>
                 }
+                { (!genderFootballGate) &&
+                    <NitroCardTabsItemView
+                        classNames={ [ 'biribiri-community-category-tab' ] }
+                        title="Comunidad"
+                        onClick={ event => CreateLinkEvent('community-outfits/toggle') }>
+                        {/* BIRIBIRI_WARDROBE_COMMUNITY_C1_4_2 */}
+                        <FaUsers className="biribiri-community-people-icon" />
+                    </NitroCardTabsItemView> }
             </NitroCardTabsView>
             <NitroCardContentView>
                 <Grid>
-                    <Column size={ isWardrobeVisible ? 6 : 8 } overflow="hidden">
+                    <Column
+                        size={
+                            isWardrobeVisible
+                                ? 5
+                                : (
+                                    isRandomMenuVisible
+                                        ? 6
+                                        : 8
+                                )
+                        }
+                        overflow="hidden">
                         { (activeCategory) &&
-                            <AvatarEditorModelView model={ activeCategory } gender={ figureData.gender } setGender={ setGender } /> 
+                            <AvatarEditorModelView
+                                model={ activeCategory }
+                                gender={ figureData.gender }
+                                isFromFootballGate={ !!genderFootballGate }
+                                setGender={ setGender }
+                            />
                         }
                     </Column>
-                    <Column size={ isWardrobeVisible ? 6 : 4 } overflow="hidden">
+                    <Column
+                        size={
+                            isWardrobeVisible
+                                ? 7
+                                : (
+                                    isRandomMenuVisible
+                                        ? 6
+                                        : 4
+                                )
+                        }
+                        overflow="hidden">
                         <Flex gap={ 2 } className="w-100 h-100">
                             <Flex column={ true } className="w-100">
                                 <AvatarEditorFigurePreviewView figureData={ figureData } />
                                 <Column grow gap={ 1 }>
                                     { (!genderFootballGate) &&
                                         <ButtonGroup className="action-buttons w-100">
-                                            <Button variant="secondary" onClick={ event => processAction(AvatarEditorAction.ACTION_RESET) }>
+                                            <Button
+                                                variant="secondary"
+                                                title="Deshacer cambios"
+                                                onClick={ event => processAction(AvatarEditorAction.ACTION_RESET) }>
                                                 <FaUndo className="fa-icon" />
                                             </Button>
-                                            <Button variant="secondary" onClick={ event => processAction(AvatarEditorAction.ACTION_CLEAR) }>
+                                            <Button
+                                                variant="secondary"
+                                                title="Limpiar look"
+                                                onClick={ event => processAction(AvatarEditorAction.ACTION_CLEAR) }>
                                                 <FaTrash className="fa-icon" />
                                             </Button>
-                                            <Button variant="secondary" onClick={ event => processAction(AvatarEditorAction.ACTION_RANDOMIZE) }>
+                                            <Button
+                                                variant="secondary"
+                                                title="Opciones de look aleatorio"
+                                                onClick={
+                                                    () =>
+                                                    {
+                                                        setIsWardrobeVisible(false);
+                                                        setIsRandomMenuVisible(
+                                                            previous =>
+                                                                !previous
+                                                        );
+                                                    }
+                                                }>
                                                 <FaDice className="fa-icon" />
                                             </Button>
                                         </ButtonGroup>
@@ -427,6 +710,100 @@ export const AvatarEditorView: FC<{}> = props =>
                                         setOutfitNames={ setWardrobeOutfitNames } />
                                 </Column>
                             }
+                            { isRandomMenuVisible &&
+                                <Column
+                                    overflow="hidden"
+                                    className="w-100 biribiri-random-side-panel">
+                                    <div className="biribiri-random-popover-header">
+                                        <div>
+                                            <strong>Look aleatorio</strong>
+                                            <span>Bloquea lo que quieras conservar.</span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className="biribiri-random-popover-close"
+                                            title="Cerrar"
+                                            aria-label="Cerrar"
+                                            onClick={
+                                                () =>
+                                                    setIsRandomMenuVisible(
+                                                        false
+                                                    )
+                                            }>
+                                            <FaTimes className="fa-icon" />
+                                        </button>
+                                    </div>
+
+                                    <div className="biribiri-random-lock-grid">
+                                        { randomizableClothingCategories.map(
+                                            definition =>
+                                            {
+                                                const isLocked =
+                                                    lockedFigureTypes.has(
+                                                        definition.type
+                                                    );
+
+                                                return (
+                                                    <button
+                                                        key={
+                                                            definition.type
+                                                        }
+                                                        type="button"
+                                                        className={
+                                                            `biribiri-random-lock-option${ isLocked ? ' is-locked' : '' }`
+                                                        }
+                                                        title={
+                                                            isLocked
+                                                                ? `Desbloquear ${ definition.label }`
+                                                                : `Bloquear ${ definition.label }`
+                                                        }
+                                                        onClick={
+                                                            () =>
+                                                                toggleFigureTypeLock(
+                                                                    definition.type
+                                                                )
+                                                        }>
+                                                        <span className="biribiri-random-lock-state">
+                                                            { isLocked
+                                                                ? <FaLock className="fa-icon" />
+                                                                : <FaLockOpen className="fa-icon" /> }
+                                                        </span>
+                                                        <span>
+                                                            { definition.label }
+                                                        </span>
+                                                    </button>
+                                                );
+                                            }
+                                        ) }
+                                    </div>
+
+                                    <div className="biribiri-random-popover-actions">
+                                        <button
+                                            type="button"
+                                            className="biribiri-random-unlock-all"
+                                            onClick={
+                                                () =>
+                                                    setLockedFigureTypes(
+                                                        new Set<string>()
+                                                    )
+                                            }>
+                                            Desbloquear todo
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="biribiri-random-run"
+                                            onClick={
+                                                () =>
+                                                    processAction(
+                                                        AvatarEditorAction.ACTION_RANDOMIZE
+                                                    )
+                                            }>
+                                            <FaDice className="fa-icon" />
+                                            <span>Randomizar</span>
+                                        </button>
+                                    </div>
+                                </Column> }
+
                         </Flex>
                     </Column>
                 </Grid>

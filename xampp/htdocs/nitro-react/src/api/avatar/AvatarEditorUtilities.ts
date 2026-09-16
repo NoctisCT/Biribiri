@@ -1,5 +1,5 @@
 import { IPartColor } from '@nitrots/nitro-renderer';
-import { GetAvatarPalette, GetAvatarRenderManager, GetAvatarSetType, GetClubMemberLevel, GetConfiguration } from '../nitro';
+import { GetAvatarPalette, GetAvatarRenderManager, GetAvatarSetType, GetConfiguration } from '../nitro';
 import { AvatarEditorGridColorItem } from './AvatarEditorGridColorItem';
 import { AvatarEditorGridPartItem } from './AvatarEditorGridPartItem';
 import { CategoryBaseModel } from './CategoryBaseModel';
@@ -69,19 +69,19 @@ export class AvatarEditorUtilities
         if(!colorIds) colorIds = [];
 
         const partColors: IPartColor[] = new Array(colorIds.length);
-        const clubItemsDimmed = this.clubItemsDimmed;
-        const clubMemberLevel = GetClubMemberLevel();
+
+        // BIRIBIRI_WARDROBE_HC_FREE_V1
+        // El clubLevel legacy no limita prendas ni colores en Biribiri.
 
         for(const partColor of palette.colors.getValues())
         {
-            if(partColor.isSelectable && (clubItemsDimmed || (clubMemberLevel >= partColor.clubLevel)))
+            if(partColor.isSelectable)
             {
                 let i = 0;
 
                 while(i < this.MAX_PALETTES)
                 {
-                    const isDisabled = (clubMemberLevel < partColor.clubLevel);
-                    const colorItem = new AvatarEditorGridColorItem(partColor, isDisabled);
+                    const colorItem = new AvatarEditorGridColorItem(partColor, false);
 
                     colorItems[i].push(colorItem);
 
@@ -102,16 +102,11 @@ export class AvatarEditorUtilities
             }
         }
 
-        let mandatorySetIds: string[] = [];
-
-        if(clubItemsDimmed)
-        {
-            mandatorySetIds = GetAvatarRenderManager().getMandatoryAvatarPartSetIds(this.CURRENT_FIGURE.gender, 2);
-        }
-        else
-        {
-            mandatorySetIds = GetAvatarRenderManager().getMandatoryAvatarPartSetIds(this.CURRENT_FIGURE.gender, clubMemberLevel);
-        }
+        const mandatorySetIds: string[] =
+            GetAvatarRenderManager().getMandatoryAvatarPartSetIds(
+                this.CURRENT_FIGURE.gender,
+                Number.MAX_SAFE_INTEGER
+            );
 
         const isntMandatorySet = (mandatorySetIds.indexOf(name) === -1);
 
@@ -146,15 +141,13 @@ export class AvatarEditorUtilities
                 isValidGender = true;
             }
 
-            if(partSet.isSelectable && isValidGender && (clubItemsDimmed || (clubMemberLevel >= partSet.clubLevel)))
+            if(partSet.isSelectable && isValidGender)
             {
-                const isDisabled = (clubMemberLevel < partSet.clubLevel);
-
                 let isValid = true;
 
                 if(partSet.isSellable) isValid = this.hasFigureSetId(partSet.id);
 
-                if(isValid) partItems.push(new AvatarEditorGridPartItem(partSet, partColors, usesColors, isDisabled));
+                if(isValid) partItems.push(new AvatarEditorGridPartItem(partSet, partColors, usesColors, false));
             }
 
             i--;
@@ -257,7 +250,7 @@ export class AvatarEditorUtilities
 
         for(const color of palette.colors.getValues())
         {
-            if(!color.isSelectable || (GetClubMemberLevel() < color.clubLevel)) continue;
+            if(!color.isSelectable) continue;
 
             return color.id;
         }

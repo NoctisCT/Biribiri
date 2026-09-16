@@ -1,4 +1,5 @@
 import { AvatarEditorUtilities } from './AvatarEditorUtilities';
+import { CLOTHING_CATEGORY_TYPES, IsClothingCategoryType } from './ClothingCategoryRegistry';
 
 export class FigureData
 {
@@ -23,7 +24,8 @@ export class FigureData
     public static TROUSERS: string = 'lg';
     public static SHOES: string = 'sh';
     public static TROUSER_ACCESSORIES: string = 'wa';
-    public static SET_TYPES = [ FigureData.FACE, FigureData.HAIR, FigureData.HAT, FigureData.HEAD_ACCESSORIES, FigureData.EYE_ACCESSORIES, FigureData.FACE_ACCESSORIES, FigureData.JACKET, FigureData.SHIRT, FigureData.CHEST_ACCESSORIES, FigureData.CHEST_PRINTS, FigureData.TROUSERS, FigureData.SHOES, FigureData.TROUSERS ];
+    // BIRIBIRI_EXTENDED_CLOTHING_ARCH_V1_1
+    public static SET_TYPES: string[] = CLOTHING_CATEGORY_TYPES.slice();
 
     private _data: Map<string, number>;
     private _colors: Map<string, number[]>;
@@ -142,30 +144,16 @@ export class FigureData
 
     private savePartSetId(setType: string, partId: number, update: boolean = true): void
     {
-        switch(setType)
+        if(IsClothingCategoryType(setType))
         {
-            case FigureData.FACE:
-            case FigureData.HAIR:
-            case FigureData.HAT:
-            case FigureData.HEAD_ACCESSORIES:
-            case FigureData.EYE_ACCESSORIES:
-            case FigureData.FACE_ACCESSORIES:
-            case FigureData.SHIRT:
-            case FigureData.JACKET:
-            case FigureData.CHEST_ACCESSORIES:
-            case FigureData.CHEST_PRINTS:
-            case FigureData.TROUSERS:
-            case FigureData.SHOES:
-            case FigureData.TROUSER_ACCESSORIES:
-                if(partId >= 0)
-                {
-                    this._data.set(setType, partId);
-                }
-                else
-                {
-                    this._data.delete(setType);
-                }
-                break;
+            if(partId >= 0)
+            {
+                this._data.set(setType, partId);
+            }
+            else
+            {
+                this._data.delete(setType);
+            }
         }
 
         if(update) this.updateView();
@@ -173,23 +161,9 @@ export class FigureData
 
     public savePartSetColourId(setType: string, colorIds: number[], update: boolean = true): void
     {
-        switch(setType)
+        if(IsClothingCategoryType(setType))
         {
-            case FigureData.FACE:
-            case FigureData.HAIR:
-            case FigureData.HAT:
-            case FigureData.HEAD_ACCESSORIES:
-            case FigureData.EYE_ACCESSORIES:
-            case FigureData.FACE_ACCESSORIES:
-            case FigureData.SHIRT:
-            case FigureData.JACKET:
-            case FigureData.CHEST_ACCESSORIES:
-            case FigureData.CHEST_PRINTS:
-            case FigureData.TROUSERS:
-            case FigureData.SHOES:
-            case FigureData.TROUSER_ACCESSORIES:
-                this._colors.set(setType, colorIds);
-                break;
+            this._colors.set(setType, colorIds);
         }
 
         if(update) this.updateView();
