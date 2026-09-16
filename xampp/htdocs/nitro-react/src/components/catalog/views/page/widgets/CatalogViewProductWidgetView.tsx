@@ -1,6 +1,6 @@
 import { Vector3d } from '@nitrots/nitro-renderer';
 import { FC, useEffect } from 'react';
-import { FurniCategory, GetAvatarRenderManager, GetSessionDataManager, Offer, ProductTypeEnum } from '../../../../../api';
+import { FurniCategory, GetSessionDataManager, Offer, ProductTypeEnum } from '../../../../../api';
 import { AutoGrid, Column, LayoutGridItem, LayoutRoomPreviewerView } from '../../../../../common';
 import { useCatalog } from '../../../../../hooks';
 
@@ -24,25 +24,17 @@ export const CatalogViewProductWidgetView: FC<{}> = props =>
             case ProductTypeEnum.FLOOR: {
                 if(!product.furnitureData) return;
 
-                if(product.furnitureData.specialType === FurniCategory.FIGURE_PURCHASABLE_SET)
-                {
-                    const furniData = GetSessionDataManager().getFloorItemData(product.furnitureData.id);
-                    const customParts = furniData.customParams.split(',').map(value => parseInt(value));
-                    const figureSets: number[] = [];
+                const previewDirection =
+                    product.furnitureData.specialType === FurniCategory.FIGURE_PURCHASABLE_SET
+                        ? 0
+                        : 90;
 
-                    for(const part of customParts)
-                    {
-                        if(GetAvatarRenderManager().isValidFigureSetForGender(part, GetSessionDataManager().gender)) figureSets.push(part);
-                    }
-
-                    const figureString = GetAvatarRenderManager().getFigureStringWithFigureIds(GetSessionDataManager().figure, GetSessionDataManager().gender, figureSets);
-
-                    roomPreviewer.addAvatarIntoRoom(figureString, product.productClassId)
-                }
-                else
-                {
-                    roomPreviewer.addFurnitureIntoRoom(product.productClassId, new Vector3d(90), previewStuffData, product.extraParam);
-                }
+                roomPreviewer.addFurnitureIntoRoom(
+                    product.productClassId,
+                    new Vector3d(previewDirection),
+                    previewStuffData,
+                    product.extraParam
+                );
                 return;
             }
             case ProductTypeEnum.WALL: {

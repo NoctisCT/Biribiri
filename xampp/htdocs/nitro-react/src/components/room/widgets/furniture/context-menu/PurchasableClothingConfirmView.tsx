@@ -35,7 +35,7 @@ export const PurchasableClothingConfirmView: FC<PurchasableClothingConfirmViewPr
 
         const figure = GetSessionDataManager().figure;
         const gender = GetSessionDataManager().gender;
-        const validSets: number[] = [];
+        const previewFigure = GetAvatarRenderManager().createFigureContainer(figure);
 
         if(roomSession && (objectId >= 0))
         {
@@ -52,7 +52,16 @@ export const PurchasableClothingConfirmView: FC<PurchasableClothingConfirmViewPr
 
                         for(const setId of setIds)
                         {
-                            if(GetAvatarRenderManager().isValidFigureSetForGender(setId, gender)) validSets.push(setId);
+                            const partSet = GetAvatarRenderManager().structureData.getFigurePartSet(setId);
+
+                            if(!partSet) continue;
+                            if((partSet.gender !== gender) && (partSet.gender !== FigureData.UNISEX)) continue;
+
+                            previewFigure.updatePart(
+                                partSet.type,
+                                partSet.id,
+                                previewFigure.getPartColorIds(partSet.type) || []
+                            );
                         }
 
                         break;
@@ -68,7 +77,7 @@ export const PurchasableClothingConfirmView: FC<PurchasableClothingConfirmViewPr
         }
         
         setGender(gender);
-        setNewFigure(GetAvatarRenderManager().getFigureStringWithFigureIds(figure, gender, validSets));
+        setNewFigure(previewFigure.getFigureString());
 
         // if owns clothing, change to it
 
@@ -84,7 +93,7 @@ export const PurchasableClothingConfirmView: FC<PurchasableClothingConfirmViewPr
                 <Flex gap={ 2 } overflow="hidden">
                     <Column>
                         <Base className="mannequin-preview">
-                            <LayoutAvatarImageView figure={ newFigure } direction={ 2 } />
+                            <LayoutAvatarImageView figure={ newFigure } gender={ gender } direction={ 2 } />
                         </Base>
                     </Column>
                     <Column justifyContent="between" overflow="auto">
