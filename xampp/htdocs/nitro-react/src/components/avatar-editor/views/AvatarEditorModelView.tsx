@@ -1,5 +1,5 @@
 import { Dispatch, FC, SetStateAction, useCallback, useEffect, useRef, useState } from 'react';
-import { CategoryData, FigureData, GetClothingCategoryDefinition, IAvatarEditorCategoryModel, LocalizeText } from '../../../api';
+import { CategoryData, FigureData, GetClothingCategoryDefinition, GetClothingCategoryTypesByGroup, IAvatarEditorCategoryModel, LocalizeText } from '../../../api';
 import { Column, Flex, Grid, Text } from '../../../common';
 import { AvatarEditorIcon } from './AvatarEditorIcon';
 import { AvatarEditorFigureSetView } from './figure-set/AvatarEditorFigureSetView';
@@ -76,10 +76,22 @@ export const AvatarEditorModelView: FC<AvatarEditorModelViewProps> = props =>
 
     if(!model || !activeCategory) return null;
 
+    // BIRIBIRI_CATEGORY_VISIBILITY_V1
+    // Mostramos todas las categorias registradas aunque todavia no exista
+    // setType/prenda disponible para la cuenta. Solo las categorias reales
+    // son seleccionables; las vacias sirven de descubrimiento y QA visual.
+    const visibleCategoryNames: string[] =
+        (!model.canSetGender && !isFromFootballGate)
+            ? GetClothingCategoryTypesByGroup(
+                model.name as 'generic' | 'head' | 'torso' | 'legs' | 'extras'
+            )
+            : Array.from(model.categories.keys());
+
+
     return (
         <Grid>
-            <Column className="choose-clothing overflow-y-auto overflow-x-hidden">
-                <Flex className="px-3 biribiri-avatar-category-strip" gap={ 4 }>
+            <Column className="choose-clothing overflow-y-auto">
+                <Flex className="px-3 biribiri-avatar-category-strip" gap={ 2 }>
                     { model.canSetGender &&
                     <>
                         <Flex center pointer className="category-item" gap={ 3 } onClick={ event => setGender(FigureData.MALE) }>
@@ -91,29 +103,25 @@ export const AvatarEditorModelView: FC<AvatarEditorModelViewProps> = props =>
                             <Text bold>{ LocalizeText('avatareditor.generic.girl') }</Text>
                         </Flex>
                     </> }
-                    { !model.canSetGender && model.categories && (model.categories.size > 0) && Array.from(model.categories.keys()).map(name =>
+                    { !model.canSetGender && model.categories && visibleCategoryNames.map(name =>
                     {
                         const category = model.categories.get(name);
+                        const definition = GetClothingCategoryDefinition(name);
 
-                        if(!category) return null;
-                        if(isFromFootballGate && !CATEGORY_FOOTBALL_GATE.includes(category.name)) return null;
+                        if(!category && !definition) return null;
+                        if(isFromFootballGate && (!category || !CATEGORY_FOOTBALL_GATE.includes(category.name))) return null;
 
-                        const definition = GetClothingCategoryDefinition(category.name);
-                        const useFallbackIcon = !!definition && !definition.nativeEditorIcon;
+                        const useBiribiriCategoryIcon = !!definition && !definition.nativeEditorIcon;
+                        const isEmptyCategory = !category;
 
                         return (
                             <div key={ name }>
-                                <Flex center pointer className="category-item" onClick={ event => selectCategory(name) }>
+                                <Flex center pointer className={ `category-item${ isEmptyCategory ? ' biribiri-category-empty' : '' }` } onClick={ category ? (() => selectCategory(name)) : undefined }>
                                     <AvatarEditorIcon
-                                        icon={ category.name }
-                                        selected={ (activeCategory === category) }
-                                        classNames={ useFallbackIcon ? [ 'biribiri-category-fallback' ] : [] }
-                                        title={ definition?.label || category.name }>
-                                        { useFallbackIcon &&
-                                            <span className="biribiri-category-code">
-                                                { definition?.label?.charAt(0).toUpperCase() || '?' }
-                                            </span> }
-                                    </AvatarEditorIcon>
+                                        icon={ name }
+                                        selected={ !!category && (activeCategory === category) }
+                                        classNames={ useBiribiriCategoryIcon ? [ 'biribiri-category-custom-icon' ] : [] }
+                                        title={ definition?.label || name } />
                                 </Flex>
 
 </div>
@@ -126,9 +134,9 @@ export const AvatarEditorModelView: FC<AvatarEditorModelViewProps> = props =>
                 <Column overflow="hidden" className={
                     maxPaletteCount === 2 ? 'avatar-color-palette-container dual-palette' : 'avatar-color-palette-container'
                 }>
-                    { (maxPaletteCount >= 1) &&
+                    { (maxPaletteCount >= 1) && ((activeCategory.getPalette(0)?.length || 0) > 0) &&
                     <AvatarEditorPaletteSetView model={ model } category={ activeCategory } paletteSet={ activeCategory.getPalette(0) } paletteIndex={ 0 } /> }
-                    { (maxPaletteCount === 2) &&
+                    { (maxPaletteCount === 2) && ((activeCategory.getPalette(1)?.length || 0) > 0) &&
                     <AvatarEditorPaletteSetView model={ model } category={ activeCategory } paletteSet={ activeCategory.getPalette(1) } paletteIndex={ 1 } /> }
                 </Column>
             </Column>

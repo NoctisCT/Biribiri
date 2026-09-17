@@ -5,6 +5,7 @@ import { AvatarEditorGridPartItem } from './AvatarEditorGridPartItem';
 import { CategoryBaseModel } from './CategoryBaseModel';
 import { CategoryData } from './CategoryData';
 import { FigureData } from './FigureData';
+import { GetClothingCategoryDefinition } from './ClothingCategoryRegistry';
 
 export class AvatarEditorUtilities
 {
@@ -58,7 +59,35 @@ export class AvatarEditorUtilities
 
         const setType = GetAvatarSetType(name);
 
-        if(!setType) return null;
+        // BIRIBIRI_AUDITED_EMPTY_CATEGORY_V1
+        // Las categorias custom registradas existen incluso antes de tener
+        // prendas/setType. Se crea una CategoryData real con solo la X.
+        if(!setType)
+        {
+            const definition =
+                GetClothingCategoryDefinition(name);
+
+            if(!definition || definition.nativeEditorIcon)
+            {
+                return null;
+            }
+
+            const clearPart =
+                new AvatarEditorGridPartItem(
+                    null,
+                    null,
+                    false
+                );
+
+            clearPart.isClear = true;
+            partItems.push(clearPart);
+
+            return new CategoryData(
+                name,
+                partItems,
+                colorItems
+            );
+        }
 
         const palette = GetAvatarPalette(setType.paletteID);
 

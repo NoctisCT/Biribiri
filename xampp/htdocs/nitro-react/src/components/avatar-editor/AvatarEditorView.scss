@@ -359,7 +359,7 @@
 }
 
     .choose-clothing {
-        width: 320px;
+        width: 440px;
     }
 
     .color-picker-frame {
@@ -1500,8 +1500,17 @@
     }
 
     .biribiri-clothing-search {
-        width: 100%;
+        width: calc(100% - 1px);
+        max-width: calc(100% - 1px);
         min-height: 27px;
+        box-sizing: border-box;
+
+        /* BIRIBIRI_SEARCH_RIGHT_EDGE_FIX_V1 */
+        border-right-width: 1px !important;
+        border-right-style: solid !important;
+        border-top-right-radius: 3px !important;
+        border-bottom-right-radius: 3px !important;
+
         font-size: 11px;
     }
 
@@ -1718,46 +1727,6 @@
 }
 
 /* END_BIRIBIRI_EXTENDED_CLOTHING_ARCH_V1_1 */
-
-
-/* BIRIBIRI_EXTENDED_CLOTHING_EXTRAS_V1_2 */
-
-.avatar-editor-tabs {
-    .extras {
-        position: relative;
-        width: 34px;
-        height: 22px;
-        background: none !important;
-
-        &::before {
-            content: '';
-            position: absolute;
-            left: 11px;
-            top: 3px;
-            width: 9px;
-            height: 15px;
-            border-radius: 5px 5px 3px 3px;
-            background: #77a82a;
-            box-shadow:
-                0 -4px 0 -1px #77a82a,
-                inset 1px 1px 0 rgba(255, 255, 255, .28);
-        }
-
-        &::after {
-            content: '+';
-            position: absolute;
-            right: 4px;
-            top: 0;
-            color: #4f7017;
-            font-size: 15px;
-            font-weight: 900;
-            line-height: 15px;
-            text-shadow: 1px 1px 0 rgba(255, 255, 255, .55);
-        }
-    }
-}
-
-/* END_BIRIBIRI_EXTENDED_CLOTHING_EXTRAS_V1_2 */
 
 /* BIRIBIRI_WARDROBE_P4_2_RANDOM_POPOVER_ES */
 /* BIRIBIRI_WARDROBE_P4_3_RANDOM_UX_ES */
@@ -2977,3 +2946,335 @@
     }
 }
 /* END_BIRIBIRI_WARDROBE_COMMUNITY_C1_4_2 */
+
+/* BIRIBIRI_EXTENDED_CATEGORY_ICONS_V2 */
+.nitro-avatar-editor-spritesheet {
+    &.biribiri-category-custom-icon {
+        background-color: transparent !important;
+        background-position: center !important;
+        background-repeat: no-repeat !important;
+    }
+
+    &.bn-icon.biribiri-category-custom-icon {
+        width: 28px;
+        height: 14px;
+        background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-bn-icon.png') !important;
+
+        &.selected, &:hover {
+            background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-bn-selected-icon.png') !important;
+        }
+    }
+
+    &.er-icon.biribiri-category-custom-icon {
+        width: 31px;
+        height: 27px;
+        background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-er-icon.png') !important;
+
+        &.selected, &:hover {
+            background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-er-selected-icon.png') !important;
+        }
+    }
+
+    &.ba-icon.biribiri-category-custom-icon {
+        width: 25px;
+        height: 23px;
+        background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-ba-icon.png') !important;
+
+        &.selected, &:hover {
+            background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-ba-selected-icon.png') !important;
+        }
+    }
+
+    &.bp-icon.biribiri-category-custom-icon {
+        width: 21px;
+        height: 29px;
+        background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-bp-icon.png') !important;
+
+        &.selected, &:hover {
+            background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-bp-selected-icon.png') !important;
+        }
+    }
+
+    &.pe-icon.biribiri-category-custom-icon {
+        width: 17px;
+        height: 28px;
+        background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-pe-icon.png') !important;
+
+        &.selected, &:hover {
+            background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-pe-selected-icon.png') !important;
+        }
+    }
+
+    &.mu-icon.biribiri-category-custom-icon,
+    &.be-icon.biribiri-category-custom-icon,
+    &.nk-icon.biribiri-category-custom-icon,
+    &.gl-icon.biribiri-category-custom-icon,
+    &.wr-icon.biribiri-category-custom-icon,
+    &.ce-icon.biribiri-category-custom-icon,
+    &.wi-icon.biribiri-category-custom-icon,
+    &.tl-icon.biribiri-category-custom-icon {
+        width: 30px;
+        height: 30px;
+    }
+
+    &.mu-icon.biribiri-category-custom-icon {
+        background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-mu-icon.png') !important;
+        &.selected, &:hover { background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-mu-selected-icon.png') !important; }
+    }
+
+    &.be-icon.biribiri-category-custom-icon {
+        background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-be-icon.png') !important;
+        &.selected, &:hover { background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-be-selected-icon.png') !important; }
+    }
+
+    &.nk-icon.biribiri-category-custom-icon {
+        background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-nk-icon.png') !important;
+        &.selected, &:hover { background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-nk-selected-icon.png') !important; }
+    }
+
+    &.gl-icon.biribiri-category-custom-icon {
+        background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-gl-icon.png') !important;
+        &.selected, &:hover { background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-gl-selected-icon.png') !important; }
+    }
+
+    &.wr-icon.biribiri-category-custom-icon {
+        background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-wr-icon.png') !important;
+        &.selected, &:hover { background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-wr-selected-icon.png') !important; }
+    }
+
+    &.ce-icon.biribiri-category-custom-icon {
+        background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-ce-icon.png') !important;
+        &.selected, &:hover { background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-ce-selected-icon.png') !important; }
+    }
+
+    &.wi-icon.biribiri-category-custom-icon {
+        background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-wi-icon.png') !important;
+        &.selected, &:hover { background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-wi-selected-icon.png') !important; }
+    }
+
+    &.tl-icon.biribiri-category-custom-icon {
+        background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-tl-icon.png') !important;
+        &.selected, &:hover { background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-tl-selected-icon.png') !important; }
+    }
+}
+
+/* BIRIBIRI_CATEGORY_VISIBILITY_V1 */
+.nitro-avatar-editor {
+    .avatar-editor-tabs {
+        .extras {
+            width: 34px;
+            height: 28px;
+            background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-extras-icon.png');
+            background-repeat: no-repeat;
+            background-position: center;
+            image-rendering: pixelated;
+        }
+
+        .nav-tabs .nav-link.active .extras,
+        .nav-tabs .nav-link:hover .extras {
+            background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-extras-icon.png');
+        }
+    }
+
+    .biribiri-avatar-category-strip {
+        .biribiri-category-empty {
+            opacity: .55;
+            cursor: default;
+        }
+    }
+}
+
+/* BIRIBIRI_EXTRAS_TOP_ICON_AND_SINGLE_ROW_V1 */
+.nitro-avatar-editor {
+    .biribiri-avatar-category-strip {
+        flex-wrap: nowrap !important;
+        overflow-x: auto;
+        overflow-y: hidden;
+
+        > div {
+            flex: 0 0 auto;
+        }
+    }
+
+    .avatar-editor-tabs {
+        .extras {
+            width: 34px !important;
+            height: 22px !important;
+            background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-extras-icon.png') !important;
+            background-repeat: no-repeat !important;
+            background-position: center !important;
+            background-size: auto !important;
+        }
+
+        .nav-tabs .nav-link.active .extras,
+        .nav-tabs .nav-link:hover .extras {
+            background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-extras-icon.png') !important;
+        }
+    }
+}
+
+/* BIRIBIRI_EDITOR_ROW_EXTRAS_FINAL_V1 */
+.nitro-avatar-editor {
+    .biribiri-avatar-category-strip {
+        flex-wrap: nowrap !important;
+        overflow: visible !important;
+        white-space: nowrap;
+
+        > div {
+            flex: 0 0 auto;
+        }
+    }
+
+    .avatar-editor-tabs {
+        .extras {
+            width: 34px !important;
+            height: 22px !important;
+            background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-extras-icon.png') !important;
+            background-repeat: no-repeat !important;
+            background-position: center !important;
+            background-size: 23px 22px !important;
+            image-rendering: pixelated;
+        }
+
+        .nav-tabs .nav-link.active .extras,
+        .nav-tabs .nav-link:hover .extras {
+            background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-extras-icon.png') !important;
+            background-position: center !important;
+            background-size: 23px 22px !important;
+        }
+    }
+}
+
+/* PET sigue siendo una SUBCATEGORIA distinta de Extras. */
+.nitro-avatar-editor-spritesheet.pe-icon.biribiri-category-custom-icon {
+    width: 17px !important;
+    height: 28px !important;
+    background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-pe-icon.png') !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+
+    &.selected,
+    &:hover {
+        background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-pe-selected-icon.png') !important;
+    }
+}
+
+/* BIRIBIRI_CLOTHING_7COL_EXTRAS_CRISP_V1 */
+.nitro-avatar-editor {
+    .choose-clothing {
+        width: 370px !important;
+        min-width: 370px;
+    }
+
+    .biribiri-avatar-category-strip {
+        flex-wrap: nowrap !important;
+        overflow: visible !important;
+        white-space: nowrap;
+
+        > div {
+            flex: 0 0 auto;
+        }
+    }
+
+    .clothing-container {
+        grid-template-columns: repeat(7, minmax(40px, 1fr)) !important;
+        padding-right: 15px !important;
+    }
+
+    .avatar-editor-tabs {
+        .extras {
+            width: 23px !important;
+            min-width: 23px !important;
+            height: 22px !important;
+            background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-extras-icon.png') !important;
+            background-repeat: no-repeat !important;
+            background-position: 0 0 !important;
+            background-size: auto !important;
+            image-rendering: pixelated;
+        }
+
+        .nav-tabs .nav-link.active .extras,
+        .nav-tabs .nav-link:hover .extras {
+            background-image: url('@/assets/images/avatareditor/biribiri-categories/biribiri-extras-icon.png') !important;
+            background-position: 0 0 !important;
+            background-size: auto !important;
+        }
+    }
+}
+
+/* BIRIBIRI_AVATAR_EDITOR_AUDITED_FINAL_V1 */
+.nitro-avatar-editor {
+    .choose-clothing {
+        width: 440px !important;
+        min-width: 440px !important;
+        overflow-x: visible !important;
+    }
+
+    .biribiri-avatar-category-strip {
+        flex-wrap: nowrap !important;
+        overflow: visible !important;
+        white-space: nowrap;
+
+        > div {
+            flex: 0 0 auto;
+        }
+    }
+
+    .clothing-container {
+        grid-template-columns: repeat(7, 48px) !important;
+        justify-content: start;
+        padding-right: 15px !important;
+    }
+
+    .avatar-editor-tabs {
+        .extras {
+            width: 25px !important;
+            min-width: 25px !important;
+            height: 22px !important;
+            background: transparent url('@/assets/images/avatareditor/biribiri-categories/biribiri-extras-icon.png') no-repeat 0 0 / 25px 22px !important;
+            image-rendering: pixelated;
+        }
+
+        .nav-tabs .nav-link.active .extras,
+        .nav-tabs .nav-link:hover .extras {
+            background: transparent url('@/assets/images/avatareditor/biribiri-categories/biribiri-extras-icon.png') no-repeat 0 0 / 25px 22px !important;
+        }
+    }
+}
+
+/* BIRIBIRI_EXTRAS_TAB_STANDARD_SIZE_V1 */
+.nitro-avatar-editor {
+    .avatar-editor-tabs {
+        .tab.extras {
+            width: 34px !important;
+            min-width: 34px !important;
+            height: 22px !important;
+
+            background-size: 25px 22px !important;
+            background-position: center !important;
+            background-repeat: no-repeat !important;
+        }
+    }
+}
+
+/* BIRIBIRI_CLOTHING_SEARCH_WIDTH_FIX_V1 */
+.nitro-avatar-editor {
+    .biribiri-clothing-browser {
+        min-width: 0;
+
+        .biribiri-clothing-search-wrap {
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+
+            input {
+                display: block;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                box-sizing: border-box !important;
+            }
+        }
+    }
+}
