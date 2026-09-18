@@ -4,7 +4,7 @@ import com.eu.habbo.messages.ServerMessage;
 
 public final class PokemonPackets
 {
-    public static final int RESULT_PACKET = 5061;
+    public static final int RESULT_PACKET = 6401;
 
     private PokemonPackets()
     {

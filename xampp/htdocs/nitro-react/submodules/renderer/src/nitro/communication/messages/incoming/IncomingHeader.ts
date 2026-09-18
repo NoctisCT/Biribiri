@@ -571,5 +571,5 @@ public static HOLO_SLOT_RESULT = 5044;
 public static HOLO_SLOT_STATE = 5045;
 public static HOLO_SPACE_INVADERS_OPEN = 6100;
 public static RPG_ENGINE_RESULT = 5051;
-public static POKEMON_RESULT = 5061;
+public static POKEMON_RESULT = 6401;
 }

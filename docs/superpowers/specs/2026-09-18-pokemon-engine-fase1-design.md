@@ -103,7 +103,7 @@ Decisión del propietario: se usan, con créditos.
 | Clase | Responsabilidad |
 |---|---|
 | `PokemonEnginePlugin` | Ciclo de vida, registro de handlers, eventos de login y logout |
-| `PokemonCommandHandler` | Único punto de entrada del packet 5060: lee `action` y despacha. Sin lógica |
+| `PokemonCommandHandler` | Único punto de entrada del packet 6400: lee `action` y despacha. Sin lógica |
 | `BaseDatosPokemon` | Pool de conexiones, migraciones idempotentes al arrancar |
 | `ServicioPokedex` | Catálogo en memoria (especies, movimientos, tipos, habilidades, objetos), solo lectura |
 | `ServicioEntrenador` | Entrenador, equipo de 6, cajas, mochila, pokédex del jugador |
@@ -317,8 +317,8 @@ La firma de `RpgEnginePackets.result()` tiene once parámetros posicionales. Pok
 
 | Paquete | Uso | Formato |
 |---|---|---|
-| **5060 / 5061** | Estado y UI: equipo, cajas, mochila, dex, tiendas, eventos de turno | JSON en un campo string |
-| **5062 / 5063** | Alta frecuencia: posición y dirección del seguidor, y en la fase 2 la animación en sala | Binario compacto |
+| **6400 / 6401** | Estado y UI: equipo, cajas, mochila, dex, tiendas, eventos de turno | JSON en un campo string |
+| **6402 / 6403** | Alta frecuencia: posición y dirección del seguidor, y en la fase 2 la animación en sala | Binario compacto |
 
 Razonamiento: el estado de la UI es poco frecuente y muy variado (un equipo de 6 con movimientos son unos 3 KB) y ahí la flexibilidad vale más que los bytes. El seguidor es un paquete por paso de cada jugador de la sala, y ahí JSON sería un desperdicio real.
 
@@ -352,9 +352,9 @@ Archivos nuevos en `xampp/htdocs/nitro-react/submodules/renderer/src/nitro/commu
 - `outgoing/pokemonengine/PokemonCommandComposer.ts`
 - `incoming/pokemonengine/PokemonResultEvent.ts`
 - `parser/pokemonengine/PokemonResultParser.ts`
-- Y los equivalentes para el par binario 5062/5063
+- Y los equivalentes para el par binario 6402/6403
 
-Registro en `IncomingHeader.ts` (5061, 5063), `OutgoingHeader.ts` (5060, 5062) y `NitroMessages.ts`.
+Registro en `IncomingHeader.ts` (6401, 6403), `OutgoingHeader.ts` (6400, 6402) y `NitroMessages.ts`.
 
 ---
 
@@ -388,7 +388,7 @@ Tres reglas, que son la diferencia con lo que hay hoy:
 
 - El `userId` sale de la conexión del cliente, **nunca del paquete**. Esto cierra el agujero actual del backend de Node
 - Validación por acción: sala con zona activa, propiedad del Pokémon, movimiento presente en sus cuatro huecos, PP disponible, objeto en la mochila, turno correcto
-- Límite de acciones en el packet 5060, con corte progresivo
+- Límite de acciones en el packet 6400, con corte progresivo
 - Enfriamiento entre encuentros y tope de spawns por jugador y hora
 - **Toda transacción de pokédólares pasa por `ServicioEconomia` con registro en `pokemon_currency_log`.** Sin eso, el primer fallo de duplicación de dinero es indetectable
 - Intercambio con registro inmutable y bloqueo al modificar la oferta después de aceptar
@@ -424,7 +424,7 @@ El importador se prueba contra ficheros de ejemplo, no contra la API en vivo. El
 
 ## 14. Hitos de la fase 1
 
-1. Plugin que carga, 5060/5061 de ida y vuelta, migraciones aplicadas
+1. Plugin que carga, 6400/6401 de ida y vuelta, migraciones aplicadas
 2. Importador y verificador del catálogo. Comprobable: ~1.025 especies, ~937 movimientos, learnsets, informe de efectos sin implementar
 3. `ServicioCombate` con su batería de pruebas, todavía sin cliente
 4. Entrenador, equipo, cajas, mochila, dex, pokédólares

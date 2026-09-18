@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Un plugin Java que carga en Arcturus, aplica migraciones idempotentes y responde a un saludo del cliente Nitro por los paquetes 5060/5061, con el `userId` tomado de la conexión.
+**Goal:** Un plugin Java que carga en Arcturus, aplica migraciones idempotentes y responde a un saludo del cliente Nitro por los paquetes 6400/6401, con el `userId` tomado de la conexión.
 
 **Architecture:** Plugin independiente `com.retro.pokemonengine` siguiendo el patrón de `Desarrollo/RPGEngine`: `HabboPlugin` que registra un `MessageHandler` único en `EmulatorLoadedEvent`, capa de datos con runner de migraciones numeradas, y cuerpo de respuesta en JSON en lugar de los once parámetros posicionales de `RpgEnginePackets.result()`. El cliente registra composer, evento y parser en el submódulo local del renderer.
 
@@ -12,7 +12,7 @@
 
 - Paquete Java raíz: `com.retro.pokemonengine`
 - `maven.compiler.release` = **16**
-- Packet cliente→servidor: **5060**. Packet servidor→cliente: **5061**
+- Packet cliente→servidor: **6400**. Packet servidor→cliente: **6401**. Bloque reservado 6400-6419 (ver `docs/REGISTRO-PACKET-IDS.md`)
 - Versión de protocolo inicial: **1**
 - Prefijo de tablas: `pokemon_`
 - **El `userId` se obtiene siempre de `this.client.getHabbo().getHabboInfo().getId()`, nunca del paquete**
@@ -57,15 +57,15 @@ Antes de ejecutar la tarea 6 hay que acordar con el propietario cómo se sirve e
 |---|---|
 | `pom.xml` | Build Maven, dependencias, sombreado de Gson, surefire |
 | `src/main/resources/plugin.json` | Manifiesto que Arcturus lee para encontrar la clase principal |
-| `src/main/java/com/retro/pokemonengine/PokemonEnginePlugin.java` | Ciclo de vida: registra eventos, arranca migraciones, registra el handler 5060 |
+| `src/main/java/com/retro/pokemonengine/PokemonEnginePlugin.java` | Ciclo de vida: registra eventos, arranca migraciones, registra el handler 6400 |
 | `src/main/java/com/retro/pokemonengine/BaseDatosPokemon.java` | Runner de migraciones contra la conexión del emulador |
 | `src/main/java/com/retro/pokemonengine/migraciones/Migracion.java` | Interfaz de una migración numerada |
 | `src/main/java/com/retro/pokemonengine/migraciones/PlanMigracion.java` | Lógica pura: qué migraciones faltan por aplicar |
 | `src/main/java/com/retro/pokemonengine/migraciones/M001Base.java` | Primera migración: tabla de versión de esquema |
 | `src/main/java/com/retro/pokemonengine/PokemonCuerpo.java` | Serialización JSON del cuerpo de respuesta. Pura |
 | `src/main/java/com/retro/pokemonengine/PokemonAcciones.java` | Constantes de acción del protocolo |
-| `src/main/java/com/retro/pokemonengine/PokemonPackets.java` | Construcción del `ServerMessage` 5061 |
-| `src/main/java/com/retro/pokemonengine/handlers/PokemonCommandHandler.java` | Punto de entrada del 5060: lee la acción y despacha |
+| `src/main/java/com/retro/pokemonengine/PokemonPackets.java` | Construcción del `ServerMessage` 6401 |
+| `src/main/java/com/retro/pokemonengine/handlers/PokemonCommandHandler.java` | Punto de entrada del 6400: lee la acción y despacha |
 | `src/test/java/com/retro/pokemonengine/migraciones/PlanMigracionTest.java` | Pruebas del plan de migración |
 | `src/test/java/com/retro/pokemonengine/PokemonCuerpoTest.java` | Pruebas del cuerpo JSON |
 
@@ -73,11 +73,11 @@ Antes de ejecutar la tarea 6 hay que acordar con el propietario cómo se sirve e
 
 | Archivo | Responsabilidad |
 |---|---|
-| `messages/outgoing/pokemonengine/PokemonCommandComposer.ts` | Composer del 5060 |
+| `messages/outgoing/pokemonengine/PokemonCommandComposer.ts` | Composer del 6400 |
 | `messages/outgoing/pokemonengine/index.ts` | Reexport |
-| `messages/parser/pokemonengine/PokemonResultParser.ts` | Parser del 5061 |
+| `messages/parser/pokemonengine/PokemonResultParser.ts` | Parser del 6401 |
 | `messages/parser/pokemonengine/index.ts` | Reexport |
-| `messages/incoming/pokemonengine/PokemonResultEvent.ts` | Evento del 5061 |
+| `messages/incoming/pokemonengine/PokemonResultEvent.ts` | Evento del 6401 |
 | `messages/incoming/pokemonengine/index.ts` | Reexport |
 
 **Cliente** — `xampp/htdocs/nitro-react/src/api/pokemon/`
@@ -205,7 +205,7 @@ import com.eu.habbo.plugin.events.emulator.EmulatorLoadedEvent;
 
 public class PokemonEnginePlugin extends HabboPlugin implements EventListener
 {
-    public static final int PACKET_POKEMON_COMMAND = 5060;
+    public static final int PACKET_POKEMON_COMMAND = 6400;
     public static final int VERSION_PROTOCOLO = 1;
 
     @Override
@@ -741,7 +741,7 @@ git commit -m "feat(pokemon): add json response body serializer"
 
 ---
 
-### Task 4: Handler 5060 y acción de saludo
+### Task 4: Handler 6400 y acción de saludo
 
 **Files:**
 - Create: `Desarrollo/PokemonEngine/src/main/java/com/retro/pokemonengine/PokemonAcciones.java`
@@ -754,9 +754,9 @@ git commit -m "feat(pokemon): add json response body serializer"
 - Produces:
   - `static final int PokemonAcciones.SALUDO = 1`
   - `static ServerMessage PokemonPackets.resultado(int accion, boolean exito, String cuerpoJson)`
-  - Handler registrado en el packet 5060
+  - Handler registrado en el packet 6400
 
-El formato del 5061 es: `int accion`, `boolean exito`, `string cuerpoJson`.
+El formato del 6401 es: `int accion`, `boolean exito`, `string cuerpoJson`.
 
 - [ ] **Step 1: Escribir `PokemonAcciones`**
 
@@ -783,7 +783,7 @@ import com.eu.habbo.messages.ServerMessage;
 
 public final class PokemonPackets
 {
-    public static final int RESULT_PACKET = 5061;
+    public static final int RESULT_PACKET = 6401;
 
     private PokemonPackets()
     {
@@ -930,7 +930,7 @@ Expected: una fila con `version = 1`, `nombre = base` y su marca de tiempo.
 
 ```bash
 git add Desarrollo/PokemonEngine/src
-git commit -m "feat(pokemon): add 5060 command handler with handshake action"
+git commit -m "feat(pokemon): add 6400 command handler with handshake action"
 ```
 
 ---
@@ -952,12 +952,12 @@ git commit -m "feat(pokemon): add 5060 command handler with handshake action"
 - Modify: `xampp/htdocs/nitro-react/submodules/renderer/src/nitro/communication/NitroMessages.ts`
 
 **Interfaces:**
-- Consumes: el formato del 5061 de la tarea 4 (`int accion`, `boolean exito`, `string cuerpoJson`)
+- Consumes: el formato del 6401 de la tarea 4 (`int accion`, `boolean exito`, `string cuerpoJson`)
 - Produces:
   - `class PokemonCommandComposer` con `constructor(action: number, ...args: Array<string | number | boolean>)`
   - `class PokemonResultParser` con `get action(): number`, `get success(): boolean`, `get payload(): PokemonResultPayload`
   - `class PokemonResultEvent` con `getParser(): PokemonResultParser`
-  - `OutgoingHeader.POKEMON_COMMAND = 5060`, `IncomingHeader.POKEMON_RESULT = 5061`
+  - `OutgoingHeader.POKEMON_COMMAND = 6400`, `IncomingHeader.POKEMON_RESULT = 6401`
 
 - [ ] **Step 1: Crear el composer**
 
@@ -1115,13 +1115,13 @@ Repetir lo mismo en `messages/parser/index.ts` (junto a su línea 83) y en `mess
 En `messages/outgoing/OutgoingHeader.ts`, junto a `RPG_ENGINE_COMMAND = 5050` (línea 513):
 
 ```typescript
-    public static POKEMON_COMMAND = 5060;
+    public static POKEMON_COMMAND = 6400;
 ```
 
 En `messages/incoming/IncomingHeader.ts`, junto a `RPG_ENGINE_RESULT = 5051` (línea 573):
 
 ```typescript
-public static POKEMON_RESULT = 5061;
+public static POKEMON_RESULT = 6401;
 ```
 
 - [ ] **Step 6: Registrar el evento en `NitroMessages.ts`**
@@ -1177,7 +1177,7 @@ Solo se versiona `submodules/renderer`; `node_modules` está ignorado por git y 
 
 ```bash
 git add xampp/htdocs/nitro-react/submodules/renderer/src/nitro/communication
-git commit -m "feat(pokemon): register 5060/5061 packets in nitro renderer"
+git commit -m "feat(pokemon): register 6400/6401 packets in nitro renderer"
 ```
 
 ---

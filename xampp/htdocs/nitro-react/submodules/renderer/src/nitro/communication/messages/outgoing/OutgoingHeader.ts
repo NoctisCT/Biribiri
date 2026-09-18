@@ -511,7 +511,7 @@ export class OutgoingHeader
     public static PARTY_VISIT = 5077;
     public static GET_HOLO_GRID_WALKABILITY = 5040;
     public static RPG_ENGINE_COMMAND = 5050;
-    public static POKEMON_COMMAND = 5060;
+    public static POKEMON_COMMAND = 6400;
     public static HOLO_SLOT_SPIN = 5042;
     public static AIR_HOCKEY_MOVE = 6000;
     public static AIR_HOCKEY_READY = 6001;

@@ -10,7 +10,7 @@ import com.retro.pokemonengine.handlers.PokemonCommandHandler;
 
 public class PokemonEnginePlugin extends HabboPlugin implements EventListener
 {
-    public static final int PACKET_POKEMON_COMMAND = 5060;
+    public static final int PACKET_POKEMON_COMMAND = 6400;
     public static final int VERSION_PROTOCOLO = 1;
 
     @Override
