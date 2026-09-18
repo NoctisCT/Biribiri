@@ -18,7 +18,7 @@
 
 ## Alcance y límite honesto del seguidor
 
-Este hito entrega el seguidor **completo en servidor**: se elige, se persiste, se mueve baldosa a baldosa detrás del jugador, cambia de animación según lo que hace el avatar y se difunde a la sala por `6403`. Lo que **no** entrega son los píxeles: dibujar el sprite PMD en la sala es la capa de render de la fase 2. Hasta entonces el seguidor se valida con el oyente de depuración del cliente (`PokemonEngine.onFollower`), que imprime posición, dirección y animación de cada entidad.
+Este hito entrega el seguidor **completo en servidor**: se elige, se persiste, se mueve baldosa a baldosa detrás del jugador, cambia de animación según lo que hace el avatar y se difunde a la sala por `6403`. Lo que **no** entrega son los píxeles: dibujar el sprite PMD en la sala es la capa de render de la fase 2. Hasta entonces el seguidor se valida con el oyente de depuración del cliente (`PokemonEngine.onSeguidor`), que imprime posición, dirección y animación de cada entidad.
 
 Las animaciones sembradas son **los nombres reales** del `AnimData.xml` de `PMDCollab/SpriteCollab` (verificado contra `sprite/0025`), no nombres inventados. El conjunto varía por especie, así que cada estado lleva animación de respaldo y el cliente resuelve contra el `AnimData.xml` de la especie.
 
@@ -180,7 +180,13 @@ Precedencia de la máquina: combate > interacción en curso > tumbado > sentado 
 
 **Capa de emulador:** `ServicioSeguidor.java` con `@EventHandler` de `UserTakeStepEvent`, `UserEnterRoomEvent`, `UserExitRoomEvent` y `UserIdleEvent`; `handlers/PokemonSeguidorHandler` para `6402`; `SeguidorPackets` para `6403`.
 
-`6402` cliente → servidor: `int accion` (1 = pedir la foto de la sala, 2 = interactuar con el seguidor de un usuario, 3 = activar o desactivar el propio), `int argumento`.
+`6402` cliente → servidor: `int accion`, y según cuál:
+
+- **1** pedir la foto de la sala, sin más argumentos
+- **2** interactuar con el seguidor de alguien: `int userId`, `string codigo`. Solo vale con quien está en tu misma sala
+- **3** gesto propio: `string codigo`. Existe porque la risa, el beso y el pulgar no dejan estado en el avatar y el servidor no puede verlos. Solo se aplica al seguidor de quien lo manda, así que lo peor que consigue un cliente manipulado es que su propio Pokémon salude de más
+
+Activar o desactivar el seguidor y elegir cuál va por el 6400 (acciones 4 y 5), que es donde vive el estado.
 
 `6403` servidor → cliente, binario: `int tipo` (1 foto, 2 paso, 3 alta, 4 baja, 5 animación), `int n`, y por entrada `userId, ownedId, speciesId, formId, shiny, x, y, zCentesimas, direccion, codigoEstado, animacion, respaldo, mote`.
 
