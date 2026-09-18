@@ -77,6 +77,19 @@ public final class EjecutorMovimiento
             Mecanica mecanica,
             CatalogoCombate catalogo)
     {
+        return ejecutar(estado, atacante, defensor, movimiento, mecanica, catalogo, null, null);
+    }
+
+    public static List<Evento> ejecutar(
+            EstadoCombate estado,
+            PokemonCombate atacante,
+            PokemonCombate defensor,
+            MovimientoCatalogo movimiento,
+            Mecanica mecanica,
+            CatalogoCombate catalogo,
+            Bando bandoAtacante,
+            Bando bandoDefensor)
+    {
         List<Evento> eventos = new ArrayList<>();
         RngCombate rng = estado.rng();
 
@@ -107,7 +120,8 @@ public final class EjecutorMovimiento
 
             for(int i = 0; i < golpes && !defensor.debilitado(); i++)
             {
-                danoTotal += golpear(estado, atacante, defensor, movimiento, mecanica, efectividad, eventos);
+                danoTotal += golpear(estado, atacante, defensor, movimiento, mecanica,
+                        efectividad, eventos, bandoDefensor);
             }
 
             if(golpes > 1)
@@ -121,8 +135,8 @@ public final class EjecutorMovimiento
 
         aplicarDrenajeYRetroceso(atacante, mecanica, danoTotal, eventos);
         aplicarCuracion(atacante, mecanica, eventos);
-        aplicarDolencia(defensor, mecanica, movimiento, rng, eventos);
-        aplicarCambiosDeStats(atacante, defensor, mecanica, movimiento, rng, eventos);
+        aplicarDolencia(estado, defensor, mecanica, movimiento, rng, eventos, bandoDefensor);
+        aplicarCambiosDeStats(atacante, defensor, mecanica, movimiento, rng, eventos, bandoDefensor);
         aplicarRetrocesoDelDefensor(defensor, mecanica, rng, eventos);
 
         if(defensor.debilitado())
@@ -159,7 +173,8 @@ public final class EjecutorMovimiento
 
     private static int golpear(
             EstadoCombate estado, PokemonCombate atacante, PokemonCombate defensor,
-            MovimientoCatalogo movimiento, Mecanica mecanica, double efectividad, List<Evento> eventos)
+            MovimientoCatalogo movimiento, Mecanica mecanica, double efectividad,
+            List<Evento> eventos, Bando bandoDefensor)
     {
         RngCombate rng = estado.rng();
 
@@ -173,17 +188,32 @@ public final class EjecutorMovimiento
         boolean stab = movimiento.tipoId() == atacante.tipo1()
                 || (atacante.tipo2() != null && movimiento.tipoId() == atacante.tipo2());
 
+        // La tormenta sube la Defensa Especial de los Roca y la nieve la Defensa de los Hielo.
+        double defensaPorClima = statDefensa == Stat.DEFENSA_ESP
+                ? Campo.defensaEspecialPorClima(estado.clima(), defensor)
+                : Campo.defensaPorClima(estado.clima(), defensor);
+
+        int defensaFinal = (int) Math.max(1, Math.floor(defensor.statEfectivo(statDefensa) * defensaPorClima));
+
+        double modificadorCampo = Campo.modificadorClima(estado.clima(), movimiento.tipoId())
+                * Campo.modificadorTerreno(estado.terreno(), movimiento.tipoId(), atacante, defensor);
+
+        if(bandoDefensor != null)
+        {
+            modificadorCampo *= CondicionesBando.modificadorPantalla(bandoDefensor, fisico, critico);
+        }
+
         int dano = CalculadoraDano.calcular(new CalculadoraDano.EntradaDano(
                 atacante.nivelEfectivo(),
                 movimiento.potencia(),
                 atacante.statEfectivo(statAtaque),
-                defensor.statEfectivo(statDefensa),
+                defensaFinal,
                 efectividad,
                 stab,
                 critico,
                 PokemonCombate.QUEMADURA.equals(atacante.estado()),
                 fisico,
-                1.0,
+                modificadorCampo,
                 rng.variacionDano()));
 
         int aplicado = defensor.recibirDano(dano);
@@ -267,13 +297,29 @@ public final class EjecutorMovimiento
     }
 
     private static void aplicarDolencia(
-            PokemonCombate defensor, Mecanica mecanica, MovimientoCatalogo movimiento,
-            RngCombate rng, List<Evento> eventos)
+            EstadoCombate estado, PokemonCombate defensor, Mecanica mecanica, MovimientoCatalogo movimiento,
+            RngCombate rng, List<Evento> eventos, Bando bandoDefensor)
     {
         String dolencia = mecanica.dolencia();
 
         if(dolencia == null || "none".equals(dolencia)) return;
         if(defensor.debilitado()) return;
+
+        boolean esVolatil = PokemonCombate.CONFUSION.equals(dolencia);
+
+        if(!esVolatil && bandoDefensor != null && CondicionesBando.protegeDeEstados(bandoDefensor))
+        {
+            eventos.add(new Evento("estado_bloqueado")
+                    .con("pokemon", defensor.nombre()).con("por", "safeguard"));
+            return;
+        }
+
+        if(!esVolatil && Campo.terrenoImpideEstado(estado.terreno(), dolencia, defensor))
+        {
+            eventos.add(new Evento("estado_bloqueado")
+                    .con("pokemon", defensor.nombre()).con("por", estado.terreno()));
+            return;
+        }
 
         int probabilidad = mecanica.dolenciaChance() > 0 ? mecanica.dolenciaChance() : 100;
 
@@ -312,7 +358,7 @@ public final class EjecutorMovimiento
 
     private static void aplicarCambiosDeStats(
             PokemonCombate atacante, PokemonCombate defensor, Mecanica mecanica,
-            MovimientoCatalogo movimiento, RngCombate rng, List<Evento> eventos)
+            MovimientoCatalogo movimiento, RngCombate rng, List<Evento> eventos, Bando bandoDefensor)
     {
         if(mecanica.cambiosStats().isEmpty()) return;
 
@@ -330,6 +376,13 @@ public final class EjecutorMovimiento
             if(objetivo.debilitado()) continue;
 
             if(cambio.indiceEtapa() < 0) continue;
+
+            if(!aUnoMismo && bandoDefensor != null && CondicionesBando.protegeDeBajadas(bandoDefensor))
+            {
+                eventos.add(new Evento("bajada_bloqueada")
+                        .con("pokemon", objetivo.nombre()).con("por", "mist"));
+                continue;
+            }
 
             int movido = objetivo.cambiarEtapa(cambio.indiceEtapa(), cambio.cambio());
 

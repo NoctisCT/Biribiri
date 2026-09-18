@@ -73,7 +73,10 @@ public final class OrdenTurno
     {
         PokemonCombate quien = estado.bando(accion.bando()).activo(accion.posicion());
 
-        return quien == null ? 0 : quien.statEfectivo(Stat.VELOCIDAD);
+        if(quien == null) return 0;
+
+        return CondicionesBando.velocidadConViento(
+                estado.bando(accion.bando()), quien.statEfectivo(Stat.VELOCIDAD));
     }
 
     private static final class Entrada

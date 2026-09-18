@@ -23,6 +23,7 @@ public final class FinDeTurno
         List<Evento> eventos = new ArrayList<>();
 
         aplicarClima(estado, eventos);
+        aplicarTerreno(estado, eventos);
         aplicarResiduales(estado, eventos);
         aplicarDrenadoras(estado, eventos);
         eventos.addAll(Volatiles.alFinDeTurno(estado));
@@ -41,13 +42,10 @@ public final class FinDeTurno
 
         if(EstadoCombate.SIN_CLIMA.equals(clima)) return;
 
-        boolean dana = "sandstorm".equalsIgnoreCase(clima) || "hail".equalsIgnoreCase(clima);
-
-        if(!dana) return;
-
         for(PokemonCombate p : activos(estado))
         {
             if(p.debilitado()) continue;
+            if(!Campo.leDanaElClima(clima, p)) continue;
 
             int dano = Math.max(1, p.psMax() / 16);
             int aplicado = p.recibirDano(dano);
@@ -56,6 +54,25 @@ public final class FinDeTurno
                     .con("pokemon", p.nombre())
                     .con("clima", clima)
                     .con("dano", aplicado));
+        }
+    }
+
+    /** El terreno de planta cura un dieciseisavo por turno a quien pisa el suelo. */
+    private static void aplicarTerreno(EstadoCombate estado, List<Evento> eventos)
+    {
+        if(!Campo.TERRENO_PLANTA.equals(Campo.normalizar(estado.terreno()))) return;
+
+        for(PokemonCombate p : activos(estado))
+        {
+            if(p.debilitado() || !Campo.pisaSuelo(p)) continue;
+
+            int curado = p.curar(Math.max(1, p.psMax() / 16));
+
+            if(curado > 0)
+            {
+                eventos.add(new Evento("cura_terreno")
+                        .con("pokemon", p.nombre()).con("terreno", "grassyterrain").con("ps", curado));
+            }
         }
     }
 

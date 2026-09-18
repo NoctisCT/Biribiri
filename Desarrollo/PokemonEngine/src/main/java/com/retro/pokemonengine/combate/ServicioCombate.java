@@ -106,6 +106,19 @@ public final class ServicioCombate
                 .con("sale", saliente.nombre())
                 .con("entra", entrante.nombre()));
 
+        if(CondicionesBando.absorbePuasToxicas(entrante, bando))
+        {
+            eventos.add(new Evento("trampa_absorbida")
+                    .con("pokemon", entrante.nombre()).con("trampa", "toxicspikes"));
+        }
+
+        eventos.addAll(CondicionesBando.alEntrar(entrante, bando, this.catalogo));
+
+        if(entrante.debilitado())
+        {
+            eventos.add(new Evento("debilitado").con("pokemon", entrante.nombre()));
+        }
+
         return eventos;
     }
 
@@ -150,11 +163,34 @@ public final class ServicioCombate
         slot.gastarPp();
         atacante.registrarMovimientoUsado(movimiento.id());
 
-        PokemonCombate defensor = estado.bando(accion.bandoObjetivo()).activo(accion.posicionObjetivo());
+        Bando bandoDefensor = estado.bando(accion.bandoObjetivo());
+        PokemonCombate defensor = bandoDefensor.activo(accion.posicionObjetivo());
 
         if(defensor == null || defensor.debilitado())
         {
             eventos.add(new Evento("sin_objetivo").con("pokemon", atacante.nombre()));
+            return eventos;
+        }
+
+        String bloqueo = CondicionesBando.bloqueaMovimiento(bandoDefensor, movimiento);
+
+        if(bloqueo != null)
+        {
+            eventos.add(new Evento("movimiento_bloqueado")
+                    .con("pokemon", atacante.nombre())
+                    .con("movimiento", movimiento.nombreEs())
+                    .con("motivo", bloqueo));
+
+            return eventos;
+        }
+
+        if(Campo.terrenoBloqueaPrioridad(estado.terreno(), movimiento, defensor))
+        {
+            eventos.add(new Evento("movimiento_bloqueado")
+                    .con("pokemon", atacante.nombre())
+                    .con("movimiento", movimiento.nombreEs())
+                    .con("motivo", "psychicterrain"));
+
             return eventos;
         }
 
@@ -163,7 +199,8 @@ public final class ServicioCombate
         if(mecanica == null) mecanica = EjecutorMovimiento.Mecanica.simple("damage");
 
         eventos.addAll(EjecutorMovimiento.ejecutar(
-                estado, atacante, defensor, movimiento, mecanica, this.catalogo));
+                estado, atacante, defensor, movimiento, mecanica, this.catalogo,
+                estado.bando(accion.bando()), bandoDefensor));
 
         return eventos;
     }
