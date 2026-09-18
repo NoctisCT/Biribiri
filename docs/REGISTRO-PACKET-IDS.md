@@ -61,11 +61,13 @@ Contando también los ids de respuesta declarados en las cabeceras del renderer,
 
 | Id | Uso |
 |---|---|
-| 6400 | Cliente → servidor: estado y UI |
-| 6401 | Servidor → cliente: estado y UI |
-| 6402 | Cliente → servidor: alta frecuencia (seguidor) |
-| 6403 | Servidor → cliente: alta frecuencia (seguidor) |
+| 6400 | Cliente → servidor: estado y UI. **En uso** |
+| 6401 | Servidor → cliente: estado y UI. **En uso** |
+| 6402 | Cliente → servidor: seguidor (foto, interactuar, gesto propio). **En uso desde el hito 4** |
+| 6403 | Servidor → cliente: seguidor (foto, paso, alta, baja, animación). **En uso desde el hito 4** |
 | 6404-6419 | Reservados para las fases siguientes |
+
+Los cuatro están registrados en Java y en el renderer. Recordatorio de §3.3 del traspaso: en `NitroMessages.ts` hay que dar de alta **el evento y el compositor**, no solo el evento.
 
 ## Por qué existe este documento
 

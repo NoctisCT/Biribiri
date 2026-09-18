@@ -145,7 +145,7 @@ Repositorio `PMDCollab/SpriteCollab`. Verificado en `sprite/0025`:
 
 ---
 
-## 5. Estado actual: 3 de 8 hitos, 25 commits, 138 pruebas
+## 5. Estado actual: 4 de 8 hitos, 29 commits, 225 pruebas
 
 ### Hecho y verificado
 
@@ -156,20 +156,20 @@ Repositorio `PMDCollab/SpriteCollab`. Verificado en `sprite/0025`:
 | **3a** | Cálculo de stats, tabla de tipos, fórmula de daño, catálogo en memoria | 36 pruebas. Cero SQL en camino de combate |
 | **3b** | Modelo de estado en 3 niveles, orden del turno, impedimentos, ejecución de movimientos, fin de turno, `ServicioCombate` | 101 pruebas. Misma semilla reproduce el combate evento por evento |
 | **3c** | Mecánica real conectada, 12 condiciones de bando, 4 climas, 4 terrenos, volátiles | 138 pruebas |
+| **4** | Entrenador, equipo, 32 cajas, mochila, pokédex, pokédólares y **el seguidor server-side**, adelantado del hito 8 | 225 pruebas. Migración 4 aplicada en el runtime aislado; 1.025 especies con habilidades y género y 36.336 aprendizajes por nivel en memoria |
 
-**Invariante comprobada en cada commit**: ninguna clase de `com.retro.pokemonengine.combate` importa `com.eu.habbo`. Es lo que permite probar el motor sin emulador y reutilizarlo en la fase 2.
+**Invariante comprobada en cada commit**: ninguna clase de `combate/`, `entrenador/` ni `seguidor/` importa `com.eu.habbo`. Es lo que permite probar las reglas sin emulador y reutilizarlas en la fase 2. La única excepción deliberada es `DireccionTest`, que sí importa `Rotation` de Arcturus **a propósito**, para comprobar que las ocho direcciones del seguidor coinciden con las del emulador.
 
 ### Pendiente
 
 | Hito | Contenido | Tamaño |
 |---|---|---|
-| **4** | Entrenador, equipo de 6, 32 cajas de 30, mochila por bolsillos, pokédex del jugador, pokédólares con `pokemon_currency_log` | Medio |
 | **5** | Zonas de Kanto, gating por `pokemon_zone_rooms`, encuentros y spawns, captura con fórmula real, centros Pokémon, modelo de tiendas | Medio |
 | **6** | Combate de punta a punta: salvaje y PvP, formación, `ServicioArena` con arenas predefinidas y resolución dinámica, bloqueo de posición, reserva de baldosas | Grande |
 | **7** | **Cliente nuevo completo**: 11 vistas, `PokemonStateProvider` con reducer, SCSS del holo, cero `any`. Y eliminar `PokemonBackend/` y `usePokemonSocket.ts` | El más grande |
-| **8** | MOs de interfaz (Destello, Vuelo, Surf), intercambio entre jugadores, ranking de temporada, seguidor server-side | Medio |
+| **8** | MOs de interfaz (Destello, Vuelo, Surf), intercambio entre jugadores, ranking de temporada | Medio |
 
-**Los hitos 4, 5 y 6 son enteramente de servidor y no necesitan coordinación.** El 7 es el único que toca el cliente de producción y compite con el trabajo del vestidor en `dev`.
+**Los hitos 5 y 6 son enteramente de servidor y no necesitan coordinación.** El 7 es el único que toca el cliente de producción y compite con el trabajo del vestidor en `dev`.
 
 ### Deuda conocida
 
@@ -179,8 +179,10 @@ Repositorio `PMDCollab/SpriteCollab`. Verificado en `sprite/0025`:
    ```
 2. **`pokemon_move_effects.implemented` sigue a 0 en todas las filas.** Hay que marcar las primitivas ya implementadas para que el verificador informe de verdad
 3. **Habilidades sin implementar**: `pokemon_abilities_cat` está importada con nombres y descripciones, pero `effect_code` vale `sin_implementar` en las 374
-4. **Objetos**: la tabla del catálogo no se ha importado todavía (estaba prevista en el modelo pero no en el hito 2)
-5. **El `.gitignore` impide compilar Nitro desde un clon limpio** (§3.6)
+4. **Objetos**: `pokemon_items` existe desde la migración 4 pero **está vacía**. El importador es trabajo del hito 5. Hasta entonces la mochila funciona pero no hay nada que meter en ella
+5. **El seguidor no se ve**: el hito 4 lo entrega entero en servidor (posición, dirección, animación y difusión por 6403), pero dibujar el sprite PMD en la sala es la capa de render de la fase 2. Se valida con `PokemonEngine.onSeguidor(...)` en la consola del cliente
+6. **`HotelNight.tsx` tiene un error de sintaxis heredado** (`<div .../><` partido en dos líneas, línea 32) que rompe cualquier `tsc` y cualquier build del cliente. No es de Pokémon y no se ha tocado: viene del commit de importación `35147830b`
+7. **El `.gitignore` impide compilar Nitro desde un clon limpio** (§3.6)
 
 ---
 
@@ -230,12 +232,18 @@ Alias de Apache `/pokemon-dist` → el dist del worktree. Tras cada `yarn build`
 
 | Clase | Responsabilidad |
 |---|---|
-| `PokemonEnginePlugin` | Ciclo de vida, migraciones, carga del catálogo, registro del handler 6400 |
+| `PokemonEnginePlugin` | Ciclo de vida, migraciones, carga de catálogos, registro de los handlers 6400 y 6402, y los eventos de sala y paso del seguidor |
 | `PokemonCommandHandler` | Único punto de entrada. Lee `action` y despacha. **El `userId` sale de la conexión, nunca del paquete** |
 | `BaseDatosPokemon` | Runner de migraciones idempotentes. Si una falla, el plugin no se habilita |
-| `migraciones/M001Base`, `M002Catalogo`, `M003SinShowdown` | Esquema en la versión 3 |
+| `migraciones/M001Base`, `M002Catalogo`, `M003SinShowdown`, `M004Entrenador` | Esquema en la versión 4 |
 | `ServicioPokedex` | Catálogo inmutable en memoria: especies, movimientos, mecánica, tabla de tipos |
-| `PokemonCuerpo` / `PokemonPackets` / `PokemonAcciones` | Protocolo: JSON en el cuerpo, rangos de acción reservados |
+| `ServicioGeneracion` | El otro catálogo: habilidades, género y los 36.336 aprendizajes por nivel. Va aparte porque al motor de turno no le hacen falta |
+| `ServicioZonas` | El gating. Una sala sin fila en `pokemon_zone_rooms` no tiene nada de Pokémon |
+| `ServicioEntrenador` | Entrenador, equipo, cajas, mochila y pokédex contra la base de datos |
+| `ServicioEconomia` | Pokédólares con `SELECT ... FOR UPDATE` y registro en la misma transacción |
+| `ServicioSeguidor` | El seguidor vivo: estela por `UserTakeStepEvent` y latido de medio segundo para la animación |
+| `AccionesEntrenador` | Las acciones del 6400 que no son saludo ni catálogo |
+| `PokemonCuerpo` / `PokemonPackets` / `SeguidorPackets` / `PokemonAcciones` | Protocolo: JSON en 6400/6401, binario en 6402/6403, rangos de acción reservados |
 
 ### El motor, en `combate/`
 
@@ -256,6 +264,29 @@ Sin dependencias del emulador. `ServicioCombate` es una función: **(estado, acc
 | `CondicionesBando` | Pantallas, protecciones y las 4 trampas de entrada |
 | `Campo` | Clima y terreno |
 | `CatalogoCombate` | Interfaz que evita que el motor dependa de `ServicioPokedex` |
+
+### El estado del jugador, en `entrenador/`
+
+También sin dependencias del emulador.
+
+| Clase | Responsabilidad |
+|---|---|
+| `PokemonPoseido` / `MovimientoPoseido` | El Pokémon del jugador: IV, EV, naturaleza, género, shiny, PP con Más PP. `aCombate()` lo convierte a números de combate con el nivel efectivo que se le pase, sin tocar el nivel real |
+| `TablaExperiencia` | Las 6 curvas de PokéAPI con sus nombres tal cual los guarda el importador |
+| `GeneradorPokemon` / `EspecieGeneracion` / `CatalogoGeneracion` | Creación: IV, naturaleza 1/25, género por octavos, shiny 1/4096, pokerus 3/65536, habilidad oculta solo si se pide |
+| `Almacenamiento` | Equipo de 6 y 32 cajas de 30, con compactado y la regla de no quedarse sin nadie que pueda combatir |
+| `Bolsillo` / `Mochila` | Seis bolsillos, tope de pila 999, objetos clave que no se tiran |
+| `Economia` | Pokédólares: saldo nunca negativo, tope, y un movimiento por cambio |
+| `Dex` | Banderas que solo suben |
+
+### El seguidor, en `seguidor/`
+
+| Clase | Responsabilidad |
+|---|---|
+| `RastroSeguidor` | La estela: ocupa la baldosa que el entrenador deja. Un rodillo o un teletransporte lo colocan encima en vez de hacerle caminar |
+| `Direccion` | Las 8 direcciones de Habbo, comprobadas contra `Rotation.Calculate` |
+| `CatalogoAnimaciones` / `EstadoSeguidor` | **Fuente única** de los 37 estados y sus animaciones PMD. La migración 4 siembra la tabla leyendo de aquí, así que código y base de datos no pueden separarse |
+| `MaquinaAnimacion` | Precedencia: combate > interacción pedida > tumbado > sentado > durmiendo > bailando > gesto > caminando > parado |
 
 ---
 

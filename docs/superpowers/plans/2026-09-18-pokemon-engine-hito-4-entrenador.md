@@ -50,7 +50,9 @@ Las animaciones **sin vínculo** son las interactivas: se alcanzan pulsando el s
 
 **Ficheros:** `migraciones/M004Entrenador.java`, alta en `BaseDatosPokemon.migraciones()`.
 
-Catorce tablas: `pokemon_seasons`, `pokemon_items`, `pokemon_trainers`, `pokemon_owned`, `pokemon_owned_moves`, `pokemon_owned_ribbons`, `pokemon_boxes`, `pokemon_bag`, `pokemon_dex_entries`, `pokemon_currency_log`, `pokemon_zones`, `pokemon_zone_rooms`, `pokemon_follower_animations`, `pokemon_follower_state`.
+Trece tablas: `pokemon_seasons`, `pokemon_items`, `pokemon_trainers`, `pokemon_owned`, `pokemon_owned_moves`, `pokemon_owned_ribbons`, `pokemon_boxes`, `pokemon_bag`, `pokemon_dex_entries`, `pokemon_currency_log`, `pokemon_zones`, `pokemon_zone_rooms`, `pokemon_follower_animations`.
+
+La posición del seguidor **no se persiste**: se deriva de dónde está el jugador en cada sesión. Lo único permanente es qué Pokémon es, y eso vive en `pokemon_trainers.follower_owned_id`.
 
 Decisiones que quedan fijadas aquí:
 
