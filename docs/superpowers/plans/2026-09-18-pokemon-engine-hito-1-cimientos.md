@@ -22,6 +22,23 @@
 - **Prohibido ejecutar `yarn install`**: rompió Subastas, Arcade y otros sistemas la última vez. `node_modules/@nitrots/nitro-renderer` es una copia física, no un enlace, así que todo cambio en `submodules/renderer` debe replicarse a mano en `node_modules` (ver tarea 5, paso 7)
 - Todo el trabajo ocurre en el worktree `build/pokemon-engine`, rama `codex/pokemon-engine`
 
+## Preparación del worktree para compilar el cliente
+
+Dos archivos necesarios para el build **no están en git** y hay que copiarlos desde la copia principal:
+
+1. **`node_modules`** (341 MB). Copiar con robocopy, nunca instalar:
+   ```bash
+   robocopy "C:\Users\erale\Desktop\Habbo\xampp\htdocs\nitro-react\node_modules" "C:\Users\erale\Desktop\Habbo\build\pokemon-engine\xampp\htdocs\nitro-react\node_modules" /E /NFL /NDL /NJH /NJS /MT:16
+   ```
+2. **`src/assets/styles/bootstrap/vendor/_rfs.scss`**. La regla `**/vendor/` del `.gitignore` (línea 12), pensada para Composer, también excluye esta hoja SCSS, que es código fuente del cliente. Sin ella el build muere con `Can't find stylesheet to import: vendor/rfs`.
+   ```bash
+   cp -r "xampp/htdocs/nitro-react/src/assets/styles/bootstrap/vendor" "build/pokemon-engine/xampp/htdocs/nitro-react/src/assets/styles/bootstrap/"
+   ```
+
+**Defecto pendiente del repositorio**: por ese `.gitignore`, un clon limpio no puede compilar el cliente. Se arregla con una excepción (`!xampp/htdocs/nitro-react/src/assets/styles/bootstrap/vendor/`) y añadiendo el archivo al repositorio. Queda fuera del alcance de este hito.
+
+**Nota sobre `diff -r`**: al comparar `submodules/renderer` con `node_modules`, `diff -r` marca todos los archivos como distintos por el final de línea (CRLF en el checkout, LF en `node_modules`). Usar siempre `diff -r --strip-trailing-cr` para ver diferencias reales.
+
 ## Aviso de despliegue (leer antes de la tarea 6)
 
 Las tareas 1 a 5 no tocan nada en ejecución: compilan y prueban dentro del worktree.
