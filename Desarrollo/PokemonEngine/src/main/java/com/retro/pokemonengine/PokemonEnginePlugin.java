@@ -24,6 +24,8 @@ public class PokemonEnginePlugin extends HabboPlugin implements EventListener
     {
         BaseDatosPokemon.inicializar();
 
+        ServicioPokedex.cargar();
+
         Emulator.getGameServer().getPacketManager()
                 .registerHandler(PACKET_POKEMON_COMMAND, PokemonCommandHandler.class);
 

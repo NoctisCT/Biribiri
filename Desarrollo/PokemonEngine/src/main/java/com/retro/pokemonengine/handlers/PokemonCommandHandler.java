@@ -6,6 +6,7 @@ import com.retro.pokemonengine.PokemonAcciones;
 import com.retro.pokemonengine.PokemonCuerpo;
 import com.retro.pokemonengine.PokemonEnginePlugin;
 import com.retro.pokemonengine.PokemonPackets;
+import com.retro.pokemonengine.ServicioPokedex;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -35,6 +36,18 @@ public class PokemonCommandHandler extends MessageHandler
                     datos.put("protocolVersion", PokemonEnginePlugin.VERSION_PROTOCOLO);
                     datos.put("userId", userId);
                     datos.put("serverTimeEpoch", System.currentTimeMillis() / 1000L);
+
+                    exito = true;
+                    cuerpo = PokemonCuerpo.datos(datos);
+                    break;
+                }
+
+                case PokemonAcciones.CATALOGO:
+                {
+                    Map<String, Object> datos = new LinkedHashMap<>();
+
+                    datos.put("especies", ServicioPokedex.totalEspecies());
+                    datos.put("movimientos", ServicioPokedex.totalMovimientos());
 
                     exito = true;
                     cuerpo = PokemonCuerpo.datos(datos);
