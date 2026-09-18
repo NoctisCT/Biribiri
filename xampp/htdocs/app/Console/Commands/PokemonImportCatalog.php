@@ -239,6 +239,7 @@ class PokemonImportCatalog extends Command
             }
 
             $fila = MapeadorMovimiento::fila($movimiento, $sd, $tipos);
+            $fila['sin_showdown'] = $sd === null ? 1 : 0;
 
             DB::table('pokemon_moves')->updateOrInsert(['id' => $fila['id']], $fila);
 

@@ -103,6 +103,46 @@ class PokemonVerifyCatalog extends Command
         }
 
         $this->newLine();
+        $this->info('Movimientos sin correspondencia en los datos de Showdown');
+
+        $sinShowdown = DB::table('pokemon_moves')->where('sin_showdown', 1)->get();
+
+        // Los movimientos Z llevan sufijo de clase y los Oscuros vienen de
+        // Pokémon XD/Colosseum: ninguno existe en los juegos principales.
+        $esRuido = fn ($m) =>
+            str_contains($m->nombre, '--physical')
+            || str_contains($m->nombre, '--special')
+            || str_starts_with($m->nombre, 'shadow-')
+            || str_starts_with($m->nombre, 'max-')
+            || str_starts_with($m->nombre, 'g-max-');
+
+        $ruido = $sinShowdown->filter($esRuido);
+        $revisar = $sinShowdown->reject($esRuido);
+
+        $this->line('  Total sin correspondencia: ' . $sinShowdown->count());
+        $this->line('  De ellos, movimientos Z, Maxi u Oscuros (descartables): ' . $ruido->count());
+
+        if ($revisar->isEmpty()) {
+            $this->line('  Ninguno pendiente de revisar.');
+        } else {
+            $this->error('  PENDIENTES DE REVISAR: ' . $revisar->count());
+
+            $this->table(['Id', 'Nombre', 'Nombre ES', 'Especies de Kanto'], $revisar->map(fn ($m) => [
+                $m->id,
+                $m->nombre,
+                $m->nombre_es,
+                DB::table('pokemon_learnsets')
+                    ->where('move_id', $m->id)
+                    ->where('species_id', '<=', 151)
+                    ->distinct()
+                    ->count('species_id'),
+            ])->all());
+
+            $this->line('  Si alguno es legítimo, añadir su alias a MapeadorMovimiento::ALIAS_SHOWDOWN.');
+            $problemas++;
+        }
+
+        $this->newLine();
         $sueltos = DB::table('pokemon_moves')
             ->where('vigente', 1)
             ->where('effect_code', 'like', 'manual_%')

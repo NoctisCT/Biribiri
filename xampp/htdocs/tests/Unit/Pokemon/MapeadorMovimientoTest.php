@@ -85,6 +85,15 @@ class MapeadorMovimientoTest extends TestCase
         $this->assertSame('kingsshield', MapeadorMovimiento::claveShowdown("king's-shield"));
     }
 
+    public function test_los_alias_corrigen_grafias_antiguas_de_pokeapi(): void
+    {
+        $this->assertSame(
+            'visegrip',
+            MapeadorMovimiento::claveShowdown('vice-grip'),
+            'Agarre existe en Showdown como visegrip; sin alias se perdería un movimiento de Kanto'
+        );
+    }
+
     public function test_el_reparto_de_categorias_no_solapa(): void
     {
         $solape = array_intersect(

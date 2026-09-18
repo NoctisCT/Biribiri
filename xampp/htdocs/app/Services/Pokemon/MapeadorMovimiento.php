@@ -25,6 +25,17 @@ class MapeadorMovimiento
     ];
 
     /**
+     * PokéAPI conserva grafías antiguas que Showdown ya actualizó.
+     * Sin este mapa se pierden movimientos legítimos: Agarre lo aprenden
+     * Krabby, Kingler y Pinsir, y su clave normalizada no coincide.
+     *
+     * Clave: nombre normalizado de PokéAPI. Valor: clave de Showdown.
+     */
+    public const ALIAS_SHOWDOWN = [
+        'vicegrip' => 'visegrip',
+    ];
+
+    /**
      * @param array|null $sd Entrada del movimiento en BattleMovedex de Showdown, o null si no existe
      * @param array<string, int> $tiposPorNombre
      */
@@ -124,7 +135,9 @@ class MapeadorMovimiento
      */
     public static function claveShowdown(string $nombre): string
     {
-        return preg_replace('/[^a-z0-9]/', '', strtolower($nombre));
+        $clave = preg_replace('/[^a-z0-9]/', '', strtolower($nombre));
+
+        return self::ALIAS_SHOWDOWN[$clave] ?? $clave;
     }
 
     private static function nombreEs(array $json): string
