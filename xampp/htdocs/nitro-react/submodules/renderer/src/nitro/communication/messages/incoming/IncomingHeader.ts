@@ -572,4 +572,5 @@ public static HOLO_SLOT_STATE = 5045;
 public static HOLO_SPACE_INVADERS_OPEN = 6100;
 public static RPG_ENGINE_RESULT = 5051;
 public static POKEMON_RESULT = 6401;
+public static POKEMON_FOLLOWER = 6403;
 }

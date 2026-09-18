@@ -32,12 +32,12 @@ import { EstadoBloqueoInventarioEvent, ResultadoConfigurarPatronEvent, Resultado
 import { HoloGridWalkabilityEvent } from './messages/incoming/hologrid';
 import { BuilderProCopyGroupResultEvent, BuilderProPasteGroupResultEvent, BuilderProMoveGroupResultEvent, BuilderProTransformGroupResultEvent, BuilderProHistoryResultEvent, BuilderProOffsetGroupResultEvent, BuilderProLayoutGroupResultEvent, BuilderProGroupStateEvent, BuilderProTraversalStateEvent, BuilderProBlueprintStateEvent, BuilderProPickupGroupResultEvent, BuilderProLayerStateEvent, BuilderProMirrorDuplicateResultEvent, BuilderProReplaceGroupResultEvent, BuilderProLinearRepeatResultEvent, BuilderProGridRepeatResultEvent, BuilderProRadialRepeatResultEvent, BuilderProFillRepeatResultEvent, BuilderProItemLockStateEvent, BuilderProRoomBackupStateEvent } from './messages/incoming/builderpro';
 import { RpgEngineResultEvent } from './messages/incoming/rpgengine';
-import { PokemonResultEvent } from './messages/incoming/pokemonengine';
+import { PokemonFollowerEvent, PokemonResultEvent } from './messages/incoming/pokemonengine';
 import { CerrarSesionInventarioComposer, ConfigurarPatronInventarioComposer, ConsultarBloqueoInventarioComposer, VerificarPatronInventarioComposer } from './messages/outgoing/inventorylock';
 import { GetHoloGridWalkabilityComposer } from './messages/outgoing/hologrid';
 import { BuilderProCopyGroupComposer, BuilderProPasteGroupComposer, BuilderProMoveGroupComposer, BuilderProTransformGroupComposer, BuilderProHistoryComposer, BuilderProOffsetGroupComposer, BuilderProLayoutGroupComposer, BuilderProGroupStateComposer, BuilderProTraversalStateComposer, BuilderProBlueprintStateComposer, BuilderProPickupGroupComposer, BuilderProLayerStateComposer, BuilderProReferencePlacementComposer, BuilderProMirrorDuplicateComposer, BuilderProReplaceGroupComposer, BuilderProLinearRepeatComposer, BuilderProGridRepeatComposer, BuilderProRadialRepeatComposer, BuilderProFillRepeatComposer, BuilderProItemLockStateComposer, BuilderProRoomBackupStateComposer } from './messages/outgoing/builderpro';
 import { RpgEngineCommandComposer } from './messages/outgoing/rpgengine';
-import { PokemonCommandComposer } from './messages/outgoing/pokemonengine';
+import { PokemonCommandComposer, PokemonFollowerComposer } from './messages/outgoing/pokemonengine';
 import { ObtenerRecordsSubastasComposer } from './messages/outgoing/subastas';
 import { RecordsSubastasEvent } from './messages/incoming/subastas';
 import { ObtenerProximaSubastaComposer, ProximaSubastaEvent } from './messages';
@@ -148,6 +148,7 @@ export class NitroMessages implements IMessageConfiguration {
         this._events.set(IncomingHeader.BUILDER_PRO_ROOM_BACKUP_RESULT, BuilderProRoomBackupStateEvent);
         this._events.set(IncomingHeader.RPG_ENGINE_RESULT, RpgEngineResultEvent);
         this._events.set(IncomingHeader.POKEMON_RESULT, PokemonResultEvent);
+        this._events.set(IncomingHeader.POKEMON_FOLLOWER, PokemonFollowerEvent);
         this._events.set(IncomingHeader.ROOM_AD_ERROR, RoomAdErrorEvent);
 
         // AVAILABILITY
@@ -790,6 +791,7 @@ export class NitroMessages implements IMessageConfiguration {
         this._composers.set(OutgoingHeader.BUILDER_PRO_ROOM_BACKUP, BuilderProRoomBackupStateComposer);
         this._composers.set(OutgoingHeader.RPG_ENGINE_COMMAND, RpgEngineCommandComposer);
         this._composers.set(OutgoingHeader.POKEMON_COMMAND, PokemonCommandComposer);
+        this._composers.set(OutgoingHeader.POKEMON_FOLLOWER, PokemonFollowerComposer);
 
         // SUBASTAS
         this._composers.set(OutgoingHeader.ABRIR_SUBASTAS, AbrirSubastasComposer);
