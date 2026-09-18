@@ -32,6 +32,7 @@ import { EstadoBloqueoInventarioEvent, ResultadoConfigurarPatronEvent, Resultado
 import { HoloGridWalkabilityEvent } from './messages/incoming/hologrid';
 import { BuilderProCopyGroupResultEvent, BuilderProPasteGroupResultEvent, BuilderProMoveGroupResultEvent, BuilderProTransformGroupResultEvent, BuilderProHistoryResultEvent, BuilderProOffsetGroupResultEvent, BuilderProLayoutGroupResultEvent, BuilderProGroupStateEvent, BuilderProTraversalStateEvent, BuilderProBlueprintStateEvent, BuilderProPickupGroupResultEvent, BuilderProLayerStateEvent, BuilderProMirrorDuplicateResultEvent, BuilderProReplaceGroupResultEvent, BuilderProLinearRepeatResultEvent, BuilderProGridRepeatResultEvent, BuilderProRadialRepeatResultEvent, BuilderProFillRepeatResultEvent, BuilderProItemLockStateEvent, BuilderProRoomBackupStateEvent } from './messages/incoming/builderpro';
 import { RpgEngineResultEvent } from './messages/incoming/rpgengine';
+import { PokemonResultEvent } from './messages/incoming/pokemonengine';
 import { CerrarSesionInventarioComposer, ConfigurarPatronInventarioComposer, ConsultarBloqueoInventarioComposer, VerificarPatronInventarioComposer } from './messages/outgoing/inventorylock';
 import { GetHoloGridWalkabilityComposer } from './messages/outgoing/hologrid';
 import { BuilderProCopyGroupComposer, BuilderProPasteGroupComposer, BuilderProMoveGroupComposer, BuilderProTransformGroupComposer, BuilderProHistoryComposer, BuilderProOffsetGroupComposer, BuilderProLayoutGroupComposer, BuilderProGroupStateComposer, BuilderProTraversalStateComposer, BuilderProBlueprintStateComposer, BuilderProPickupGroupComposer, BuilderProLayerStateComposer, BuilderProReferencePlacementComposer, BuilderProMirrorDuplicateComposer, BuilderProReplaceGroupComposer, BuilderProLinearRepeatComposer, BuilderProGridRepeatComposer, BuilderProRadialRepeatComposer, BuilderProFillRepeatComposer, BuilderProItemLockStateComposer, BuilderProRoomBackupStateComposer } from './messages/outgoing/builderpro';
@@ -145,6 +146,7 @@ export class NitroMessages implements IMessageConfiguration {
         this._events.set(IncomingHeader.BUILDER_PRO_ITEM_LOCK_STATE_RESULT, BuilderProItemLockStateEvent);
         this._events.set(IncomingHeader.BUILDER_PRO_ROOM_BACKUP_RESULT, BuilderProRoomBackupStateEvent);
         this._events.set(IncomingHeader.RPG_ENGINE_RESULT, RpgEngineResultEvent);
+        this._events.set(IncomingHeader.POKEMON_RESULT, PokemonResultEvent);
         this._events.set(IncomingHeader.ROOM_AD_ERROR, RoomAdErrorEvent);
 
         // AVAILABILITY
