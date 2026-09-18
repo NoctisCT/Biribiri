@@ -2,6 +2,7 @@ package com.retro.pokemonengine;
 
 import com.eu.habbo.Emulator;
 import com.retro.pokemonengine.migraciones.M001Base;
+import com.retro.pokemonengine.migraciones.M002Catalogo;
 import com.retro.pokemonengine.migraciones.Migracion;
 import com.retro.pokemonengine.migraciones.PlanMigracion;
 
@@ -21,7 +22,8 @@ public final class BaseDatosPokemon
     private static List<Migracion> migraciones()
     {
         return Arrays.asList(
-                new M001Base()
+                new M001Base(),
+                new M002Catalogo()
         );
     }
 
