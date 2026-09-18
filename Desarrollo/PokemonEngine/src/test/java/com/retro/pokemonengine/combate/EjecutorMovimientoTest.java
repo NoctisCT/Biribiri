@@ -162,7 +162,7 @@ class EjecutorMovimientoTest
         EjecutorMovimiento.Mecanica m = new EjecutorMovimiento.Mecanica(
                 "net-good-stats", "none", 0, null, null, null, null,
                 0, 0, 0, 0, 0,
-                List.of(new EjecutorMovimiento.CambioStat(Stat.ATAQUE, 2)), null, null);
+                List.of(EjecutorMovimiento.CambioStat.de(Stat.ATAQUE, 2)), null, null);
 
         MovimientoCatalogo danzaEspada = CatalogoFalso.mov(14, "Danza Espada", CatalogoFalso.NORMAL, "status", null, null, 0, "net-good-stats");
 
@@ -181,7 +181,7 @@ class EjecutorMovimientoTest
         EjecutorMovimiento.Mecanica m = new EjecutorMovimiento.Mecanica(
                 "damage-lower", "none", 0, null, null, null, null,
                 0, 0, 0, 0, 100,
-                List.of(new EjecutorMovimiento.CambioStat(Stat.DEFENSA, -1)), null, null);
+                List.of(EjecutorMovimiento.CambioStat.de(Stat.DEFENSA, -1)), null, null);
 
         EjecutorMovimiento.ejecutar(estado(a, b, 1L), a, b, rayo(), m, catalogo);
 

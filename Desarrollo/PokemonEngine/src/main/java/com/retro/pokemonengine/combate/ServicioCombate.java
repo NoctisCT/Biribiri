@@ -65,8 +65,19 @@ public final class ServicioCombate
                 eventos.add(new Evento("combate_terminado").con("ganador", 1 - accion.bando()));
             }
             case CAMBIO -> eventos.addAll(cambiar(estado, accion, quien));
-            case OBJETO -> eventos.add(new Evento("objeto_usado")
-                    .con("pokemon", quien.nombre()).con("item", accion.parametro()));
+            case OBJETO ->
+            {
+                if(Volatiles.puedeUsarObjetos(quien))
+                {
+                    eventos.add(new Evento("objeto_usado")
+                            .con("pokemon", quien.nombre()).con("item", accion.parametro()));
+                }
+                else
+                {
+                    eventos.add(new Evento("objeto_bloqueado")
+                            .con("pokemon", quien.nombre()).con("motivo", "embargo"));
+                }
+            }
             case MOVIMIENTO -> eventos.addAll(mover(estado, accion, quien));
         }
 
@@ -124,7 +135,20 @@ public final class ServicioCombate
 
         if(movimiento == null) return eventos;
 
+        Volatiles.Restriccion restriccion = Volatiles.puedeUsar(atacante, movimiento);
+
+        if(!restriccion.permitido())
+        {
+            eventos.add(new Evento("movimiento_bloqueado")
+                    .con("pokemon", atacante.nombre())
+                    .con("movimiento", movimiento.nombreEs())
+                    .con("motivo", restriccion.motivo()));
+
+            return eventos;
+        }
+
         slot.gastarPp();
+        atacante.registrarMovimientoUsado(movimiento.id());
 
         PokemonCombate defensor = estado.bando(accion.bandoObjetivo()).activo(accion.posicionObjetivo());
 

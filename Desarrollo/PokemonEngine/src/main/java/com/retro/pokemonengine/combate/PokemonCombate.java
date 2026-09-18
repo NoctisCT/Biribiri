@@ -21,8 +21,21 @@ public final class PokemonCombate
     public static final String VENENO = "poison";
     public static final String VENENO_GRAVE = "toxic";
 
+    // Volatiles. Duran mientras el Pokemon siga en el campo.
     public static final String CONFUSION = "confusion";
     public static final String RETROCESO = "flinch";
+    public static final String ENAMORADO = "attract";
+    public static final String MOFA = "taunt";
+    public static final String MALDITO = "curse";
+    public static final String CANTO_MORTAL = "perishsong";
+    public static final String DRENADORAS = "leechseed";
+    public static final String TORMENTO = "torment";
+    public static final String ANULACION = "disable";
+    public static final String EMBARGO = "embargo";
+
+    public static final int GENERO_MACHO = 0;
+    public static final int GENERO_HEMBRA = 1;
+    public static final int GENERO_NINGUNO = 2;
 
     private final int ownedId;
     private final int especieId;
@@ -42,6 +55,11 @@ public final class PokemonCombate
 
     private final Map<String, Integer> volatiles = new HashMap<>();
     private final List<MovimientoEnCombate> movimientos = new ArrayList<>();
+
+    private int genero = GENERO_NINGUNO;
+    private int enamoradoDe = -1;
+    private int ultimoMovimiento = -1;
+    private int movimientoAnulado = -1;
 
     public static final int ETAPA_ATAQUE = 0;
     public static final int ETAPA_DEFENSA = 1;
@@ -77,6 +95,41 @@ public final class PokemonCombate
     public String estado() { return this.estado; }
     public int contadorEstado() { return this.contadorEstado; }
     public List<MovimientoEnCombate> movimientos() { return this.movimientos; }
+    public int genero() { return this.genero; }
+    public int enamoradoDe() { return this.enamoradoDe; }
+    public int ultimoMovimiento() { return this.ultimoMovimiento; }
+    public int movimientoAnulado() { return this.movimientoAnulado; }
+
+    public void ponerGenero(int genero)
+    {
+        this.genero = genero;
+    }
+
+    public void registrarMovimientoUsado(int moveId)
+    {
+        this.ultimoMovimiento = moveId;
+    }
+
+    public void anularMovimiento(int moveId)
+    {
+        this.movimientoAnulado = moveId;
+    }
+
+    /**
+     * Enamorarse exige generos opuestos y definidos: los Pokemon sin genero son
+     * inmunes a Atraccion, y dos del mismo genero tampoco se enamoran.
+     */
+    public boolean enamorarseDe(PokemonCombate otro)
+    {
+        if(this.genero == GENERO_NINGUNO || otro.genero == GENERO_NINGUNO) return false;
+        if(this.genero == otro.genero) return false;
+        if(this.tieneVolatil(ENAMORADO)) return false;
+
+        this.ponerVolatil(ENAMORADO, 1);
+        this.enamoradoDe = otro.ownedId;
+
+        return true;
+    }
 
     public int statBase(Stat stat)
     {
@@ -202,5 +255,8 @@ public final class PokemonCombate
     {
         java.util.Arrays.fill(this.etapas, 0);
         this.volatiles.clear();
+        this.enamoradoDe = -1;
+        this.ultimoMovimiento = -1;
+        this.movimientoAnulado = -1;
     }
 }

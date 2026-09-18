@@ -72,6 +72,12 @@ public final class Impedimentos
             return new Resultado(false, eventos);
         }
 
+        if(Volatiles.enamoradoImpide(quien, rng))
+        {
+            eventos.add(new Evento("impedido").con("pokemon", quien.nombre()).con("motivo", "attract"));
+            return new Resultado(false, eventos);
+        }
+
         if(quien.tieneVolatil(PokemonCombate.CONFUSION))
         {
             int turnos = quien.volatil(PokemonCombate.CONFUSION) - 1;

@@ -25,6 +25,7 @@ public final class FinDeTurno
         aplicarClima(estado, eventos);
         aplicarResiduales(estado, eventos);
         aplicarDrenadoras(estado, eventos);
+        eventos.addAll(Volatiles.alFinDeTurno(estado));
         caducarCondiciones(estado, eventos);
 
         estado.reducirClimaYTerreno();

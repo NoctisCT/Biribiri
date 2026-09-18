@@ -41,8 +41,32 @@ public final class EjecutorMovimiento
         }
     }
 
-    public record CambioStat(Stat stat, int cambio)
+    /**
+     * Un cambio de etapa. Usa el indice de etapa y no `Stat` porque precision y
+     * evasion son etapas pero no son stats de combate.
+     */
+    public record CambioStat(int indiceEtapa, String nombre, int cambio)
     {
+        public static CambioStat de(Stat stat, int cambio)
+        {
+            return new CambioStat(EjecutorMovimiento.indiceEtapa(stat), stat.name(), cambio);
+        }
+
+        /** Traduce los nombres de stat de PokeAPI al indice de etapa. */
+        public static int indicePorNombre(String nombre)
+        {
+            return switch(nombre == null ? "" : nombre)
+            {
+                case "attack" -> PokemonCombate.ETAPA_ATAQUE;
+                case "defense" -> PokemonCombate.ETAPA_DEFENSA;
+                case "special-attack" -> PokemonCombate.ETAPA_ATAQUE_ESP;
+                case "special-defense" -> PokemonCombate.ETAPA_DEFENSA_ESP;
+                case "speed" -> PokemonCombate.ETAPA_VELOCIDAD;
+                case "accuracy" -> PokemonCombate.ETAPA_PRECISION;
+                case "evasion" -> PokemonCombate.ETAPA_EVASION;
+                default -> -1;
+            };
+        }
     }
 
     public static List<Evento> ejecutar(
@@ -305,15 +329,13 @@ public final class EjecutorMovimiento
 
             if(objetivo.debilitado()) continue;
 
-            int indice = indiceEtapa(cambio.stat());
+            if(cambio.indiceEtapa() < 0) continue;
 
-            if(indice < 0) continue;
-
-            int movido = objetivo.cambiarEtapa(indice, cambio.cambio());
+            int movido = objetivo.cambiarEtapa(cambio.indiceEtapa(), cambio.cambio());
 
             eventos.add(new Evento(movido == 0 ? "stat_sin_cambio" : "stat_cambiado")
                     .con("pokemon", objetivo.nombre())
-                    .con("stat", cambio.stat().name())
+                    .con("stat", cambio.nombre())
                     .con("etapas", movido));
         }
     }

@@ -1,6 +1,10 @@
 package com.retro.pokemonengine;
 
 import com.eu.habbo.Emulator;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
+import com.retro.pokemonengine.combate.EjecutorMovimiento;
 import com.retro.pokemonengine.combate.EspecieCatalogo;
 import com.retro.pokemonengine.combate.MovimientoCatalogo;
 import com.retro.pokemonengine.combate.TablaTipos;
@@ -8,8 +12,10 @@ import com.retro.pokemonengine.combate.TablaTipos;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -23,6 +29,7 @@ public final class ServicioPokedex
     private static Map<Integer, EspecieCatalogo> especies = Collections.emptyMap();
     private static Map<Integer, MovimientoCatalogo> movimientos = Collections.emptyMap();
     private static TablaTipos tipos = new TablaTipos(Collections.emptyMap());
+    private static Map<Integer, EjecutorMovimiento.Mecanica> mecanicas = Collections.emptyMap();
 
     private ServicioPokedex()
     {
@@ -33,6 +40,7 @@ public final class ServicioPokedex
         Map<Integer, EspecieCatalogo> nuevasEspecies = new HashMap<>();
         Map<Integer, MovimientoCatalogo> nuevosMovimientos = new HashMap<>();
         Map<Long, Double> nuevaTabla = new HashMap<>();
+        Map<Integer, EjecutorMovimiento.Mecanica> nuevasMecanicas = new HashMap<>();
 
         try(Connection c = Emulator.getDatabase().getDataSource().getConnection();
             Statement s = c.createStatement();
@@ -67,7 +75,12 @@ public final class ServicioPokedex
             Statement s = c.createStatement();
             ResultSet r = s.executeQuery(
                     "SELECT id, nombre_es, type_id, clase, potencia, precision_pct, pp, prioridad," +
-                    " objetivo, effect_code, vigente FROM pokemon_moves"))
+                    " objetivo, effect_code, vigente," +
+                    " categoria, dolencia, dolencia_chance, golpes_min, golpes_max," +
+                    " turnos_min, turnos_max, drenaje, curacion, ratio_critico," +
+                    " retroceso_chance, stat_chance, cambios_stats," +
+                    " stat_ofensivo_forzado, stat_defensivo_forzado" +
+                    " FROM pokemon_moves"))
         {
             while(r.next())
             {
@@ -86,6 +99,23 @@ public final class ServicioPokedex
                         r.getString("objetivo"),
                         r.getString("effect_code"),
                         r.getInt("vigente") == 1));
+
+                nuevasMecanicas.put(r.getInt("id"), new EjecutorMovimiento.Mecanica(
+                        r.getString("categoria"),
+                        r.getString("dolencia"),
+                        r.getInt("dolencia_chance"),
+                        entero(r, "golpes_min"),
+                        entero(r, "golpes_max"),
+                        entero(r, "turnos_min"),
+                        entero(r, "turnos_max"),
+                        r.getInt("drenaje"),
+                        r.getInt("curacion"),
+                        r.getInt("ratio_critico"),
+                        r.getInt("retroceso_chance"),
+                        r.getInt("stat_chance"),
+                        cambiosStats(r.getString("cambios_stats")),
+                        r.getString("stat_ofensivo_forzado"),
+                        r.getString("stat_defensivo_forzado")));
             }
         }
 
@@ -103,6 +133,7 @@ public final class ServicioPokedex
         }
 
         especies = Collections.unmodifiableMap(nuevasEspecies);
+        mecanicas = Collections.unmodifiableMap(nuevasMecanicas);
         movimientos = Collections.unmodifiableMap(nuevosMovimientos);
         tipos = new TablaTipos(nuevaTabla);
 
@@ -112,6 +143,50 @@ public final class ServicioPokedex
                 + especies.size() + " especies, "
                 + movimientos.size() + " movimientos (" + vigentes + " vigentes), "
                 + nuevaTabla.size() + " combinaciones de tipos.");
+    }
+
+    /**
+     * La mecanica de un movimiento, tal y como la dejo el importador del hito 2.
+     * Es lo que el motor necesita para resolver las once categorias genericas.
+     */
+    public static EjecutorMovimiento.Mecanica mecanica(int moveId)
+    {
+        return mecanicas.get(moveId);
+    }
+
+    private static Integer entero(ResultSet r, String columna) throws Exception
+    {
+        int valor = r.getInt(columna);
+
+        return r.wasNull() ? null : valor;
+    }
+
+    /** La columna guarda [{"stat":"attack","cambio":-1}] tal como lo escribio el importador. */
+    private static List<EjecutorMovimiento.CambioStat> cambiosStats(String json)
+    {
+        List<EjecutorMovimiento.CambioStat> salida = new ArrayList<>();
+
+        if(json == null || json.isBlank() || "[]".equals(json)) return salida;
+
+        try
+        {
+            JsonArray array = JsonParser.parseString(json).getAsJsonArray();
+
+            for(JsonElement elemento : array)
+            {
+                String nombre = elemento.getAsJsonObject().get("stat").getAsString();
+                int cambio = elemento.getAsJsonObject().get("cambio").getAsInt();
+                int indice = EjecutorMovimiento.CambioStat.indicePorNombre(nombre);
+
+                if(indice >= 0) salida.add(new EjecutorMovimiento.CambioStat(indice, nombre, cambio));
+            }
+        }
+        catch(Exception error)
+        {
+            System.out.println("[PokemonEngine] cambios_stats ilegible: " + json);
+        }
+
+        return salida;
     }
 
     public static EspecieCatalogo especie(int id)
