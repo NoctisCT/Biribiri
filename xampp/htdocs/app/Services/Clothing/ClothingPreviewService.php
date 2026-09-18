@@ -9,14 +9,20 @@ use RuntimeException;
 
 class ClothingPreviewService
 {
-    private const VERSION = 7;
+    private const VERSION = 9;
+
+    /*
+     * IDs efímeros para construir el sandbox de preview.
+     * No se consultan, reservan ni instalan en DB.
+     */
+    private const PREVIEW_PUBLIC_BASE_ITEM_ID = 2146999998;
+    private const PREVIEW_CATALOG_ITEM_ID = 2146999999;
 
     public function __construct(
         private readonly ClothingNitroConverterService $converter,
         private readonly ClothingNitroPartIdRemapperService $partIdRemapper,
         private readonly ClothingRedeemableNitroService $redeemableNitro,
         private readonly ClothingBiribiriCodeService $biribiriCode,
-        private readonly ClothingDatabaseInstaller $databaseInstaller,
         private readonly ClothingGamedataInstaller $gamedataInstaller
     ) {
     }
@@ -1265,20 +1271,18 @@ class ClothingPreviewService
         string $root,
         string $rootRelative
     ): array {
-        $ids =
-            $this->databaseInstaller
-                ->reserveIds();
+        $previewPlanRoot =
+            $root .
+            DIRECTORY_SEPARATOR .
+            '_avatar_plan';
 
         $plan =
             $this->gamedataInstaller
                 ->prepare(
                     $submission,
-                    (int) $ids[
-                        'public_base_item_id'
-                    ],
-                    (int) $ids[
-                        'catalog_item_id'
-                    ]
+                    self::PREVIEW_PUBLIC_BASE_ITEM_ID,
+                    self::PREVIEW_CATALOG_ITEM_ID,
+                    $previewPlanRoot
                 );
 
         $preparedRoot =
@@ -1349,6 +1353,54 @@ class ClothingPreviewService
                 }
             }
 
+            $qaFigureDataPath =
+                $avatarRoot .
+                DIRECTORY_SEPARATOR .
+                'gamedata' .
+                DIRECTORY_SEPARATOR .
+                'FigureData.json';
+
+            $qaFigureDataRaw =
+                file_get_contents(
+                    $qaFigureDataPath
+                );
+
+            if (! is_string($qaFigureDataRaw)) {
+                throw new RuntimeException(
+                    'No se pudo leer FigureData de preview.'
+                );
+            }
+
+            try {
+                $qaFigureData =
+                    json_decode(
+                        $qaFigureDataRaw,
+                        true,
+                        512,
+                        JSON_THROW_ON_ERROR
+                    );
+            } catch (\Throwable $exception) {
+                throw new RuntimeException(
+                    'FigureData de preview no es JSON válido.',
+                    0,
+                    $exception
+                );
+            }
+
+            if (
+                ! is_array($qaFigureData) ||
+                ! is_array(
+                    $qaFigureData['palettes'] ?? null
+                ) ||
+                ! is_array(
+                    $qaFigureData['setTypes'] ?? null
+                )
+            ) {
+                throw new RuntimeException(
+                    'FigureData de preview no tiene palettes/setTypes válidos.'
+                );
+            }
+
             $sourceFigure =
                 $preparedRoot .
                 DIRECTORY_SEPARATOR .
@@ -1400,6 +1452,7 @@ class ClothingPreviewService
             $variants = [];
             $combinedByGender = [];
             $combinedSetIds = [];
+            $combinedColorGroups = [];
 
             foreach ($availableGenders as $gender) {
                 $combinedByGender[$gender] =
@@ -1457,6 +1510,31 @@ class ClothingPreviewService
                     );
                 }
 
+                $pieceLabel =
+                    $this->qaCategoryLabel(
+                        $category,
+                        $index
+                    );
+
+                $colorProfile =
+                    $this->qaColorProfile(
+                        $qaFigureData,
+                        $category,
+                        $setIds[0],
+                        $pieceLabel
+                    );
+
+                $defaultColors =
+                    is_array(
+                        $colorProfile[
+                            'default_colors'
+                        ] ?? null
+                    )
+                        ? $colorProfile[
+                            'default_colors'
+                        ]
+                        : [];
+
                 $figures = [];
 
                 foreach ($availableGenders as $gender) {
@@ -1466,14 +1544,16 @@ class ClothingPreviewService
                                 $gender
                             ),
                             $category,
-                            $setIds[0]
+                            $setIds[0],
+                            $defaultColors
                         );
 
                     $combinedByGender[$gender] =
                         $this->replaceFigureCategory(
                             $combinedByGender[$gender],
                             $category,
-                            $setIds[0]
+                            $setIds[0],
+                            $defaultColors
                         );
                 }
 
@@ -1487,14 +1567,14 @@ class ClothingPreviewService
                         )
                     );
 
+                $combinedColorGroups[] =
+                    $colorProfile;
+
                 $variants[] = [
                     'key' =>
                         'piece_' . $index,
                     'label' =>
-                        $this->qaCategoryLabel(
-                            $category,
-                            $index
-                        ),
+                        $pieceLabel,
                     'figures' =>
                         $figures,
                     'figure' =>
@@ -1509,6 +1589,9 @@ class ClothingPreviewService
                         $category,
                     'set_ids' =>
                         $setIds,
+                    'color_groups' => [
+                        $colorProfile,
+                    ],
                 ];
             }
 
@@ -1538,6 +1621,8 @@ class ClothingPreviewService
                         'set',
                     'set_ids' =>
                         $combinedSetIds,
+                    'color_groups' =>
+                        $combinedColorGroups,
                 ];
             }
 
@@ -1620,6 +1705,8 @@ class ClothingPreviewService
                 'supports_action' =>
                     true,
                 'supports_frame_animation' =>
+                    true,
+                'supports_color_selection' =>
                     true,
             ];
         } finally {
@@ -1780,11 +1867,367 @@ class ClothingPreviewService
         );
     }
 
+    private function qaColorProfile(
+        array $figureData,
+        string $category,
+        string $setId,
+        string $label
+    ): array {
+        $setType = null;
+
+        foreach (
+            $figureData['setTypes']
+            as $candidate
+        ) {
+            if (! is_array($candidate)) {
+                continue;
+            }
+
+            if (
+                strcasecmp(
+                    trim(
+                        (string) (
+                            $candidate['type'] ??
+                            ''
+                        )
+                    ),
+                    $category
+                ) === 0
+            ) {
+                $setType = $candidate;
+                break;
+            }
+        }
+
+        if ($setType === null) {
+            throw new RuntimeException(
+                'FigureData QA no contiene la categoría ' .
+                $category .
+                '.'
+            );
+        }
+
+        $set = null;
+
+        foreach (
+            is_array(
+                $setType['sets'] ?? null
+            )
+                ? $setType['sets']
+                : []
+            as $candidate
+        ) {
+            if (
+                is_array($candidate) &&
+                (string) (
+                    $candidate['id'] ??
+                    ''
+                ) === (string) $setId
+            ) {
+                $set = $candidate;
+                break;
+            }
+        }
+
+        if ($set === null) {
+            throw new RuntimeException(
+                'FigureData QA no contiene el set ' .
+                $category .
+                '-' .
+                $setId .
+                '.'
+            );
+        }
+
+        $colorable =
+            $this->qaBool(
+                $set['colorable'] ??
+                false
+            );
+
+        $maxColorIndex = 0;
+
+        foreach (
+            is_array(
+                $set['parts'] ?? null
+            )
+                ? $set['parts']
+                : []
+            as $part
+        ) {
+            if (! is_array($part)) {
+                continue;
+            }
+
+            $maxColorIndex =
+                max(
+                    $maxColorIndex,
+                    (int) (
+                        $part['colorindex'] ??
+                        0
+                    )
+                );
+        }
+
+        $paletteId =
+            (int) (
+                $setType['paletteId'] ??
+                0
+            );
+
+        $base = [
+            'key' =>
+                $category .
+                ':' .
+                $setId,
+            'label' =>
+                $label,
+            'category' =>
+                $category,
+            'set_id' =>
+                (string) $setId,
+            'palette_id' =>
+                $paletteId,
+            'colorable' =>
+                $colorable &&
+                $maxColorIndex > 0,
+            'slots' => [],
+            'default_colors' => [],
+        ];
+
+        if (
+            ! $colorable ||
+            $maxColorIndex <= 0
+        ) {
+            return $base;
+        }
+
+        $palette = null;
+
+        foreach (
+            $figureData['palettes']
+            as $candidate
+        ) {
+            if (
+                is_array($candidate) &&
+                (int) (
+                    $candidate['id'] ??
+                    -1
+                ) === $paletteId
+            ) {
+                $palette = $candidate;
+                break;
+            }
+        }
+
+        if ($palette === null) {
+            throw new RuntimeException(
+                'FigureData QA no contiene la paleta ' .
+                $paletteId .
+                ' para ' .
+                $category .
+                '.'
+            );
+        }
+
+        $colors = [];
+
+        foreach (
+            is_array(
+                $palette['colors'] ?? null
+            )
+                ? $palette['colors']
+                : []
+            as $color
+        ) {
+            if (! is_array($color)) {
+                continue;
+            }
+
+            if (
+                ! $this->qaBool(
+                    $color['selectable'] ??
+                    true,
+                    true
+                )
+            ) {
+                continue;
+            }
+
+            $id =
+                (int) (
+                    $color['id'] ??
+                    -1
+                );
+
+            if ($id < 0) {
+                continue;
+            }
+
+            $hex =
+                strtoupper(
+                    trim(
+                        (string) (
+                            $color['hexCode'] ??
+                            ''
+                        )
+                    )
+                );
+
+            $hex =
+                ltrim(
+                    $hex,
+                    '#'
+                );
+
+            if (
+                strlen($hex) === 3 &&
+                ctype_xdigit($hex)
+            ) {
+                $hex =
+                    $hex[0] . $hex[0] .
+                    $hex[1] . $hex[1] .
+                    $hex[2] . $hex[2];
+            }
+
+            if (
+                strlen($hex) !== 6 ||
+                ! ctype_xdigit($hex)
+            ) {
+                continue;
+            }
+
+            $colors[] = [
+                'id' => $id,
+                'hex' =>
+                    '#' .
+                    $hex,
+                'club' =>
+                    (int) (
+                        $color['club'] ??
+                        0
+                    ),
+            ];
+        }
+
+        if ($colors === []) {
+            throw new RuntimeException(
+                'La paleta ' .
+                $paletteId .
+                ' no tiene colores seleccionables para QA.'
+            );
+        }
+
+        $defaultColor =
+            (int) $colors[0]['id'];
+
+        $slots = [];
+
+        for (
+            $slot = 1;
+            $slot <= $maxColorIndex;
+            $slot++
+        ) {
+            $slots[] = [
+                'index' => $slot,
+                'colors' => $colors,
+            ];
+        }
+
+        $base['slots'] =
+            $slots;
+
+        $base['default_colors'] =
+            array_fill(
+                0,
+                $maxColorIndex,
+                $defaultColor
+            );
+
+        return $base;
+    }
+
+    private function qaBool(
+        mixed $value,
+        bool $default = false
+    ): bool {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (
+            is_int($value) ||
+            is_float($value)
+        ) {
+            return (int) $value !== 0;
+        }
+
+        $normalized =
+            strtolower(
+                trim(
+                    (string) $value
+                )
+            );
+
+        if (
+            in_array(
+                $normalized,
+                [
+                    '1',
+                    'true',
+                    'yes',
+                    'y',
+                ],
+                true
+            )
+        ) {
+            return true;
+        }
+
+        if (
+            in_array(
+                $normalized,
+                [
+                    '0',
+                    'false',
+                    'no',
+                    'n',
+                    '',
+                ],
+                true
+            )
+        ) {
+            return false;
+        }
+
+        return $default;
+    }
+
     private function replaceFigureCategory(
         string $figure,
         string $category,
-        string $setId
+        string $setId,
+        array $colorIds = []
     ): string {
+        $requestedColors =
+            array_values(
+                array_filter(
+                    array_map(
+                        static fn (
+                            mixed $value
+                        ): string =>
+                            trim(
+                                (string) $value
+                            ),
+                        $colorIds
+                    ),
+                    static fn (
+                        string $value
+                    ): bool =>
+                        $value !== ''
+                )
+            );
+
         $segments =
             array_values(
                 array_filter(
@@ -1825,18 +2268,23 @@ class ClothingPreviewService
             }
 
             $colors =
-                array_values(
-                    array_filter(
-                        array_slice(
-                            $parts,
-                            2
-                        ),
-                        static fn (
-                            string $value
-                        ): bool =>
-                            trim($value) !== ''
-                    )
-                );
+                $requestedColors;
+
+            if ($colors === []) {
+                $colors =
+                    array_values(
+                        array_filter(
+                            array_slice(
+                                $parts,
+                                2
+                            ),
+                            static fn (
+                                string $value
+                            ): bool =>
+                                trim($value) !== ''
+                        )
+                    );
+            }
 
             if ($colors === []) {
                 $colors = ['1'];
@@ -1858,11 +2306,20 @@ class ClothingPreviewService
         }
 
         if (! $replaced) {
+            $colors =
+                $requestedColors === []
+                    ? ['1']
+                    : $requestedColors;
+
             $segments[] =
                 $category .
                 '-' .
                 $setId .
-                '-1';
+                '-' .
+                implode(
+                    '-',
+                    $colors
+                );
         }
 
         return implode(

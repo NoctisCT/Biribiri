@@ -240,11 +240,14 @@ class ClothingDatabaseInstaller
             );
         }
 
-        $clothingCatalogId =
-            DB::table(
-                'catalog_clothing'
-            )
-                ->insertGetId([
+        $clothingCatalogId = null;
+
+        try {
+            $clothingCatalogId =
+                DB::table(
+                    'catalog_clothing'
+                )
+                    ->insertGetId([
                     'name' => $code,
                     'setid' =>
                         implode(
@@ -296,6 +299,35 @@ class ClothingDatabaseInstaller
         $catalogRow['limited_sells'] = 0;
         $catalogRow['limited_stack'] = 0;
         $catalogRow['badge'] = null;
+
+        /*
+         * La plantilla histórica puede contener '' en enums MySQL.
+         * Conservamos 0/1 válidos y normalizamos cualquier valor
+         * inválido a '0', equivalente al false que leía el emulador.
+         */
+        foreach ([
+            'have_offer',
+            'club_only',
+        ] as $booleanColumn) {
+            $value = (string) (
+                $catalogRow[
+                    $booleanColumn
+                ] ?? ''
+            );
+
+            $catalogRow[
+                $booleanColumn
+            ] = in_array(
+                $value,
+                [
+                    '0',
+                    '1',
+                ],
+                true
+            )
+                ? $value
+                : '0';
+        }
 
         DB::table('catalog_items')
             ->insert($catalogRow);
@@ -415,6 +447,29 @@ class ClothingDatabaseInstaller
             'clothing_product_id' =>
                 $product->id,
         ];
+        } catch (\Throwable $exception) {
+            /*
+             * catalog_clothing es MyISAM en esta base.
+             * No participa en la transacción InnoDB exterior, así
+             * que compensamos manualmente si algo posterior falla.
+             */
+            if ($clothingCatalogId !== null) {
+                DB::table(
+                    'catalog_clothing'
+                )
+                    ->where(
+                        'id',
+                        $clothingCatalogId
+                    )
+                    ->where(
+                        'name',
+                        $code
+                    )
+                    ->delete();
+            }
+
+            throw $exception;
+        }
     }
 
     private function installMetadata(

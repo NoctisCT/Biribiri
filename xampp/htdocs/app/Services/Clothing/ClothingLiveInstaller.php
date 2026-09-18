@@ -12,12 +12,14 @@ class ClothingLiveInstaller
     public function __construct(
         private readonly ClothingDatabaseInstaller $database,
         private readonly ClothingGamedataInstaller $gamedata,
+        private readonly ClothingApprovalPlanService $approvalPlan,
         private readonly RconService $rcon
     ) {
     }
 
     public function install(
-        ClothingSubmission $submission
+        ClothingSubmission $submission,
+        ?int $moderatorUserId = null
     ): array {
         if (
             $submission->status !== 'pending' ||
@@ -50,6 +52,16 @@ class ClothingLiveInstaller
         $plan = null;
 
         try {
+            /*
+             * Revalida el dry-run dentro del lock. Si otra
+             * solicitud ocupa la misma identidad entre el plan y
+             * la aprobación, se bloquea antes de tocar assets vivos.
+             */
+            $this->approvalPlan
+                ->build(
+                    $submission
+                );
+
             $ids =
                 $this->database
                     ->reserveIds();
@@ -136,6 +148,12 @@ class ClothingLiveInstaller
                 $submission->forceFill([
                     'technical_report' =>
                         $report,
+                    'moderator_user_id' =>
+                        $moderatorUserId,
+                    'moderation_reason' =>
+                        null,
+                    'rejected_at' =>
+                        null,
                 ])->save();
 
                 DB::commit();
@@ -187,6 +205,10 @@ class ClothingLiveInstaller
                     true,
             ];
         } finally {
+            $this->cleanupPreparedPlan(
+                $plan
+            );
+
             try {
                 DB::selectOne(
                     'SELECT RELEASE_LOCK(?) AS released',
@@ -195,5 +217,98 @@ class ClothingLiveInstaller
             } catch (\Throwable) {
             }
         }
+    }
+
+    private function cleanupPreparedPlan(
+        ?array $plan
+    ): void {
+        if (! is_array($plan)) {
+            return;
+        }
+
+        $preparedRoot =
+            realpath(
+                (string) (
+                    $plan[
+                        'prepared_root'
+                    ] ?? ''
+                )
+            );
+
+        $allowedRoot =
+            realpath(
+                storage_path(
+                    'app/clothing_importer/install-prepared'
+                )
+            );
+
+        if (
+            $preparedRoot === false ||
+            $allowedRoot === false ||
+            ! is_dir(
+                $preparedRoot
+            )
+        ) {
+            return;
+        }
+
+        $preparedNormalized =
+            rtrim(
+                str_replace(
+                    '\\',
+                    '/',
+                    $preparedRoot
+                ),
+                '/'
+            );
+
+        $allowedNormalized =
+            rtrim(
+                str_replace(
+                    '\\',
+                    '/',
+                    $allowedRoot
+                ),
+                '/'
+            );
+
+        if (
+            ! str_starts_with(
+                strtolower(
+                    $preparedNormalized
+                ),
+                strtolower(
+                    $allowedNormalized .
+                    '/'
+                )
+            )
+        ) {
+            return;
+        }
+
+        $iterator =
+            new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator(
+                    $preparedRoot,
+                    \FilesystemIterator::SKIP_DOTS
+                ),
+                \RecursiveIteratorIterator::CHILD_FIRST
+            );
+
+        foreach ($iterator as $entry) {
+            if ($entry->isDir()) {
+                @rmdir(
+                    $entry->getPathname()
+                );
+            } else {
+                @unlink(
+                    $entry->getPathname()
+                );
+            }
+        }
+
+        @rmdir(
+            $preparedRoot
+        );
     }
 }

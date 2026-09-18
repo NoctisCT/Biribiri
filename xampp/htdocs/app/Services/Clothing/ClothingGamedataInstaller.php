@@ -19,7 +19,8 @@ class ClothingGamedataInstaller
     public function prepare(
         ClothingSubmission $submission,
         int $publicBaseItemId,
-        int $catalogItemId
+        int $catalogItemId,
+        ?string $previewWorkRoot = null
     ): array {
         $report = $submission->technical_report;
 
@@ -124,12 +125,17 @@ class ClothingGamedataInstaller
                     $submission
                 );
 
-        $work = storage_path(
-            'app/clothing_importer/install-prepared/' .
-            $submission->id .
-            '/' .
-            Str::uuid()->toString()
-        );
+        $work =
+            $previewWorkRoot !== null
+                ? $this->previewWorkRoot(
+                    $previewWorkRoot
+                )
+                : storage_path(
+                    'app/clothing_importer/install-prepared/' .
+                    $submission->id .
+                    '/' .
+                    Str::uuid()->toString()
+                );
 
         $this->ensureDirectory($work);
 
@@ -538,6 +544,16 @@ class ClothingGamedataInstaller
             'part_id_map' => $partIdMap,
             'figure_library_map' =>
                 $figureLibraryMap,
+            'figure_set_map' =>
+                is_array(
+                    $figureMerge[
+                        'source_to_final'
+                    ] ?? null
+                )
+                    ? $figureMerge[
+                        'source_to_final'
+                    ]
+                    : [],
         ];
     }
 
@@ -1850,6 +1866,99 @@ class ClothingGamedataInstaller
                 $path
             );
         }
+    }
+
+    private function previewWorkRoot(
+        string $path
+    ): string {
+        $path = trim($path);
+
+        if ($path === '') {
+            throw new RuntimeException(
+                'Preview work root vacío.'
+            );
+        }
+
+        $allowedRoot =
+            realpath(
+                storage_path(
+                    'app/clothing_importer/previews'
+                )
+            );
+
+        $parent =
+            realpath(
+                dirname($path)
+            );
+
+        if (
+            $allowedRoot === false ||
+            $parent === false
+        ) {
+            throw new RuntimeException(
+                'No se pudo resolver el sandbox de preview.'
+            );
+        }
+
+        $allowed =
+            rtrim(
+                str_replace(
+                    '\\',
+                    '/',
+                    $allowedRoot
+                ),
+                '/'
+            );
+
+        $normalizedParent =
+            rtrim(
+                str_replace(
+                    '\\',
+                    '/',
+                    $parent
+                ),
+                '/'
+            );
+
+        if (
+            strcasecmp(
+                $normalizedParent,
+                $allowed
+            ) !== 0 &&
+            ! str_starts_with(
+                strtolower($normalizedParent),
+                strtolower($allowed . '/')
+            )
+        ) {
+            throw new RuntimeException(
+                'Preview work root fuera del sandbox permitido.'
+            );
+        }
+
+        $name = basename($path);
+
+        if (
+            $name === '' ||
+            $name === '.' ||
+            $name === '..'
+        ) {
+            throw new RuntimeException(
+                'Nombre inválido para preview work root.'
+            );
+        }
+
+        $resolved =
+            $parent .
+            DIRECTORY_SEPARATOR .
+            $name;
+
+        if (file_exists($resolved)) {
+            throw new RuntimeException(
+                'El preview work root ya existe.'
+            );
+        }
+
+        return $resolved;
     }
 
     private function ensureDirectory(

@@ -4,6 +4,8 @@ namespace App\Livewire\Filament;
 
 use App\Models\ClothingSubmission;
 use App\Models\User;
+use App\Services\Clothing\ClothingApprovalPlanService;
+use App\Services\Clothing\ClothingLiveInstaller;
 use App\Services\Clothing\ClothingPreviewService;
 use Filament\Forms;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -410,6 +412,127 @@ class ClothingApplicationsTable extends Component implements HasForms, HasTable
                                 )
                                 ->success()
                                 ->send();
+                        }
+                    ),
+
+                Tables\Actions\Action::make(
+                    'approval_plan'
+                )
+                    ->label('Plan de aprobación')
+                    ->icon(
+                        'heroicon-o-clipboard-document-check'
+                    )
+                    ->color('success')
+                    ->visible(
+                        fn (
+                            ClothingSubmission $record
+                        ): bool =>
+                            $record->status === 'pending' &&
+                            $record->technical_status === 'valid'
+                    )
+                    ->modalHeading(
+                        fn (
+                            ClothingSubmission $record
+                        ): string =>
+                            'Plan de aprobación · ' .
+                            $record->clothing_name
+                    )
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Cerrar')
+                    ->modalContent(
+                        fn (
+                            ClothingSubmission $record
+                        ) =>
+                            view(
+                                'filament.clothing.approval-plan',
+                                [
+                                    'result' =>
+                                        app(
+                                            ClothingApprovalPlanService::class
+                                        )->buildSafe(
+                                            $record
+                                        ),
+                                ]
+                            )
+                    )
+                    ->action(
+                        static fn (): null =>
+                            null
+                    ),
+
+                Tables\Actions\Action::make(
+                    'approve'
+                )
+                    ->label('Aprobar')
+                    ->icon(
+                        'heroicon-o-check-circle'
+                    )
+                    ->color('success')
+                    ->visible(
+                        fn (
+                            ClothingSubmission $record
+                        ): bool =>
+                            $record->status === 'pending' &&
+                            $record->technical_status === 'valid'
+                    )
+                    ->requiresConfirmation()
+                    ->modalHeading(
+                        'Aprobar e instalar ropa'
+                    )
+                    ->modalDescription(
+                        'Se volverá a validar el plan dentro del lock. Después se instalarán assets y registros DB. Si falla cualquier paso previo al commit, se restaurarán los archivos y la transacción DB.'
+                    )
+                    ->modalSubmitActionLabel(
+                        'Aprobar e instalar'
+                    )
+                    ->action(
+                        function (
+                            ClothingSubmission $record
+                        ): void {
+                            try {
+                                $result =
+                                    app(
+                                        ClothingLiveInstaller::class
+                                    )->install(
+                                        $record,
+                                        auth()->user()?->id
+                                    );
+
+                                $body =
+                                    'Instalación completada.';
+
+                                if (
+                                    $result[
+                                        'emulator_restart_required'
+                                    ] ?? false
+                                ) {
+                                    $body .=
+                                        ' Reinicia el emulador antes del primer test dentro del hotel.';
+                                }
+
+                                Notification::make()
+                                    ->title(
+                                        'Ropa aprobada e instalada'
+                                    )
+                                    ->body(
+                                        $body
+                                    )
+                                    ->success()
+                                    ->persistent()
+                                    ->send();
+                            } catch (\Throwable $exception) {
+                                Notification::make()
+                                    ->title(
+                                        'Aprobación bloqueada'
+                                    )
+                                    ->body(
+                                        $exception
+                                            ->getMessage()
+                                    )
+                                    ->danger()
+                                    ->persistent()
+                                    ->send();
+                            }
                         }
                     ),
 

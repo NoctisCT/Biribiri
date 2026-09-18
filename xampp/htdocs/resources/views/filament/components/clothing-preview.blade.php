@@ -92,8 +92,8 @@
                 max-width: 100% !important;
                 max-height: 220px !important;
                 object-fit: contain !important;
-                image-rendering: pixelated;
-                transform: scale(1.7);
+                image-rendering: auto !important;
+                transform: none !important;
                 transform-origin: center bottom;
             }
 
@@ -151,6 +151,7 @@
                 selectedKey: @js($defaultVariant),
                 genders: @js($availableGenders),
                 selectedGender: @js($defaultGender),
+                colorSelections: {},
                 direction: 2,
                 posture: 'std',
                 gesture: '',
@@ -174,16 +175,258 @@
 
                     if (!variant) return '';
 
+                    let figure = '';
+
                     if (
                         variant.figures &&
                         variant.figures[this.selectedGender]
                     ) {
-                        return variant.figures[
-                            this.selectedGender
+                        figure =
+                            variant.figures[
+                                this.selectedGender
+                            ];
+                    } else {
+                        figure =
+                            variant.figure || '';
+                    }
+
+                    return this.applySelectedColors(
+                        figure,
+                        variant
+                    );
+                },
+
+                get selectedColorGroups() {
+                    const variant =
+                        this.selectedVariant;
+
+                    return (
+                        variant &&
+                        Array.isArray(
+                            variant.color_groups
+                        )
+                    )
+                        ? variant.color_groups
+                        : [];
+                },
+
+                get hasColorOptions() {
+                    return this.selectedColorGroups.some(
+                        (group) =>
+                            Array.isArray(
+                                group.slots
+                            ) &&
+                            group.slots.length > 0
+                    );
+                },
+
+                colorGroupKey(group) {
+                    return String(
+                        group &&
+                        (
+                            group.key ||
+                            `${group.category}:${group.set_id}`
+                        )
+                    );
+                },
+
+                resetColorsForSelectedVariant() {
+                    const next = {};
+
+                    for (
+                        const group
+                        of this.selectedColorGroups
+                    ) {
+                        const defaults =
+                            Array.isArray(
+                                group.default_colors
+                            )
+                                ? group.default_colors
+                                : [];
+
+                        next[
+                            this.colorGroupKey(
+                                group
+                            )
+                        ] = [
+                            ...defaults
                         ];
                     }
 
-                    return variant.figure || '';
+                    this.colorSelections =
+                        next;
+                },
+
+                selectedColorId(
+                    group,
+                    slotIndex
+                ) {
+                    const key =
+                        this.colorGroupKey(
+                            group
+                        );
+
+                    const selected =
+                        this.colorSelections[
+                            key
+                        ] || [];
+
+                    const index =
+                        Math.max(
+                            0,
+                            Number(slotIndex) - 1
+                        );
+
+                    return selected[
+                        index
+                    ];
+                },
+
+                selectColor(
+                    group,
+                    slotIndex,
+                    colorId
+                ) {
+                    const key =
+                        this.colorGroupKey(
+                            group
+                        );
+
+                    const next =
+                        [
+                            ...(
+                                this.colorSelections[
+                                    key
+                                ] || []
+                            )
+                        ];
+
+                    const index =
+                        Math.max(
+                            0,
+                            Number(slotIndex) - 1
+                        );
+
+                    next[index] =
+                        Number(colorId);
+
+                    this.colorSelections = {
+                        ...this.colorSelections,
+                        [key]: next
+                    };
+
+                    this.frame = 0;
+                    this.render();
+                },
+
+                applySelectedColors(
+                    figure,
+                    variant
+                ) {
+                    const groups =
+                        (
+                            variant &&
+                            Array.isArray(
+                                variant.color_groups
+                            )
+                        )
+                            ? variant.color_groups
+                            : [];
+
+                    const segments =
+                        String(
+                            figure || ''
+                        )
+                            .split('.')
+                            .filter(
+                                (segment) =>
+                                    segment !== ''
+                            );
+
+                    for (
+                        const group
+                        of groups
+                    ) {
+                        if (
+                            !Array.isArray(
+                                group.slots
+                            ) ||
+                            group.slots.length === 0
+                        ) {
+                            continue;
+                        }
+
+                        const key =
+                            this.colorGroupKey(
+                                group
+                            );
+
+                        const selected =
+                            this.colorSelections[
+                                key
+                            ] ||
+                            group.default_colors ||
+                            [];
+
+                        if (
+                            !Array.isArray(
+                                selected
+                            ) ||
+                            selected.length === 0
+                        ) {
+                            continue;
+                        }
+
+                        const category =
+                            String(
+                                group.category || ''
+                            ).toLowerCase();
+
+                        const setId =
+                            String(
+                                group.set_id || ''
+                            );
+
+                        const replacement = [
+                            category,
+                            setId,
+                            ...selected.map(
+                                (value) =>
+                                    String(value)
+                            )
+                        ].join('-');
+
+                        const segmentIndex =
+                            segments.findIndex(
+                                (segment) => {
+                                    const parts =
+                                        String(
+                                            segment
+                                        ).split('-');
+
+                                    return (
+                                        String(
+                                            parts[0] || ''
+                                        ).toLowerCase() ===
+                                            category &&
+                                        String(
+                                            parts[1] || ''
+                                        ) ===
+                                            setId
+                                    );
+                                }
+                            );
+
+                        if (
+                            segmentIndex >= 0
+                        ) {
+                            segments[
+                                segmentIndex
+                            ] = replacement;
+                        }
+                    }
+
+                    return segments.join('.');
                 },
 
                 init() {
@@ -194,6 +437,8 @@
                         this.selectedKey =
                             this.variants[0].key;
                     }
+
+                    this.resetColorsForSelectedVariant();
 
                     this.bridgeTimeout = window.setTimeout(() => {
                         if (
@@ -377,6 +622,7 @@
 
                 selectVariant(key) {
                     this.selectedKey = key;
+                    this.resetColorsForSelectedVariant();
                     this.frame = 0;
                     this.render();
                 },
@@ -517,7 +763,8 @@
             @endif
 
             <div class="biri-qa-layout">
-                <div class="biri-qa-stage">
+                <div class="min-w-0 space-y-3">
+                    <div class="biri-qa-stage">
                     <div
                         x-show="!hasRendered && !failed"
                         class="absolute inset-0 flex items-center justify-center text-sm text-gray-500"
@@ -536,8 +783,72 @@
                         src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="
                         alt="Preview QA de {{ $record->clothing_name }}"
                         class="max-h-[340px] w-auto object-contain"
-                        style="image-rendering:pixelated;"
+                        style="image-rendering:auto;"
                     >
+                    </div>
+
+                    <template x-if="hasColorOptions">
+                        <div class="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                            <div class="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                Colores
+                            </div>
+
+                            <div class="space-y-4">
+                                <template
+                                    x-for="group in selectedColorGroups"
+                                    :key="colorGroupKey(group)"
+                                >
+                                    <div
+                                        x-show="Array.isArray(group.slots) && group.slots.length > 0"
+                                        class="space-y-2"
+                                    >
+                                        <div
+                                            x-show="selectedColorGroups.length > 1"
+                                            class="text-sm font-semibold"
+                                            x-text="group.label"
+                                        ></div>
+
+                                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:.75rem;">
+                                            <template
+                                                x-for="slot in group.slots"
+                                                :key="colorGroupKey(group) + ':' + slot.index"
+                                            >
+                                                <div class="min-w-0 rounded-lg border border-gray-200 p-2 dark:border-gray-700">
+                                                    <div
+                                                        class="mb-2 text-xs font-semibold text-gray-500"
+                                                        x-text="group.slots.length > 1 ? ('Color ' + slot.index) : 'Color'"
+                                                    ></div>
+
+                                                    <div style="height:150px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable;padding-right:.25rem;">
+                                                        <div class="flex flex-wrap gap-2">
+                                                            <template
+                                                                x-for="color in slot.colors"
+                                                                :key="colorGroupKey(group) + ':' + slot.index + ':' + color.id"
+                                                            >
+                                                                <button
+                                                                    type="button"
+                                                                    class="h-8 w-8 shrink-0 rounded-md border-2 transition"
+                                                                    :class="Number(selectedColorId(group, slot.index)) === Number(color.id) ? 'border-primary-600 ring-2 ring-primary-300' : 'border-gray-300 dark:border-gray-600'"
+                                                                    :style="'background-color:' + color.hex"
+                                                                    :title="color.hex + ' · ID ' + color.id"
+                                                                    x-on:click="selectColor(group, slot.index, color.id)"
+                                                                >
+                                                                    <span
+                                                                        class="sr-only"
+                                                                        x-text="'Color ' + color.hex + ' ID ' + color.id"
+                                                                    ></span>
+                                                                </button>
+                                                            </template>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
                 </div>
 
                 <div class="space-y-4">

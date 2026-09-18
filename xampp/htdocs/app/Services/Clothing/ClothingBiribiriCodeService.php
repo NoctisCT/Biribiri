@@ -59,22 +59,46 @@ class ClothingBiribiriCodeService
                     strlen($sourceCode)
             );
 
+        /*
+         * La identidad Biribiri parte SIEMPRE del nombre moderado.
+         * Así, si el staff cambia "Top Bustier" por
+         * "Top Bustier II", cambia también la identidad técnica.
+         *
+         * En un SET pueden existir varias piezas con el mismo
+         * prefijo de library. Conservamos el tail fuente solo cuando
+         * aporta una distinción que no está ya al final del nombre.
+         */
+        $submissionName =
+            $this->submissionName(
+                $submission
+            );
+
         $tail =
             $this->sourceTail(
                 $sourceCode
             );
 
-        if ($tail === '') {
-            $tail =
-                $this->submissionName(
-                    $submission
-                );
+        $identity =
+            $submissionName;
+
+        if (
+            $tail !== '' &&
+            ! str_ends_with(
+                strtolower(
+                    $submissionName
+                ),
+                strtolower(
+                    $tail
+                )
+            )
+        ) {
+            $identity .= $tail;
         }
 
         return $prefix .
             'biri' .
             $this->year($submission) .
-            $tail;
+            $identity;
     }
 
     private function year(
