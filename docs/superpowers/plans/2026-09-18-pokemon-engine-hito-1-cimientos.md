@@ -19,6 +19,7 @@
 - Motor de tablas: `ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
 - Maven: `C:\Users\erale\Downloads\apache-maven-3.9.16-bin\apache-maven-3.9.16\bin\mvn.cmd`
 - Build del cliente: `yarn build` desde `xampp/htdocs/nitro-react`
+- **Prohibido ejecutar `yarn install`**: rompió Subastas, Arcade y otros sistemas la última vez. `node_modules/@nitrots/nitro-renderer` es una copia física, no un enlace, así que todo cambio en `submodules/renderer` debe replicarse a mano en `node_modules` (ver tarea 5, paso 7)
 - Todo el trabajo ocurre en el worktree `build/pokemon-engine`, rama `codex/pokemon-engine`
 
 ## Aviso de despliegue (leer antes de la tarea 6)
@@ -1120,15 +1121,42 @@ Y el registro justo después de la línea 147:
         this._events.set(IncomingHeader.POKEMON_RESULT, PokemonResultEvent);
 ```
 
-- [ ] **Step 7: Compilar el renderer y el cliente**
+- [ ] **Step 7: Replicar los archivos en `node_modules`**
+
+**No ejecutar `yarn install` en ningún caso.** Rompió Subastas, Arcade y otras cosas la última vez que se hizo.
+
+`node_modules/@nitrots/nitro-renderer` **no es un enlace simbólico: es una copia física** del directorio, comprobado con `Get-Item`. Vite resuelve el paquete desde `node_modules`, así que los cambios en `submodules/renderer` **no llegan al build por sí solos**. Los doce archivos de esta tarea tienen que existir en las dos rutas, con contenido idéntico.
+
+Run, desde la raíz del checkout donde se vaya a compilar:
+```bash
+cp -r xampp/htdocs/nitro-react/submodules/renderer/src/nitro/communication/messages/outgoing/pokemonengine xampp/htdocs/nitro-react/node_modules/@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/
+cp -r xampp/htdocs/nitro-react/submodules/renderer/src/nitro/communication/messages/parser/pokemonengine xampp/htdocs/nitro-react/node_modules/@nitrots/nitro-renderer/src/nitro/communication/messages/parser/
+cp -r xampp/htdocs/nitro-react/submodules/renderer/src/nitro/communication/messages/incoming/pokemonengine xampp/htdocs/nitro-react/node_modules/@nitrots/nitro-renderer/src/nitro/communication/messages/incoming/
+cp xampp/htdocs/nitro-react/submodules/renderer/src/nitro/communication/NitroMessages.ts xampp/htdocs/nitro-react/node_modules/@nitrots/nitro-renderer/src/nitro/communication/NitroMessages.ts
+cp xampp/htdocs/nitro-react/submodules/renderer/src/nitro/communication/messages/incoming/IncomingHeader.ts xampp/htdocs/nitro-react/node_modules/@nitrots/nitro-renderer/src/nitro/communication/messages/incoming/IncomingHeader.ts
+cp xampp/htdocs/nitro-react/submodules/renderer/src/nitro/communication/messages/outgoing/OutgoingHeader.ts xampp/htdocs/nitro-react/node_modules/@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/OutgoingHeader.ts
+cp xampp/htdocs/nitro-react/submodules/renderer/src/nitro/communication/messages/incoming/index.ts xampp/htdocs/nitro-react/node_modules/@nitrots/nitro-renderer/src/nitro/communication/messages/incoming/index.ts
+cp xampp/htdocs/nitro-react/submodules/renderer/src/nitro/communication/messages/outgoing/index.ts xampp/htdocs/nitro-react/node_modules/@nitrots/nitro-renderer/src/nitro/communication/messages/outgoing/index.ts
+cp xampp/htdocs/nitro-react/submodules/renderer/src/nitro/communication/messages/parser/index.ts xampp/htdocs/nitro-react/node_modules/@nitrots/nitro-renderer/src/nitro/communication/messages/parser/index.ts
+```
+
+Verificar que no queda ninguna diferencia:
+```bash
+diff -r xampp/htdocs/nitro-react/submodules/renderer/src/nitro/communication xampp/htdocs/nitro-react/node_modules/@nitrots/nitro-renderer/src/nitro/communication
+```
+Expected: sin salida.
+
+- [ ] **Step 8: Compilar el cliente**
 
 Run:
 ```bash
 cd xampp/htdocs/nitro-react && yarn build
 ```
-Expected: build sin errores de TypeScript. Si aparece `Cannot find module './pokemonengine'`, falta uno de los `index.ts` del paso 4.
+Expected: build sin errores de TypeScript. Si aparece `Cannot find module './pokemonengine'`, falta una de las copias del paso 7 o uno de los `index.ts` del paso 4.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
+
+Solo se versiona `submodules/renderer`; `node_modules` está ignorado por git y es una copia de trabajo.
 
 ```bash
 git add xampp/htdocs/nitro-react/submodules/renderer/src/nitro/communication
