@@ -1,6 +1,7 @@
 import { IAssetData, IObjectVisualizationData, IRoomObjectGraphicVisualization, IRoomObjectVisualizationFactory, NitroLogger, RoomObjectVisualizationType } from '../../../api';
 import { RoomObjectSpriteVisualization } from '../../../room';
 import { Nitro } from '../../Nitro';
+import { PokemonFollowerVisualization, PokemonFollowerVisualizationData } from './visualization/pokemon';
 import { AvatarVisualization, AvatarVisualizationData, FurnitureAnimatedVisualization, FurnitureAnimatedVisualizationData, FurnitureBadgeDisplayVisualization, FurnitureBBVisualization, FurnitureBottleVisualization, FurnitureBuilderPlaceholderVisualization, FurnitureCounterClockVisualization, FurnitureCuboidVisualization, FurnitureExternalImageVisualization, FurnitureFireworksVisualization, FurnitureGiftWrappedFireworksVisualization, FurnitureGiftWrappedVisualization, FurnitureGuildCustomizedVisualization, FurnitureGuildIsometricBadgeVisualization, FurnitureHabboWheelVisualization, FurnitureIsometricBBVisualization, FurnitureMannequinVisualization, FurnitureMannequinVisualizationData, FurniturePartyBeamerVisualization, FurniturePlanetSystemVisualization, FurniturePosterVisualization, FurnitureQueueTileVisualization, FurnitureResettingAnimatedVisualization, FurnitureRoomBackgroundVisualization, FurnitureScoreBoardVisualization, FurnitureSoundBlockVisualization, FurnitureStickieVisualization, FurnitureValRandomizerVisualization, FurnitureVisualization, FurnitureVisualizationData, FurnitureVoteCounterVisualization, FurnitureVoteMajorityVisualization, FurnitureWaterAreaVisualization, FurnitureYoutubeVisualization, PetVisualization, PetVisualizationData, RoomVisualization, RoomVisualizationData, TileCursorVisualization } from './visualization';
 
 export class RoomObjectVisualizationFactory implements IRoomObjectVisualizationFactory
@@ -44,6 +45,9 @@ export class RoomObjectVisualizationFactory implements IRoomObjectVisualizationF
                 break;
             case RoomObjectVisualizationType.PET_ANIMATED:
                 visualization = PetVisualization;
+                break;
+            case RoomObjectVisualizationType.POKEMON_FOLLOWER:
+                visualization = PokemonFollowerVisualization;
                 break;
             case RoomObjectVisualizationType.FURNITURE_STATIC:
                 visualization = FurnitureVisualization;
@@ -193,6 +197,9 @@ export class RoomObjectVisualizationFactory implements IRoomObjectVisualizationF
             case RoomObjectVisualizationType.FURNITURE_YOUTUBE:
             case RoomObjectVisualizationType.TILE_CURSOR:
                 visualizationData = new FurnitureAnimatedVisualizationData();
+                break;
+            case RoomObjectVisualizationType.POKEMON_FOLLOWER:
+                visualizationData = new PokemonFollowerVisualizationData();
                 break;
             case RoomObjectVisualizationType.FURNITURE_MANNEQUIN:
                 visualizationData = new FurnitureMannequinVisualizationData();

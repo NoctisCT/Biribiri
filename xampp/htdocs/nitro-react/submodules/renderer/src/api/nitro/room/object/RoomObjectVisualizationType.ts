@@ -36,5 +36,6 @@ export class RoomObjectVisualizationType
     public static PET_ANIMATED = 'pet_animated';
     public static BOT = 'bot';
     public static RENTABLE_BOT = 'rentable_bot';
+    public static POKEMON_FOLLOWER: string = 'pokemon_follower';
     public static TILE_CURSOR = 'tile_cursor';
 }

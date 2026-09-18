@@ -67,6 +67,7 @@ export class RoomObjectLogicType
     public static BOT = 'bot';
     public static RENTABLE_BOT = 'rentable_bot';
     public static PET = 'pet';
+    public static POKEMON_FOLLOWER = 'pokemon_follower';
     public static TILE_CURSOR = 'tile_cursor';
     public static SELECTION_ARROW = 'selection_arrow';
     public static GAME_SNOWBALL = 'game_snowball';

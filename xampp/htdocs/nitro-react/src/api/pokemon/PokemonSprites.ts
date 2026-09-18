@@ -1,3 +1,5 @@
+import { NitroTexture } from '@nitrots/nitro-renderer';
+
 /**
  * Carga de sprites de PMDCollab/SpriteCollab.
  *
@@ -27,6 +29,10 @@ export interface PokemonAnim
     anclaX: number;
     /** Donde pisa el dibujo dentro del fotograma, en pixeles del sprite. */
     anclaY: number;
+    /** La hoja cargada, para poder recortar fotogramas sueltos. */
+    hoja: HTMLImageElement;
+    /** Texturas ya recortadas, por fila, fotograma y escala. */
+    recortes: Map<string, NitroTexture>;
 }
 
 export interface PokemonSpriteSet
@@ -245,7 +251,9 @@ export async function loadPokemonAnim(speciesId: number, name: string): Promise<
             shadowUrl: `${ pokemonSpriteBase(speciesId) }/${ name }-Shadow.png`,
             totalMs,
             anclaX: anclas.x,
-            anclaY: anclas.y
+            anclaY: anclas.y,
+            hoja: image,
+            recortes: new Map()
         };
 
         set.anims.set(name, anim);
@@ -301,4 +309,53 @@ export function frameAt(anim: PokemonAnim, elapsedMs: number, loop: boolean): nu
     }
 
     return Math.min(anim.durations.length - 1, anim.frames - 1);
+}
+
+
+/**
+ * Un fotograma suelto de la hoja, ya recortado y escalado, como textura de PIXI.
+ *
+ * El objeto de sala dibuja una textura, no un trozo de una hoja con CSS, asi que
+ * cada combinacion de fila y fotograma se recorta una vez y se guarda. El
+ * escalado es de vecino mas cercano: son pixeles, y suavizarlos los emborrona.
+ */
+export function recorteDeFotograma(
+    anim: PokemonAnim, fila: number, fotograma: number, escala: number): NitroTexture | null
+{
+    const clave = `${ fila }:${ fotograma }:${ escala }`;
+    const guardado = anim.recortes.get(clave);
+
+    if(guardado) return guardado;
+
+    try
+    {
+        const ancho = Math.max(1, Math.round(anim.frameWidth * escala));
+        const alto = Math.max(1, Math.round(anim.frameHeight * escala));
+
+        const lienzo = document.createElement('canvas');
+
+        lienzo.width = ancho;
+        lienzo.height = alto;
+
+        const contexto = lienzo.getContext('2d');
+
+        if(!contexto) return null;
+
+        contexto.imageSmoothingEnabled = false;
+
+        contexto.drawImage(
+            anim.hoja,
+            fotograma * anim.frameWidth, fila * anim.frameHeight, anim.frameWidth, anim.frameHeight,
+            0, 0, ancho, alto);
+
+        const textura = NitroTexture.from(lienzo);
+
+        anim.recortes.set(clave, textura);
+
+        return textura;
+    }
+    catch(error)
+    {
+        return null;
+    }
 }

@@ -1,34 +1,28 @@
-import { Vector3d } from '@nitrots/nitro-renderer';
+import { RoomObjectVisualizationType, Vector3d } from '@nitrots/nitro-renderer';
 import { FC, useEffect, useRef, useState } from 'react';
 import { GetRoomEngine } from '../../../../api';
 import { addPokemonFollowerListener, getPokemonFollowers, PokemonFollower, requestFollowerSnapshot } from '../../../../api/pokemon/PokemonEngineAdapter';
-import { frameAt, loadPokemonAnim, pmdRow, PokemonAnim } from '../../../../api/pokemon/PokemonSprites';
+import { frameAt, loadPokemonAnim, pmdRow, PokemonAnim, recorteDeFotograma } from '../../../../api/pokemon/PokemonSprites';
 import { useRoom } from '../../../../hooks';
-import './PokemonFollowerLayer.scss';
 
 /**
- * Dibuja el Pokemon que sigue a cada jugador de la sala.
+ * El Pokemon que sigue a cada jugador, como objeto de sala de verdad.
  *
- * Va en una capa de HTML encima del lienzo de la sala, no dentro del motor de
- * render de Nitro. Es deliberado: asi se ve ya, sin tocar el pipeline de
- * entidades, que es trabajo de la fase 2. Lo que se pierde con esto es el
- * recorte por profundidad: el Pokemon se dibuja siempre por delante del furni
- * aunque este detras de el.
+ * No dibuja nada por su cuenta: crea un objeto del tipo `pokemon_follower` en el
+ * motor de Nitro y en cada fotograma le deja la posicion y la textura que toca.
+ * Dibujar es cosa de `PokemonFollowerVisualization`, en el renderer.
  *
- * El servidor manda baldosas, no pixeles. Aqui se interpola de la baldosa
- * anterior a la nueva durante lo que dura un paso de Habbo, porque si no el
- * Pokemon aparece a saltos en vez de caminar.
+ * Esto es lo que le da profundidad. Antes era una capa de HTML encima del lienzo
+ * y el Pokemon se pintaba siempre por delante del furni y de los avatares; ahora
+ * entra en la misma lista ordenada que todo lo demas y se tapa como es debido.
  *
- * La posicion se recalcula en cada fotograma a partir de la geometria de la
- * sala, asi que arrastrar o acercar la camara lo arrastra con ella sin escuchar
- * ningun evento.
+ * El servidor manda baldosas, no pixeles, asi que la posicion se interpola de la
+ * baldosa anterior a la nueva durante lo que dura un paso de Habbo. Como el motor
+ * acepta coordenadas con decimales, basta con moverlo en el espacio de la sala y
+ * la camara hace el resto.
  */
 
-/**
- * Un paso de Habbo dura un ciclo de sala, medio segundo. Es lo que tarda el
- * avatar en pasar de una baldosa a la siguiente, y lo que debe tardar el
- * Pokemon en recorrer el mismo tramo.
- */
+/** Un paso de Habbo dura un ciclo de sala. */
 const MS_POR_BALDOSA = 500;
 
 /**
@@ -36,6 +30,12 @@ const MS_POR_BALDOSA = 500;
  * asi que a tamano nativo el Pokemon se ve diminuto al lado de su entrenador.
  */
 const ESCALA_POKEMON = 2;
+
+/**
+ * Los identificadores de objeto de los usuarios de una sala son indices bajos.
+ * Los seguidores se van bien lejos para no chocar con ninguno.
+ */
+const ID_BASE = 900000;
 
 interface Pintado
 {
@@ -62,9 +62,9 @@ export const PokemonFollowerLayer: FC<{}> = () =>
 {
     const { roomSession = null } = useRoom();
     const [ seguidores, setSeguidores ] = useState<PokemonFollower[]>([]);
-    const elementos = useRef(new Map<number, HTMLDivElement>());
     const pintados = useRef(new Map<number, Pintado>());
     const movimientos = useRef(new Map<number, Movimiento>());
+    const creados = useRef(new Set<number>());
     const peticiones = useRef(0);
 
     useEffect(() =>
@@ -172,116 +172,87 @@ export const PokemonFollowerLayer: FC<{}> = () =>
                 }
             })();
         }
-
-        for(const userId of Array.from(pintados.current.keys()))
-        {
-            if(!seguidores.some(seguidor => seguidor.userId === userId))
-            {
-                pintados.current.delete(userId);
-                elementos.current.delete(userId);
-                movimientos.current.delete(userId);
-            }
-        }
     }, [ seguidores ]);
 
     useEffect(() =>
     {
         if(!roomSession) return;
 
+        const roomId = roomSession.roomId;
         let vivo = true;
         let identificador = 0;
+
+        const quitarObjeto = (userId: number) =>
+        {
+            GetRoomEngine().removeRoomObjectUser(roomId, ID_BASE + userId);
+            creados.current.delete(userId);
+        };
 
         const pintar = () =>
         {
             if(!vivo) return;
 
-            const roomId = roomSession.roomId;
-            const geometria = GetRoomEngine().getRoomInstanceGeometry(roomId, 1);
-            const lienzo = GetRoomEngine().getRoomInstanceRenderingCanvas(roomId, 1);
+            const ahora = performance.now();
 
-            if(geometria && lienzo)
+            // Los que ya no estan se retiran de la sala.
+            for(const userId of Array.from(creados.current))
             {
-                const escalaSala = lienzo.scale;
-                const escala = escalaSala * ESCALA_POKEMON;
-                const ahora = performance.now();
+                if(!seguidores.some(seguidor => seguidor.userId === userId)) quitarObjeto(userId);
+            }
 
-                const aPantalla = (x: number, y: number, z: number) =>
+            for(const seguidor of seguidores)
+            {
+                const pintado = pintados.current.get(seguidor.userId);
+                const movimiento = movimientos.current.get(seguidor.userId);
+
+                if(!pintado || !movimiento) continue;
+
+                const avance = Math.min(1, (ahora - movimiento.empiezaMs) / MS_POR_BALDOSA);
+                const andando = avance < 1;
+                const anim = (andando && pintado.andar) ? pintado.andar : pintado.anim;
+
+                if(!anim) continue;
+
+                const objectId = ID_BASE + seguidor.userId;
+
+                if(!creados.current.has(seguidor.userId))
                 {
-                    // El centro de la baldosa, no su esquina: si no, el sprite se ve
-                    // desplazado media casilla y parece que flota.
-                    const punto = geometria.getScreenPoint(new Vector3d(x + 0.5, y + 0.5, z));
+                    const creado = GetRoomEngine().createRoomObjectUser(
+                        roomId, objectId, RoomObjectVisualizationType.POKEMON_FOLLOWER);
 
-                    if(!punto) return null;
+                    if(!creado) continue;
 
-                    return {
-                        x: (punto.x * escalaSala) + (lienzo.width / 2) + lienzo.screenOffsetX,
-                        y: (punto.y * escalaSala) + (lienzo.height / 2) + lienzo.screenOffsetY
-                    };
-                };
-
-                for(const seguidor of seguidores)
-                {
-                    const elemento = elementos.current.get(seguidor.userId);
-                    const pintado = pintados.current.get(seguidor.userId);
-                    const movimiento = movimientos.current.get(seguidor.userId);
-
-                    if(!elemento) continue;
-
-                    if(!pintado || !movimiento)
-                    {
-                        elemento.style.display = 'none';
-                        continue;
-                    }
-
-                    const avance = Math.min(1, (ahora - movimiento.empiezaMs) / MS_POR_BALDOSA);
-                    const andando = avance < 1;
-
-                    const anim = (andando && pintado.andar) ? pintado.andar : pintado.anim;
-
-                    if(!anim)
-                    {
-                        elemento.style.display = 'none';
-                        continue;
-                    }
-
-                    const desde = aPantalla(movimiento.desdeX, movimiento.desdeY, movimiento.desdeZ);
-                    const hasta = aPantalla(movimiento.hastaX, movimiento.hastaY, movimiento.hastaZ);
-
-                    if(!desde || !hasta)
-                    {
-                        elemento.style.display = 'none';
-                        continue;
-                    }
-
-                    const x = desde.x + ((hasta.x - desde.x) * avance);
-                    const y = desde.y + ((hasta.y - desde.y) * avance);
-
-                    const ancho = anim.frameWidth * escala;
-                    const alto = anim.frameHeight * escala;
-
-                    // El ancla es donde pisa el dibujo dentro del fotograma, no el
-                    // borde de la caja: los fotogramas de PMD llevan mucho hueco
-                    // transparente y anclarlos por la caja deja al Pokemon flotando.
-                    const izquierda = Math.round(x - (anim.anclaX * escala));
-                    const arriba = Math.round(y - (anim.anclaY * escala));
-
-                    // Los estados puntuales no dan vueltas: se quedan en el ultimo
-                    // fotograma hasta que el servidor mande otro estado.
-                    const bucle = andando || !esPuntual(seguidor.state);
-                    const desdeMs = andando ? movimiento.empiezaMs : pintado.desdeMs;
-                    const fotograma = frameAt(anim, ahora - desdeMs, bucle);
-                    const fila = pmdRow(movimiento.direccion, anim.rows);
-
-                    elemento.style.display = 'block';
-                    elemento.style.width = `${ ancho }px`;
-                    elemento.style.height = `${ alto }px`;
-                    elemento.style.transform = `translate3d(${ izquierda }px, ${ arriba }px, 0)`;
-                    elemento.style.backgroundImage = `url(${ anim.url })`;
-                    elemento.style.backgroundSize =
-                        `${ anim.frames * ancho }px ${ anim.rows * alto }px`;
-                    elemento.style.backgroundPosition =
-                        `${ -fotograma * ancho }px ${ -fila * alto }px`;
+                    creados.current.add(seguidor.userId);
                 }
+
+                const objeto = GetRoomEngine().getRoomObjectUser(roomId, objectId);
+
+                if(!objeto)
+                {
+                    creados.current.delete(seguidor.userId);
+                    continue;
+                }
+
+                // El motor acepta baldosas con decimales, asi que el paso se
+                // interpola en coordenadas de sala y no en pixeles de pantalla.
+                const x = movimiento.desdeX + ((movimiento.hastaX - movimiento.desdeX) * avance);
+                const y = movimiento.desdeY + ((movimiento.hastaY - movimiento.desdeY) * avance);
+                const z = movimiento.desdeZ + ((movimiento.hastaZ - movimiento.desdeZ) * avance);
+
+                objeto.setLocation(new Vector3d(x, y, z));
+
+                const bucle = andando || !esPuntual(seguidor.state);
+                const desdeMs = andando ? movimiento.empiezaMs : pintado.desdeMs;
+                const fotograma = frameAt(anim, ahora - desdeMs, bucle);
+                const fila = pmdRow(movimiento.direccion, anim.rows);
+                const textura = recorteDeFotograma(anim, fila, fotograma, ESCALA_POKEMON);
+
+                if(!textura) continue;
+
+                objeto.model.setValue('pokemon_textura', textura);
+                objeto.model.setValue('pokemon_ancla_x', anim.anclaX * ESCALA_POKEMON);
+                objeto.model.setValue('pokemon_ancla_y', anim.anclaY * ESCALA_POKEMON);
+                objeto.model.setValue('pokemon_usuario', seguidor.userId);
             }
 
             identificador = requestAnimationFrame(pintar);
@@ -293,26 +264,12 @@ export const PokemonFollowerLayer: FC<{}> = () =>
         {
             vivo = false;
             cancelAnimationFrame(identificador);
+
+            for(const userId of Array.from(creados.current)) quitarObjeto(userId);
         };
     }, [ roomSession, seguidores ]);
 
-    if(!roomSession) return null;
-
-    return (
-        <div className="pokemon-follower-layer">
-            { seguidores.map(seguidor => (
-                <div
-                    key={ seguidor.userId }
-                    className="pokemon-follower"
-                    title={ seguidor.name }
-                    ref={ elemento =>
-                    {
-                        if(elemento) elementos.current.set(seguidor.userId, elemento);
-                        else elementos.current.delete(seguidor.userId);
-                    } } />
-            )) }
-        </div>
-    );
+    return null;
 }
 
 /** Los estados que se quedan quietos al acabar en vez de repetirse. */

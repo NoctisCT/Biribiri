@@ -425,6 +425,11 @@ export class RoomContentLoader implements IFurnitureDataListener, IRoomContentLo
 
         if(type === RoomObjectVisualizationType.USER) return false;
 
+        // El seguidor Pokemon no tiene `.nitro` que descargar: sus texturas las
+        // prepara el cliente. Sin esto el motor intenta bajarlo como un furni,
+        // no lo encuentra y lo sustituye por el cubo negro del placeholder.
+        if(type === RoomObjectVisualizationType.POKEMON_FOLLOWER) return false;
+
         return true;
     }
 
