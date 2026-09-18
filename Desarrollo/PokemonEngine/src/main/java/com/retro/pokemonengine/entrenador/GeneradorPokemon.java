@@ -5,7 +5,11 @@ import com.retro.pokemonengine.combate.PokemonCombate;
 import com.retro.pokemonengine.combate.RngCombate;
 import com.retro.pokemonengine.combate.Stat;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Crea un Pokemon nuevo: salvaje, regalado o de un entrenador.
@@ -84,12 +88,22 @@ public final class GeneradorPokemon
 
         pokemon.movimientos().clear();
 
-        int desde = Math.max(0, aprendidos.size() - MOVIMIENTOS_MAX);
+        // Se recorre de atras adelante saltando los repetidos. Un learnset puede
+        // traer el mismo movimiento mas de una vez, y sin este filtro el Pokemon
+        // nace con el mismo ataque ocupando dos huecos: un Rattata salvaje salio
+        // asi en la prueba del hito 5.
+        Deque<Integer> elegidos = new ArrayDeque<>();
+        Set<Integer> vistos = new HashSet<>();
 
-        for(int i = desde; i < aprendidos.size(); i++)
+        for(int i = aprendidos.size() - 1; i >= 0 && elegidos.size() < MOVIMIENTOS_MAX; i--)
         {
             int moveId = aprendidos.get(i).moveId();
 
+            if(vistos.add(moveId)) elegidos.addFirst(moveId);
+        }
+
+        for(int moveId : elegidos)
+        {
             pokemon.movimientos().add(MovimientoPoseido.nuevo(moveId, catalogo.ppBase(moveId)));
         }
     }

@@ -6,6 +6,8 @@ import com.retro.pokemonengine.combate.Stat;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -201,6 +203,45 @@ class GeneradorPokemonTest
         assertEquals(5, p.movimientos().get(3).moveId());
         assertEquals(10, p.movimientos().get(3).ppBase(), "El PP base sale del catalogo");
         assertEquals(10, p.movimientos().get(3).ppActual(), "Nace con los PP llenos");
+    }
+
+    @Test
+    void unMovimientoRepetidoEnElLearnsetNoOcupaDosHuecos()
+    {
+        // El learnset real trae movimientos repetidos: el Rattata de la prueba del
+        // hito 5 nacio con el mismo ataque dos veces.
+        CatalogoGeneracionFalso catalogo = new CatalogoGeneracionFalso()
+                .con(pikachu())
+                .aprende(PIKACHU, 1, 1, 35)
+                .aprende(PIKACHU, 2, 4, 30)
+                .aprende(PIKACHU, 2, 7, 30)
+                .aprende(PIKACHU, 3, 10, 20)
+                .aprende(PIKACHU, 4, 13, 15);
+
+        PokemonPoseido p = GeneradorPokemon.generar(pikachu(), 20, opciones(), new RngCombate(1L));
+        GeneradorPokemon.asignarMovimientosIniciales(p, catalogo);
+
+        List<Integer> ids = p.movimientos().stream().map(MovimientoPoseido::moveId).toList();
+
+        assertEquals(4, ids.size());
+        assertEquals(4, new HashSet<>(ids).size(), "Ningun movimiento puede salir dos veces: " + ids);
+        assertEquals(List.of(1, 2, 3, 4), ids, "Se quedan los mas recientes, en orden de aprendizaje");
+    }
+
+    @Test
+    void siSolohayTresMovimientosDistintosNoInventaElCuarto()
+    {
+        CatalogoGeneracionFalso catalogo = new CatalogoGeneracionFalso()
+                .con(pikachu())
+                .aprende(PIKACHU, 1, 1, 35)
+                .aprende(PIKACHU, 2, 4, 30)
+                .aprende(PIKACHU, 1, 7, 35)
+                .aprende(PIKACHU, 3, 10, 20);
+
+        PokemonPoseido p = GeneradorPokemon.generar(pikachu(), 20, opciones(), new RngCombate(1L));
+        GeneradorPokemon.asignarMovimientosIniciales(p, catalogo);
+
+        assertEquals(List.of(2, 1, 3), p.movimientos().stream().map(MovimientoPoseido::moveId).toList());
     }
 
     @Test

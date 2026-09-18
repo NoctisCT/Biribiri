@@ -32,6 +32,9 @@ public class PokemonEnginePlugin extends HabboPlugin implements EventListener
         ServicioPokedex.cargar();
         ServicioGeneracion.cargar();
         ServicioZonas.cargar();
+        ServicioObjetos.cargar();
+        ServicioEncuentros.cargar();
+        ServicioTienda.cargar();
         ServicioAnimacionesSeguidor.sincronizar();
         ServicioSeguidor.iniciar();
 
@@ -53,6 +56,12 @@ public class PokemonEnginePlugin extends HabboPlugin implements EventListener
     public void onUserExitRoom(UserExitRoomEvent event)
     {
         ServicioSeguidor.alSalir(event.habbo);
+
+        // Un encuentro no sobrevive a cambiar de sala: el Pokemon estaba alli.
+        if(event.habbo != null && event.habbo.getHabboInfo() != null)
+        {
+            ServicioEncuentros.limpiar(event.habbo.getHabboInfo().getId());
+        }
     }
 
     @EventHandler

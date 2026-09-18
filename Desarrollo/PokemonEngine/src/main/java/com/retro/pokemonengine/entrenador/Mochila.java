@@ -84,6 +84,22 @@ public final class Mochila
         return salida;
     }
 
+    /**
+     * Si entrarian esas unidades enteras, sin meterlas.
+     *
+     * Una compra se comprueba antes de cobrar: anadir a medias dejaria al
+     * jugador pagando por lo que no le cabe.
+     */
+    public boolean cabe(int itemId, Bolsillo bolsillo, int cantidad)
+    {
+        if(cantidad <= 0) return false;
+
+        Entrada entrada = this.entradas.get(itemId);
+        int actual = entrada == null ? 0 : entrada.cantidad();
+
+        return cantidad <= bolsillo.topePila() - actual;
+    }
+
     public Resultado anadir(int itemId, Bolsillo bolsillo, int cantidad)
     {
         if(cantidad <= 0) return Resultado.mal(CANTIDAD_INVALIDA);

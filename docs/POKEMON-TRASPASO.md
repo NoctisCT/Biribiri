@@ -5,9 +5,9 @@ Rama: `codex/pokemon-engine` · Worktree: `build/pokemon-engine` · Base: `dev`
 
 **Este documento es el punto de entrada.** Está escrito para que alguien sin contexto de la conversación pueda continuar. Lo que no esté aquí, está en los documentos que enlaza.
 
-## Para la siguiente sesión: empezar por el hito 5
+## Para la siguiente sesión: empezar por el hito 6
 
-Los hitos 1 a 4 están hechos y probados. Lo siguiente es el **hito 5**, con su plan ya escrito en `docs/superpowers/plans/2026-09-19-pokemon-engine-hito-5-mundo.md`: catálogo de objetos, encuentros, captura, centros Pokémon y tiendas.
+Los hitos 1 a 5 están hechos. Lo siguiente es el **hito 6**: combate de punta a punta, salvaje y PvP, con `ServicioArena`, formación en sala y bloqueo de posición. Su plan **está por escribir**.
 
 Antes de escribir una línea, leer de este documento la **sección 3 (restricciones del entorno)**: cada punto de esa lista costó un fallo real.
 
@@ -15,8 +15,8 @@ Orden mínimo para ponerse en marcha:
 
 ```bash
 cd build/pokemon-engine
-"/c/Users/erale/Downloads/apache-maven-3.9.16-bin/apache-maven-3.9.16/bin/mvn.cmd" -o test   # 225 en verde
-grep -rn "com.eu.habbo" Desarrollo/PokemonEngine/src/main/java/com/retro/pokemonengine/{combate,entrenador,seguidor}/
+"/c/Users/erale/Downloads/apache-maven-3.9.16-bin/apache-maven-3.9.16/bin/mvn.cmd" -o test   # 263 en verde
+grep -rn "com.eu.habbo" Desarrollo/PokemonEngine/src/main/java/com/retro/pokemonengine/{combate,entrenador,seguidor,encuentros,captura,tienda}/
 ```
 
 El segundo comando **no debe devolver nada** salvo un comentario en `CatalogoAnimaciones`. Es la invariante que permite probar las reglas sin levantar el emulador.
@@ -35,7 +35,7 @@ El segundo comando **no debe devolver nada** salvo un comentario en `CatalogoAni
 | `docs/superpowers/plans/2026-09-18-pokemon-engine-hito-3a-nucleo-numerico.md` | Plan del hito 3a (hecho) |
 | `docs/superpowers/plans/2026-09-18-pokemon-engine-hito-3b-turno.md` | Plan del hito 3b (hecho) |
 | `docs/superpowers/plans/2026-09-18-pokemon-engine-hito-4-entrenador.md` | Plan del hito 4 (hecho) |
-| `docs/superpowers/plans/2026-09-19-pokemon-engine-hito-5-mundo.md` | **Plan del hito 5 (siguiente)** |
+| `docs/superpowers/plans/2026-09-19-pokemon-engine-hito-5-mundo.md` | Plan del hito 5 (hecho) |
 
 ---
 
@@ -186,6 +186,22 @@ Repositorio `PMDCollab/SpriteCollab`. Verificado en `sprite/0025`:
 
 **Licencia: CC BY-NC 4.0 con atribución obligatoria**, verificado en la política de envío. La cláusula no comercial choca con `MONETIZACION.md`. El riesgo mayor no es esa cláusula sino que los Pokémon son IP de Nintendo y Game Freak. Decisión del propietario: se usan, con créditos.
 
+### 4.5 bis PokéAPI ya no da el precio de los objetos
+
+El endpoint `/item` **ya no trae `cost`**. Ahora publica `prices`, una lista por grupo de versión con `purchase_price` y `sell_price`, y a día de hoy está vacía para buena parte de Kanto: Poké Ball, Poción, Superpoción, Revivir, Antídoto y Repelente devuelven `prices: []`. Super Ball, Ultra Ball y las MT sí la traen.
+
+Por eso `MapeadorObjeto` lee `prices` prefiriendo los grupos de Kanto (`red-blue`, `yellow`, `firered-leafgreen`) y, cuando no hay ninguno, cae en `PRECIOS_KANTO`, una tabla sembrada a mano con los precios de gen 1. El precio de venta sale del `sell_price` real si existe y, si no, es la mitad del de compra.
+
+Lo mismo pasa con el **multiplicador de captura de las balls**, que PokéAPI no ha dado nunca: se siembra en `MapeadorObjeto::BALLS_KANTO` y el verificador lista las balls que se quedan sin él.
+
+Otro detalle de formato: los objetos guardan su descripción en `flavor_text_entries[].text`, no en `flavor_text` como las especies y los movimientos.
+
+### 4.5 ter Las categorías de PokéAPI no son bolsillos
+
+El bolsillo sale de la categoría del objeto, pero las **bayas están repartidas** entre `medicine`, `effort-drop` y media docena más, así que se reconocen por el nombre (`*-berry`) antes de mirar la categoría.
+
+Y la categoría `gameplay`, que es donde viven la bici, el mapa y las cañas de Kanto, **no está mapeada**: cae en `OBJETOS`. Mientras no existan objetos clave en juego da igual, pero cuando se implementen las MO hay que decidir si `gameplay` pasa a `CLAVE`, porque en `OBJETOS` un jugador podría vender la bici.
+
 ### 4.5 Otros datos verificados
 
 - PokéAPI devuelve **19 tipos**, no 18: incluye `stellar` (Astral, el Teracristal de gen 9). La tabla de efectividades son **361 combinaciones**, no 324
@@ -194,7 +210,7 @@ Repositorio `PMDCollab/SpriteCollab`. Verificado en `sprite/0025`:
 
 ---
 
-## 5. Estado actual: 4 de 8 hitos, 34 commits, 225 pruebas
+## 5. Estado actual: 5 de 8 hitos, 263 pruebas de Java y 25 de PHP
 
 ### Hecho y verificado
 
@@ -206,9 +222,18 @@ Repositorio `PMDCollab/SpriteCollab`. Verificado en `sprite/0025`:
 | **3b** | Modelo de estado en 3 niveles, orden del turno, impedimentos, ejecución de movimientos, fin de turno, `ServicioCombate` | 101 pruebas. Misma semilla reproduce el combate evento por evento |
 | **3c** | Mecánica real conectada, 12 condiciones de bando, 4 climas, 4 terrenos, volátiles | 138 pruebas |
 | **4** | Entrenador, equipo, 32 cajas, mochila, pokédex, pokédólares y **el seguidor server-side**, adelantado del hito 8 | 225 pruebas. Migración 4 aplicada en el runtime aislado; 1.025 especies con habilidades y género y 36.336 aprendizajes por nivel en memoria |
+| **5** | Catálogo de objetos importado, encuentros por zona, captura con la fórmula real, centros Pokémon y tiendas. Migración 6 y acciones 7, 60-62 y 120-123 | 36 pruebas nuevas de Java y 12 de PHP. **Probado de punta a punta en el runtime aislado**: en la sala 203 apareció un Rattata de nivel 4, la primera Poké Ball falló con una sacudida y la segunda lo capturó; quedó en el equipo con sus cuatro movimientos, la mochila bajó de 10 a 8 balls y la Pokédex lo marcó visto y capturado. En la sala 206 (Ciudad Verde) se compraron 5 Poké Balls por 1.000, se rechazó una compra sin saldo, se vendieron 2 por 200 y el Centro curó el equipo entero. La prueba destapó que `GeneradorPokemon` repetía movimientos del learnset; arreglado y con dos pruebas propias |
 | **Extra** | **El seguidor se ve en la sala**, con sprites de PMD, profundidad real y menú de acciones al pulsarlo. Es la capa de render de entidades de la fase 2, adelantada | Probado a mano en el cliente de pruebas: camina interpolado, gira, se sienta y se tumba con el avatar, y lo tapa el furni que tiene delante |
 
-**Invariante comprobada en cada commit**: ninguna clase de `combate/`, `entrenador/` ni `seguidor/` importa `com.eu.habbo`. Es lo que permite probar las reglas sin emulador y reutilizarlas en la fase 2. La única excepción deliberada es `DireccionTest`, que sí importa `Rotation` de Arcturus **a propósito**, para comprobar que las ocho direcciones del seguidor coinciden con las del emulador.
+**Invariante comprobada en cada commit**: ninguna clase de `combate/`, `entrenador/`, `seguidor/`, `encuentros/`, `captura/` ni `tienda/` importa `com.eu.habbo`. Es lo que permite probar las reglas sin emulador y reutilizarlas en la fase 2. La única excepción deliberada es `DireccionTest`, que sí importa `Rotation` de Arcturus **a propósito**, para comprobar que las ocho direcciones del seguidor coinciden con las del emulador.
+
+### Estado del runtime de pruebas tras el hito 5
+
+Lo que quedó en `habbo_pokemon_test_20260918` después de probar, por si estorba:
+
+- La sala **206 («Centro Pokémon»)** está dada de alta en `pokemon_zone_rooms` apuntando a Ciudad Verde. Es lo que permite probar tienda y centro; se quita con un `DELETE FROM pokemon_zone_rooms WHERE room_id = 206`.
+- Hokusei (id 5) tiene dos Rattata capturados, ninguna Poké Ball y 2.200 pokédólares. El Rattata `pokemon_owned` id 2 se capturó **antes** del arreglo de movimientos duplicados y conserva el 39 repetido; el id 3 ya sale limpio.
+- `pokemon_items` tiene los 2.223 objetos. **25 balls se quedan sin multiplicador** porque no son de Kanto; el verificador las lista y no falla por ello.
 
 ### Pendiente
 
@@ -229,12 +254,13 @@ Repositorio `PMDCollab/SpriteCollab`. Verificado en `sprite/0025`:
    ```
 2. **`pokemon_move_effects.implemented` sigue a 0 en todas las filas.** Hay que marcar las primitivas ya implementadas para que el verificador informe de verdad
 3. **Habilidades sin implementar**: `pokemon_abilities_cat` está importada con nombres y descripciones, pero `effect_code` vale `sin_implementar` en las 374
-4. **Objetos**: `pokemon_items` existe desde la migración 4 pero **está vacía**. El importador es trabajo del hito 5. Hasta entonces la mochila funciona pero no hay nada que meter en ella
+4. **Objetos**: `pokemon_items` ya está importada con `pokemon:import-items`. Lo que sigue sin implementar es el **efecto** de cada objeto: solo las balls tienen `effect_code` propio, el resto vale `sin_implementar`, así que una poción todavía no cura
 5. **Solo está descargado Pikachu (0025).** Los sprites viven en `xampp/htdocs/public/dist/pokemon/sprite/<id 4 dígitos>/` y son los `<Anim>-Anim.png` más el `AnimData.xml`. Para cualquier otra especie hay que bajarlos de `PMDCollab/SpriteCollab`. Falta decidir si se sirven desde ahí o desde `nitro-assets`, y falta el pipeline que los baje en masa
 6. **El variocolor no tiene sprite propio todavía.** En SpriteCollab las variantes son subcarpetas (`0025/0000`, `0025/0001`); el cargador aún no las mira, así que un shiny se dibuja como uno normal
 7. **Algunas animaciones de PMD solo traen una dirección.** El `Sit` de Pikachu es una hoja de 96×40: tres fotogramas y **una sola fila**. No es un fallo del mapeo, es lo que hay en el origen, y por eso cada estado lleva animación de respaldo y el cliente recorta la fila a las que existan
 8. **`HotelNight.tsx` tenía un error de sintaxis heredado** (`<div .../><` partido en dos líneas). Ya arreglado. **No rompía el build**: `esbuild` acepta el espacio dentro de la etiqueta de cierre y solo `tsc` lo rechazaba
 9. **El `.gitignore` impide compilar Nitro desde un clon limpio** (§3.6)
+10. **Ningún objeto tiene efecto todavía.** Solo las balls llevan `effect_code` propio; pociones, curaciones de estado y MT valen `sin_implementar`, así que se pueden comprar pero no usar
 
 ---
 
@@ -296,6 +322,22 @@ Alias de Apache `/pokemon-dist` → el dist del worktree. Tras cada `yarn build`
 | `ServicioSeguidor` | El seguidor vivo: estela por `UserTakeStepEvent` y latido de medio segundo para la animación |
 | `AccionesEntrenador` | Las acciones del 6400 que no son saludo ni catálogo |
 | `PokemonCuerpo` / `PokemonPackets` / `SeguidorPackets` / `PokemonAcciones` | Protocolo: JSON en 6400/6401, binario en 6402/6403, rangos de acción reservados |
+
+| `ServicioObjetos` | El catálogo de objetos en memoria, con el multiplicador de ball ya en décimas |
+| `ServicioEncuentros` | Tablas de encuentro por zona y el Pokémon salvaje en curso, uno por jugador, solo en memoria |
+| `ServicioCaptura` | La tirada de ball: comprueba sitio, gasta la ball, aplica la fórmula y guarda la captura |
+| `ServicioTienda` | Tiendas y existencias. Reserva antes de cobrar y devuelve el dinero si algo falla después |
+| `ServicioCentro` | Cura el equipo: PS al máximo, estado a `none` y PP llenos. Gratis, no toca la economía |
+| `AccionesMundo` | Las acciones 7, 60-62 y 120-123. La sala sale de la sesión, nunca del paquete |
+| `migraciones/M006Mundo` | Encuentros, obstáculos, tiendas y existencias, más la siembra de las tres primeras zonas de Kanto |
+
+### Lo puro del hito 5
+
+| Paquete | Responsabilidad |
+|---|---|
+| `encuentros/` | `TablaEncuentros` sortea por peso acumulado; `Encuentro`, `MetodoEncuentro` y `Franja` describen la fila. Sin base de datos: se prueba con 10.000 tiradas |
+| `captura/` | `FormulaCaptura`, la de gen 3+ con truncado entero. Los multiplicadores llegan en décimas (una Super Ball es 15) para que el truncado sea el de los juegos |
+| `tienda/` | `ReglasTienda`: comprobar todo antes de cobrar, no entregar a medias y no vender objetos clave |
 
 ### El motor, en `combate/`
 

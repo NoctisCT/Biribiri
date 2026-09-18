@@ -5,11 +5,13 @@ import com.eu.habbo.messages.incoming.MessageHandler;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.retro.pokemonengine.AccionesEntrenador;
+import com.retro.pokemonengine.AccionesMundo;
 import com.retro.pokemonengine.PokemonAcciones;
 import com.retro.pokemonengine.PokemonCuerpo;
 import com.retro.pokemonengine.PokemonEnginePlugin;
 import com.retro.pokemonengine.PokemonPackets;
 import com.retro.pokemonengine.Respuesta;
+import com.retro.pokemonengine.ServicioObjetos;
 import com.retro.pokemonengine.ServicioPokedex;
 import com.retro.pokemonengine.ServicioZonas;
 
@@ -43,7 +45,9 @@ public class PokemonCommandHandler extends MessageHandler
             {
                 case PokemonAcciones.SALUDO -> saludo(userId, habbo);
                 case PokemonAcciones.CATALOGO -> catalogo();
-                default -> AccionesEntrenador.ejecutar(habbo, userId, accion, datos);
+                default -> AccionesMundo.esAccionDeMundo(accion)
+                        ? AccionesMundo.ejecutar(habbo, userId, accion, datos)
+                        : AccionesEntrenador.ejecutar(habbo, userId, accion, datos);
             };
         }
         catch(Exception error)
@@ -100,6 +104,7 @@ public class PokemonCommandHandler extends MessageHandler
         datos.put("especies", ServicioPokedex.totalEspecies());
         datos.put("movimientos", ServicioPokedex.totalMovimientos());
         datos.put("zonas", ServicioZonas.totalZonas());
+        datos.put("objetos", ServicioObjetos.total());
         datos.put("salasPokemon", ServicioZonas.totalSalas());
 
         return Respuesta.bien(datos);

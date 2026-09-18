@@ -23,6 +23,7 @@ class PokemonVerifyCatalog extends Command
             ['pokemon_species_evolution', DB::table('pokemon_species_evolution')->count()],
             ['pokemon_moves', DB::table('pokemon_moves')->count()],
             ['pokemon_learnsets', DB::table('pokemon_learnsets')->count()],
+            ['pokemon_items', DB::table('pokemon_items')->count()],
         ]);
 
         $tabla = DB::table('pokemon_type_chart')->count();
@@ -61,6 +62,67 @@ class PokemonVerifyCatalog extends Command
         if ($evolucionesRotas > 0) {
             $this->error("{$evolucionesRotas} evoluciones apuntan a especies inexistentes");
             $problemas++;
+        }
+
+        $this->newLine();
+        $this->info('Objetos');
+
+        $objetos = DB::table('pokemon_items')->count();
+
+        if ($objetos === 0) {
+            $this->line('  pokemon_items está vacía. Ejecuta pokemon:import-items.');
+        } else {
+            $this->table(['Bolsillo', 'Objetos'], DB::table('pokemon_items')
+                ->select('bolsillo', DB::raw('COUNT(*) as total'))
+                ->groupBy('bolsillo')
+                ->orderBy('bolsillo')
+                ->get()
+                ->map(fn ($f) => [$f->bolsillo, $f->total])
+                ->all());
+
+            $bolsillosValidos = ['OBJETOS', 'MEDICINAS', 'BALLS', 'MO_MT', 'BAYAS', 'CLAVE'];
+
+            $bolsillosRaros = DB::table('pokemon_items')
+                ->whereNotIn('bolsillo', $bolsillosValidos)
+                ->count();
+
+            if ($bolsillosRaros > 0) {
+                $this->error("{$bolsillosRaros} objetos tienen un bolsillo que la mochila no conoce");
+                $problemas++;
+            }
+
+            $ventaMayor = DB::table('pokemon_items')
+                ->whereColumn('precio_venta', '>', 'precio')
+                ->count();
+
+            if ($ventaMayor > 0) {
+                $this->error("{$ventaMayor} objetos se venden por más de lo que cuestan");
+                $problemas++;
+            }
+
+            // Una ball sin multiplicador y sin captura segura no se puede usar:
+            // la fórmula de captura no sabría con qué multiplicar.
+            $ballsSinRatio = DB::table('pokemon_items')
+                ->where('es_ball', 1)
+                ->whereNull('ball_ratio')
+                ->where('effect_code', '<>', 'ball_captura_segura')
+                ->orderBy('id')
+                ->get();
+
+            $this->line('  Balls con multiplicador: ' . DB::table('pokemon_items')
+                ->where('es_ball', 1)
+                ->whereNotNull('ball_ratio')
+                ->count());
+
+            if ($ballsSinRatio->isNotEmpty()) {
+                $this->line('  Balls sin multiplicador sembrado: ' . $ballsSinRatio->count());
+
+                $this->table(['Id', 'Nombre', 'Nombre ES'], $ballsSinRatio
+                    ->map(fn ($o) => [$o->id, $o->nombre, $o->nombre_es])
+                    ->all());
+
+                $this->line('  Si alguna es de Kanto, añadir su multiplicador a MapeadorObjeto::BALLS_KANTO.');
+            }
         }
 
         $this->newLine();
