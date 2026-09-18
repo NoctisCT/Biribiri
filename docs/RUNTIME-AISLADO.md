@@ -27,6 +27,18 @@ El puerto del websocket **no está en `config.ini`**: vive en la tabla `emulator
 cd build/pokemon-test-runtime && ./start.bat
 ```
 
+### Nunca redirigir la salida sin filtrar
+
+El emulador imprime `Waiting for command:` **en bucle** cuando su consola interactiva no tiene un terminal detras. Lanzarlo en segundo plano redirigiendo la salida a un fichero genero **95 GB de log** el 18/09/2026.
+
+Para arrancarlo en segundo plano, filtrar esa linea:
+
+```bash
+java -Dfile.encoding=UTF8 -jar Habbo-3.6.0-jar-with-dependencies.jar 2>&1   | grep --line-buffered -v "Waiting for command" > runtime.log
+```
+
+El filtro mantiene la tuberia abierta, asi que el emulador no recibe SIGPIPE y el log se queda en unos KB.
+
 Arranque correcto:
 
 ```
