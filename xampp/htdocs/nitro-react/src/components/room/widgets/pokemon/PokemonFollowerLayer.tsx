@@ -4,6 +4,7 @@ import { GetRoomEngine } from '../../../../api';
 import { addPokemonFollowerListener, getPokemonFollowers, PokemonFollower, requestFollowerSnapshot } from '../../../../api/pokemon/PokemonEngineAdapter';
 import { frameAt, loadPokemonAnim, pmdRow, PokemonAnim, recorteDeFotograma } from '../../../../api/pokemon/PokemonSprites';
 import { useRoom } from '../../../../hooks';
+import { PokemonFollowerMenuView } from './PokemonFollowerMenuView';
 
 /**
  * El Pokemon que sigue a cada jugador, como objeto de sala de verdad.
@@ -37,6 +38,12 @@ const ESCALA_POKEMON = 2;
  */
 const ID_BASE = 900000;
 
+/**
+ * Los sprites de PMD no apoyan en el borde de abajo del dibujo, les queda un
+ * poco de aire. Este empujon los sienta del todo en la baldosa.
+ */
+const AJUSTE_Y = 4;
+
 interface Pintado
 {
     anim: PokemonAnim | null;
@@ -62,6 +69,14 @@ export const PokemonFollowerLayer: FC<{}> = () =>
 {
     const { roomSession = null } = useRoom();
     const [ seguidores, setSeguidores ] = useState<PokemonFollower[]>([]);
+    // El bucle de pintado lee de aqui y no del estado: si dependiera del estado se
+    // reiniciaria con cada paquete, y su limpieza destruiria y recrearia el objeto
+    // de sala varias veces por segundo, que es justo lo que hacia parpadear.
+    const vivos = useRef<PokemonFollower[]>([]);
+    const [ menu, setMenu ] = useState<PokemonFollower>(null);
+    // El rectangulo que ocupa cada seguidor en pantalla, para saber si un clic
+    // ha caido encima.
+    const marcos = useRef(new Map<number, { x: number, y: number, ancho: number, alto: number }>());
     const pintados = useRef(new Map<number, Pintado>());
     const movimientos = useRef(new Map<number, Movimiento>());
     const creados = useRef(new Set<number>());
@@ -70,7 +85,13 @@ export const PokemonFollowerLayer: FC<{}> = () =>
     useEffect(() =>
     {
         const actualizar = (todos: Map<number, PokemonFollower>) =>
-            setSeguidores(Array.from(todos.values()));
+        {
+            const lista = Array.from(todos.values());
+
+            vivos.current = lista;
+
+            setSeguidores(lista);
+        };
 
         const quitar = addPokemonFollowerListener(actualizar);
 
@@ -78,6 +99,63 @@ export const PokemonFollowerLayer: FC<{}> = () =>
 
         return quitar;
     }, []);
+
+    /**
+     * Pulsar el Pokemon abre su menu.
+     *
+     * La seleccion del motor no vale: para una unidad busca al usuario detras del
+     * objeto y el seguidor no es ninguno. Asi que el clic se caza antes de que
+     * llegue al lienzo, comparando con el rectangulo que ocupa el sprite, y si
+     * acierta no se propaga, para que el avatar no eche a andar.
+     */
+    useEffect(() =>
+    {
+        if(!roomSession) return;
+
+        const alPulsar = (evento: MouseEvent) =>
+        {
+            const destino = evento.target as HTMLElement;
+
+            // Un clic dentro del propio menu no cuenta.
+            if(destino && destino.closest && destino.closest('.pokemon-follower-menu-root')) return;
+
+            for(const [ userId, marco ] of marcos.current)
+            {
+                if(evento.clientX < marco.x || evento.clientX > (marco.x + marco.ancho)) continue;
+                if(evento.clientY < marco.y || evento.clientY > (marco.y + marco.alto)) continue;
+
+                const seguidor = vivos.current.find(uno => uno.userId === userId);
+
+                if(!seguidor) continue;
+
+                evento.preventDefault();
+                evento.stopPropagation();
+
+                setMenu(seguidor);
+
+                return;
+            }
+
+            // Ha pinchado en otro sitio: el menu se va y el avatar anda como siempre.
+            setMenu(null);
+        };
+
+        // Se escuchan los dos porque no todos los navegadores (ni la automatizacion
+        // con la que se prueba) mandan pointerdown antes que mousedown.
+        document.addEventListener('pointerdown', alPulsar as EventListener, true);
+        document.addEventListener('mousedown', alPulsar as EventListener, true);
+
+        (globalThis as any).PokemonEngine = {
+            ...(globalThis as any).PokemonEngine,
+            marcos: () => Array.from(marcos.current.entries())
+        };
+
+        return () =>
+        {
+            document.removeEventListener('pointerdown', alPulsar as EventListener, true);
+            document.removeEventListener('mousedown', alPulsar as EventListener, true);
+        };
+    }, [ roomSession ]);
 
     // Al entrar en una sala se pide la foto: el cliente puede haberse recargado.
     useEffect(() =>
@@ -194,13 +272,15 @@ export const PokemonFollowerLayer: FC<{}> = () =>
 
             const ahora = performance.now();
 
+            const actuales = vivos.current;
+
             // Los que ya no estan se retiran de la sala.
             for(const userId of Array.from(creados.current))
             {
-                if(!seguidores.some(seguidor => seguidor.userId === userId)) quitarObjeto(userId);
+                if(!actuales.some(seguidor => seguidor.userId === userId)) quitarObjeto(userId);
             }
 
-            for(const seguidor of seguidores)
+            for(const seguidor of actuales)
             {
                 const pintado = pintados.current.get(seguidor.userId);
                 const movimiento = movimientos.current.get(seguidor.userId);
@@ -251,8 +331,10 @@ export const PokemonFollowerLayer: FC<{}> = () =>
 
                 objeto.model.setValue('pokemon_textura', textura);
                 objeto.model.setValue('pokemon_ancla_x', anim.anclaX * ESCALA_POKEMON);
-                objeto.model.setValue('pokemon_ancla_y', anim.anclaY * ESCALA_POKEMON);
+                objeto.model.setValue('pokemon_ancla_y', (anim.anclaY - AJUSTE_Y) * ESCALA_POKEMON);
                 objeto.model.setValue('pokemon_usuario', seguidor.userId);
+
+                anotarMarco(marcos.current, roomId, seguidor.userId, x, y, z, anim);
             }
 
             identificador = requestAnimationFrame(pintar);
@@ -267,9 +349,51 @@ export const PokemonFollowerLayer: FC<{}> = () =>
 
             for(const userId of Array.from(creados.current)) quitarObjeto(userId);
         };
-    }, [ roomSession, seguidores ]);
+    }, [ roomSession ]);
 
-    return null;
+    if(!menu) return null;
+
+    return (
+        <PokemonFollowerMenuView
+            userId={ menu.userId }
+            objectId={ ID_BASE + menu.userId }
+            nombre={ menu.name }
+            onClose={ () => setMenu(null) } />
+    );
+}
+
+/**
+ * Guarda donde cae el sprite en pantalla, que es lo que permite pulsarlo.
+ *
+ * Se calcula igual que lo hace el lienzo: punto de la baldosa por la escala, mas
+ * el centro y el desplazamiento de la camara.
+ */
+function anotarMarco(
+    marcos: Map<number, { x: number, y: number, ancho: number, alto: number }>,
+    roomId: number, userId: number, x: number, y: number, z: number, anim: PokemonAnim): void
+{
+    const geometria = GetRoomEngine().getRoomInstanceGeometry(roomId, 1);
+    const lienzo = GetRoomEngine().getRoomInstanceRenderingCanvas(roomId, 1);
+
+    if(!geometria || !lienzo) return;
+
+    const punto = geometria.getScreenPoint(new Vector3d(x, y, z));
+
+    if(!punto) return;
+
+    const escala = lienzo.scale;
+    const ancho = anim.frameWidth * ESCALA_POKEMON * escala;
+    const alto = anim.frameHeight * ESCALA_POKEMON * escala;
+
+    const centroX = (punto.x * escala) + (lienzo.width / 2) + lienzo.screenOffsetX;
+    const centroY = (punto.y * escala) + (lienzo.height / 2) + lienzo.screenOffsetY;
+
+    marcos.set(userId, {
+        x: centroX - (anim.anclaX * ESCALA_POKEMON * escala),
+        y: centroY - ((anim.anclaY - AJUSTE_Y) * ESCALA_POKEMON * escala),
+        ancho,
+        alto
+    });
 }
 
 /** Los estados que se quedan quietos al acabar en vez de repetirse. */

@@ -128,6 +128,9 @@ public final class CatalogoAnimaciones
         lista.add(new EstadoSeguidor(DEBILITADO, "Debilitado", "Faint", "Hurt", null, false, 0, 15));
 
         // Sin vinculo en Habbo: se piden pulsando el seguidor.
+        //
+        // `Head` no esta: en las hojas de PMD es solo la cabeza suelta, pensada
+        // para componerla con el cuerpo, y por si sola parece un decapitado.
         lista.add(new EstadoSeguidor("comer", "Comer", "Eat", "Idle", null, true, 2000, 20));
         lista.add(new EstadoSeguidor("cargar", "Cargar energia", "Charge", "Idle", null, true, 1800, 21));
         lista.add(new EstadoSeguidor("girar", "Girar", "Rotate", "Idle", null, true, 1500, 22));
@@ -140,7 +143,6 @@ public final class CatalogoAnimaciones
         lista.add(new EstadoSeguidor("encogerse", "Encogerse", "Cringe", "Idle", null, true, 1400, 29));
         lista.add(new EstadoSeguidor("perder_equilibrio", "Perder el equilibrio", "LostBalance", "Idle", null, true, 1500, 30));
         lista.add(new EstadoSeguidor("caer", "Caer al suelo", "HitGround", "Idle", null, true, 1500, 31));
-        lista.add(new EstadoSeguidor("cabezazo", "Cabezazo", "Head", "Attack", null, true, 1200, 32));
         lista.add(new EstadoSeguidor("hundirse", "Hundirse", "Sink", "Idle", null, true, 1600, 33));
         lista.add(new EstadoSeguidor("saltar_adelante", "Saltar adelante", "LeapForth", "Hop", null, true, 1400, 34));
         lista.add(new EstadoSeguidor("quejarse", "Quejarse", "Pain", "Hurt", null, true, 1400, 35));

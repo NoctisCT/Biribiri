@@ -251,6 +251,8 @@ public final class ServicioSeguidor
         // cuente el cliente.
         if(unidad.hasStatus(RoomUnitStatus.WAVE)) gesto(seguidor.userId, CatalogoAnimaciones.SALUDANDO);
 
+        if(recolocar(seguidor, unidad, room)) return;
+
         EstadoSeguidor estado = seguidor.maquina.resolver(foto(seguidor, unidad));
 
         if(estado.codigo().equals(seguidor.ultimoEstado)) return;
@@ -286,6 +288,37 @@ public final class ServicioSeguidor
                 seguidor.interaccion,
                 seguidor.interaccionHastaMs,
                 System.currentTimeMillis());
+    }
+
+    /**
+     * Si el seguidor se ha quedado descolgado, lo devuelve al lado del jugador.
+     *
+     * Pasa al entrar en una sala: `UserEnterRoomEvent` salta antes de que el
+     * avatar tenga baldosa, asi que el seguidor nacia en la del sitio anterior y
+     * se quedaba alli hasta el primer paso. En vez de adivinar cuando esta
+     * colocado el avatar, se comprueba cada latido y se corrige.
+     */
+    private static boolean recolocar(Seguidor seguidor, RoomUnit unidad, Room room)
+    {
+        RoomTile baldosa = unidad.getCurrentLocation();
+
+        if(baldosa == null) return false;
+
+        RastroSeguidor rastro = seguidor.rastro;
+
+        if(rastro.colocado()
+                && Direccion.distancia(rastro.x(), rastro.y(), baldosa.x, baldosa.y) <= 1)
+        {
+            return false;
+        }
+
+        rastro.aparecer(baldosa.x, baldosa.y,
+                unidad.getBodyRotation() == null ? Direccion.SUR : unidad.getBodyRotation().getValue());
+
+        room.sendComposer(SeguidorPackets.mensaje(
+                SeguidorPackets.TIPO_ALTA, entradaDe(seguidor, room)));
+
+        return true;
     }
 
     /**
