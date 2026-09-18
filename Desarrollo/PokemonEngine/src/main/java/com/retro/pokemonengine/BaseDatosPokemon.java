@@ -4,6 +4,7 @@ import com.eu.habbo.Emulator;
 import com.retro.pokemonengine.migraciones.M001Base;
 import com.retro.pokemonengine.migraciones.M002Catalogo;
 import com.retro.pokemonengine.migraciones.M003SinShowdown;
+import com.retro.pokemonengine.migraciones.M004Entrenador;
 import com.retro.pokemonengine.migraciones.Migracion;
 import com.retro.pokemonengine.migraciones.PlanMigracion;
 
@@ -25,7 +26,8 @@ public final class BaseDatosPokemon
         return Arrays.asList(
                 new M001Base(),
                 new M002Catalogo(),
-                new M003SinShowdown()
+                new M003SinShowdown(),
+                new M004Entrenador()
         );
     }
 
