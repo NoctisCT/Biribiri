@@ -362,3 +362,57 @@ Route::middleware('auth')->group(function () {
         [\App\Http\Controllers\AccountNotificationController::class, 'markAllRead']
     )->name('notifications.mark-all-read');
 });
+// BIRIBIRI-CLOTHING-MARKETPLACE-PORTAL-P10
+Route::middleware([
+    'maintenance',
+    'check.ban',
+    'force.staff.2fa',
+    'auth',
+])->prefix('marketplace')->as('marketplace.')->group(function () {
+    Route::get(
+        '/clothing',
+        [\App\Http\Controllers\Marketplace\ClothingCreatorController::class, 'index']
+    )->name('clothing.index');
+
+    Route::post(
+        '/clothing',
+        [\App\Http\Controllers\Marketplace\ClothingCreatorController::class, 'store']
+    )->middleware('throttle:5,1')->name('clothing.store');
+});
+// BIRIBIRI-MARKETPLACE-HOME-P11
+Route::middleware([
+    'maintenance',
+    'check.ban',
+    'force.staff.2fa',
+    'auth',
+])->group(function () {
+    Route::view(
+        '/marketplace',
+        'marketplace.index'
+    )->name('marketplace.index');
+});
+
+/*
+ * BIRIBIRI-CLOTHING-PREVIEW-BRIDGE-P12_4C
+ * Preview privada de assets pendientes. Solo housekeeping autorizado.
+ */
+Route::middleware('auth')
+    ->prefix('housekeeping/clothing-preview')
+    ->group(function () {
+        Route::get(
+            '/{submission}/figure-data',
+            [\App\Http\Controllers\Housekeeping\ClothingPreviewAssetController::class, 'figureData']
+        )->name('clothing.preview.figure-data');
+
+        Route::get(
+            '/{submission}/figure-map',
+            [\App\Http\Controllers\Housekeeping\ClothingPreviewAssetController::class, 'figureMap']
+        )->name('clothing.preview.figure-map');
+
+        Route::get(
+            '/{submission}/figure/{library}.nitro',
+            [\App\Http\Controllers\Housekeeping\ClothingPreviewAssetController::class, 'figureAsset']
+        )
+            ->where('library', '[A-Za-z0-9_]+')
+            ->name('clothing.preview.figure-asset');
+    });

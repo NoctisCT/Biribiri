@@ -11,6 +11,16 @@
                 </x-filament::tabs.item>
             @endif
 
+            @if ($this->showClothingTab())
+                <x-filament::tabs.item
+                    :active="$activeTab === 'clothing'"
+                    wire:click="selectTab('clothing')"
+                    icon="heroicon-o-sparkles"
+                >
+                    Ropa ({{ $this->clothingPendingCount() }})
+                </x-filament::tabs.item>
+            @endif
+
             @if ($this->showSellerTab())
                 <x-filament::tabs.item
                     :active="$activeTab === 'sellers'"
@@ -25,6 +35,10 @@
         @if ($activeTab === 'badges')
             <livewire:filament.badge-applications-table
                 :key="'badge-applications-table'"
+            />
+        @elseif ($activeTab === 'clothing')
+            <livewire:filament.clothing-applications-table
+                :key="'clothing-applications-table'"
             />
         @elseif ($activeTab === 'sellers')
             @php($capacity = $this->sellerCapacity())

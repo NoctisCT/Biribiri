@@ -10,6 +10,14 @@
             <x-slot:under-title>
                 Descubre placas de la comunidad, crea las tuyas y gestiona tus publicaciones.
             </x-slot:under-title>
+            <div class="px-2 pt-3 text-sm">
+                <a
+                    href="{{ route('marketplace.index') }}"
+                    class="inline-flex items-center rounded border border-gray-300 px-3 py-2 font-semibold text-gray-700 transition hover:bg-gray-100 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+                >
+                    ← Marketplace
+                </a>
+            </div>
 
             @if (session('success'))
                 <div class="mx-2 mt-3 rounded border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">

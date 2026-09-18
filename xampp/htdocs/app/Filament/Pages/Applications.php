@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\BadgeSellerLicense;
 use App\Models\BadgeSubmission;
+use App\Models\ClothingSubmission;
 use App\Services\BadgeSellerEligibilityService;
 use Filament\Pages\Page;
 
@@ -37,6 +38,24 @@ class Applications extends Page
             ->query('tab', '');
 
         if (
+            $requested === 'badges' &&
+            static::hasBadgePermission()
+        ) {
+            $this->activeTab = 'badges';
+
+            return;
+        }
+
+        if (
+            $requested === 'clothing' &&
+            static::hasClothingPermission()
+        ) {
+            $this->activeTab = 'clothing';
+
+            return;
+        }
+
+        if (
             $requested === 'sellers' &&
             static::hasSellerPermission()
         ) {
@@ -47,6 +66,12 @@ class Applications extends Page
 
         if (static::hasBadgePermission()) {
             $this->activeTab = 'badges';
+
+            return;
+        }
+
+        if (static::hasClothingPermission()) {
+            $this->activeTab = 'clothing';
 
             return;
         }
@@ -63,6 +88,7 @@ class Applications extends Page
     public static function canAccess(): bool
     {
         return static::hasBadgePermission()
+            || static::hasClothingPermission()
             || static::hasSellerPermission();
     }
 
@@ -70,6 +96,13 @@ class Applications extends Page
     {
         return hasHousekeepingPermission(
             'manage_badge_submissions'
+        );
+    }
+
+    public static function hasClothingPermission(): bool
+    {
+        return hasHousekeepingPermission(
+            'manage_clothing_submissions'
         );
     }
 
@@ -85,6 +118,11 @@ class Applications extends Page
         return static::hasBadgePermission();
     }
 
+    public function showClothingTab(): bool
+    {
+        return static::hasClothingPermission();
+    }
+
     public function showSellerTab(): bool
     {
         return static::hasSellerPermission();
@@ -98,6 +136,15 @@ class Applications extends Page
             static::hasBadgePermission()
         ) {
             $this->activeTab = 'badges';
+
+            return;
+        }
+
+        if (
+            $tab === 'clothing' &&
+            static::hasClothingPermission()
+        ) {
+            $this->activeTab = 'clothing';
 
             return;
         }
@@ -126,6 +173,23 @@ class Applications extends Page
                 [
                     'pending',
                     'rejecting',
+                ]
+            )
+            ->count();
+    }
+
+    public function clothingPendingCount(): int
+    {
+        if (! static::hasClothingPermission()) {
+            return 0;
+        }
+
+        return ClothingSubmission::query()
+            ->whereIn(
+                'status',
+                [
+                    'pending',
+                    'import_failed',
                 ]
             )
             ->count();
@@ -179,6 +243,18 @@ class Applications extends Page
                     [
                         'pending',
                         'rejecting',
+                    ]
+                )
+                ->count();
+        }
+
+        if (static::hasClothingPermission()) {
+            $count += ClothingSubmission::query()
+                ->whereIn(
+                    'status',
+                    [
+                        'pending',
+                        'import_failed',
                     ]
                 )
                 ->count();
