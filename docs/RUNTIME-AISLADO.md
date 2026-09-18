@@ -115,3 +115,35 @@ El `renderer-config.json` del dist del worktree apunta a `ws://localhost:2196`; 
 **Apache corre como aplicación de consola desde el panel de XAMPP, no como servicio**, así que `httpd -k graceful` no funciona: hay que reiniciarlo desde el panel para que tome cambios de configuración.
 
 Para retirarlo todo: borrar el fichero, borrar la línea `Include` y reiniciar Apache.
+
+### Pasos obligatorios después de cada `yarn build`
+
+El build sobrescribe dos ficheros del dist. Sin esto el cliente de pruebas se conecta a producción:
+
+```bash
+cd build/pokemon-engine/xampp/htdocs/nitro-react
+MSYS_NO_PATHCONV=1 yarn vite build --base=/pokemon-dist/
+
+cd ../public/dist
+V=$(date +%s)
+sed -i 's|"socket.url": "ws://localhost:2096"|"socket.url": "ws://localhost:2196"|' renderer-config.json
+sed -i "s|'/renderer-config.json', '/ui-config.json'|'/pokemon-dist/renderer-config.json?v=$V', '/pokemon-dist/ui-config.json?v=$V'|" index.html
+```
+
+Por qué cada uno:
+
+1. **`--base=/pokemon-dist/`**: el script `yarn build` usa `--base=/dist/`, así que los assets se pedirían al dist de producción y darían 404. En Git Bash hace falta `MSYS_NO_PATHCONV=1` o MSYS convierte el argumento en una ruta de Windows.
+2. **`socket.url`**: el build lo regenera apuntando a 2096.
+3. **`config.urls` con `?v=`**: el `index.html` compilado carga la configuración desde la **raíz** del servidor (`/renderer-config.json`), que es la de producción. El parámetro de versión es necesario porque el navegador cachea el JSON entre pruebas.
+
+### Ticket de acceso
+
+Arcturus **consume el `auth_ticket` en el primer login**, así que hace falta uno nuevo por cada sesión de prueba:
+
+```bash
+T="pkdev-$(date +%s)"
+./xampp/mysql/bin/mysql.exe -u root habbo_pokemon_test_20260918 -e "UPDATE users SET auth_ticket='$T' WHERE id=5;"
+# abrir http://localhost/pokemon-dist/index.html?sso=$T
+```
+
+Si el log del runtime dice `Someone tried to login with a non-existing SSO token`, el ticket ya se gastó.
