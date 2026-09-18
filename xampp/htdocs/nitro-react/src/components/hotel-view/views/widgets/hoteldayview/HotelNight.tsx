@@ -28,8 +28,8 @@ export const HotelNight: FC<{}> = props =>
 				<div className="hotelview-night position-relative"/>
 				<RoomWidgetViewNight/>
 				<div className="light-i position-absolute"/>
-				<div className="door position-absolute"/><
-			/div>
+				<div className="door position-absolute"/>
+			</div>
 		</div>
 	</div>
 	);

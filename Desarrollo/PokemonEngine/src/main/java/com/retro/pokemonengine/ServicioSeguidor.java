@@ -37,6 +37,12 @@ public final class ServicioSeguidor
 {
     public static final long LATIDO_MS = 500L;
 
+    /**
+     * Un paso de Habbo dura un ciclo de sala. Con algo de margen por encima, si no
+     * ha llegado otro paso en este tiempo es que el jugador se ha parado.
+     */
+    public static final long MARGEN_PASO_MS = 700L;
+
     private static final Map<Integer, Seguidor> porUsuario = new ConcurrentHashMap<>();
 
     private ServicioSeguidor()
@@ -57,6 +63,8 @@ public final class ServicioSeguidor
 
         final RastroSeguidor rastro = new RastroSeguidor();
         final MaquinaAnimacion maquina = new MaquinaAnimacion();
+
+        long ultimoPasoMs;
 
         String gesto;
         long gestoHastaMs;
@@ -149,6 +157,7 @@ public final class ServicioSeguidor
         if(room == null) return;
 
         seguidor.rastro.alPasar(desde.x, desde.y, hacia.x, hacia.y);
+        seguidor.ultimoPasoMs = System.currentTimeMillis();
 
         room.sendComposer(SeguidorPackets.mensaje(
                 SeguidorPackets.TIPO_PASO, entradaDe(seguidor, room)));
@@ -257,8 +266,11 @@ public final class ServicioSeguidor
     /** La traduccion del avatar de Habbo a la entrada que entiende la maquina. */
     private static MaquinaAnimacion.EntradaAvatar foto(Seguidor seguidor, RoomUnit unidad)
     {
-        boolean sentado = unidad.hasStatus(RoomUnitStatus.SIT) || unidad.cmdSit;
-        boolean tumbado = unidad.hasStatus(RoomUnitStatus.LAY) || unidad.cmdLay;
+        // Solo el estado real de la unidad. `cmdSit` y `cmdLay` guardan que el
+        // jugador *pidio* sentarse o tumbarse y no siempre se limpian al levantarse:
+        // mirarlos dejaba al seguidor tumbado para siempre.
+        boolean sentado = unidad.hasStatus(RoomUnitStatus.SIT);
+        boolean tumbado = unidad.hasStatus(RoomUnitStatus.LAY);
         boolean bailando = unidad.getDanceType() != null && unidad.getDanceType() != DanceType.NONE;
 
         return new MaquinaAnimacion.EntradaAvatar(
@@ -268,12 +280,25 @@ public final class ServicioSeguidor
                 sentado,
                 unidad.isIdle(),
                 bailando,
-                unidad.isWalking(),
+                andando(seguidor),
                 seguidor.gesto,
                 seguidor.gestoHastaMs,
                 seguidor.interaccion,
                 seguidor.interaccionHastaMs,
                 System.currentTimeMillis());
+    }
+
+    /**
+     * Si el ultimo paso es reciente, el jugador esta caminando.
+     *
+     * No se usa `RoomUnit.isWalking()` porque es `!isAtGoal() && canWalk`: cuando
+     * alguien pincha una baldosa a la que no se puede llegar, el destino se queda
+     * puesto, el avatar se para y el seguidor se quedaba caminando para siempre.
+     * El paso, en cambio, es un hecho: o ha llegado o no.
+     */
+    private static boolean andando(Seguidor seguidor)
+    {
+        return (System.currentTimeMillis() - seguidor.ultimoPasoMs) < MARGEN_PASO_MS;
     }
 
     // --- Construccion y envio ---
