@@ -21,6 +21,8 @@ public class PokemonEnginePlugin extends HabboPlugin implements EventListener
     @EventHandler
     public void onEmulatorLoaded(EmulatorLoadedEvent event) throws Exception
     {
+        BaseDatosPokemon.inicializar();
+
         System.out.println("[PokemonEngine] Cargado. Protocolo v" + VERSION_PROTOCOLO + ".");
     }
 
