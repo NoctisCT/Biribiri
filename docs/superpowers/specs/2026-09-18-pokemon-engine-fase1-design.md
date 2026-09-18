@@ -74,7 +74,7 @@ El seguidor va en la fase 2 y **antes** del combate en sala a propósito: necesi
 |---|---|
 | Arquitectura | Plugin Java independiente, sin dependencias de otros plugins |
 | Fidelidad | Alta, fiel a los juegos (IVs, EVs, naturalezas, habilidades, PP, estados, clima, prioridad) |
-| Origen de datos | Híbrido: PokéAPI (catálogo, learnsets, evoluciones, nombres en español) + datos de Showdown (mecánica de movimientos) |
+| Origen de datos | Híbrido: PokéAPI (catálogo, learnsets, evoluciones, nombres en español) + datos de Showdown (flags y mecánica de movimientos). Confirmado en el hito 2: PokéAPI no expone los flags, así que Showdown es imprescindible |
 | Alcance del catálogo | Se importa completo (~1.025 especies); la disponibilidad se controla por temporada |
 | Contenido de la fase 1 | Solo Kanto |
 | Cliente | Interfaz nueva completa |
