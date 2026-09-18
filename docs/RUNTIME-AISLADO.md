@@ -88,3 +88,30 @@ rm -f Emulator/plugins/pokemon-engine-1.0.0.jar
 ```
 
 Se regenera cuando haga falta con un `mvn clean package`.
+
+## Cliente de pruebas
+
+El `dist` compilado en el worktree se sirve por un alias de Apache propio, para no tocar el `dist` de producción ni el ajuste `nitro_path` del sitio web (que vale `http://localhost/dist` y lo lee la base de datos **de producción**, no la copia).
+
+Ficheros:
+
+- `xampp/apache/conf/extra/httpd-pokemon-dev.conf` — el alias
+- Una línea `Include` al final de `xampp/apache/conf/httpd.conf`
+
+```apache
+Alias /pokemon-dist "/Users/erale/Desktop/Habbo/build/pokemon-engine/xampp/htdocs/public/dist"
+
+<Directory "/Users/erale/Desktop/Habbo/build/pokemon-engine/xampp/htdocs/public/dist">
+    Options Indexes FollowSymLinks
+    AllowOverride None
+    Require local
+</Directory>
+```
+
+Acceso: `http://localhost/pokemon-dist/index.html?sso=<ticket>`, con el ticket puesto en `users.auth_ticket` de la base de datos **de pruebas**.
+
+El `renderer-config.json` del dist del worktree apunta a `ws://localhost:2196`; el de producción sigue en 2096.
+
+**Apache corre como aplicación de consola desde el panel de XAMPP, no como servicio**, así que `httpd -k graceful` no funciona: hay que reiniciarlo desde el panel para que tome cambios de configuración.
+
+Para retirarlo todo: borrar el fichero, borrar la línea `Include` y reiniciar Apache.
