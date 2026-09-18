@@ -180,7 +180,9 @@ Repositorio `PMDCollab/SpriteCollab`. Verificado en `sprite/0025`:
 2. **`pokemon_move_effects.implemented` sigue a 0 en todas las filas.** Hay que marcar las primitivas ya implementadas para que el verificador informe de verdad
 3. **Habilidades sin implementar**: `pokemon_abilities_cat` está importada con nombres y descripciones, pero `effect_code` vale `sin_implementar` en las 374
 4. **Objetos**: `pokemon_items` existe desde la migración 4 pero **está vacía**. El importador es trabajo del hito 5. Hasta entonces la mochila funciona pero no hay nada que meter en ella
-5. **El seguidor no se ve**: el hito 4 lo entrega entero en servidor (posición, dirección, animación y difusión por 6403), pero dibujar el sprite PMD en la sala es la capa de render de la fase 2. Se valida con `PokemonEngine.onSeguidor(...)` en la consola del cliente
+5. **El seguidor se ve, pero como una calcomanía encima de la sala.** Los sprites PMD de Pikachu (0025) están descargados y el seguidor camina, gira y cambia de animación en el cliente de pruebas. Lo que **no** tiene es profundidad: se dibuja en una capa de HTML sobre el lienzo, así que pasa por delante del furni y de los avatares aunque esté detrás.
+
+   No hay atajo. `RoomSpriteCanvas` reconstruye su lista de sprites **en cada fotograma** a partir de los objetos de sala y la ordena por `z` (`_sortableSprites.sort((a, b) => (b.z - a.z))`), así que cualquier cosa inyectada a mano en el contenedor se borra o se reordena sola. Para que el Pokémon se ordene con los demás tiene que **ser un objeto de sala**: tipo propio, `RoomObjectVisualization`, `RoomObjectLogic` y alta en `RoomObjectVisualizationFactory` y `RoomObjectLogicFactory`, que viven en el submódulo del renderer. Eso es exactamente la capa de render de la fase 2
 6. **`HotelNight.tsx` tiene un error de sintaxis heredado** (`<div .../><` partido en dos líneas, línea 32) que rompe cualquier `tsc` y cualquier build del cliente. No es de Pokémon y no se ha tocado: viene del commit de importación `35147830b`
 7. **El `.gitignore` impide compilar Nitro desde un clon limpio** (§3.6)
 
