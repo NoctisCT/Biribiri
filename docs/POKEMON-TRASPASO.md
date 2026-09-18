@@ -1,9 +1,25 @@
 # PokemonEngine — Estado, hallazgos y trabajo pendiente
 
-Última actualización: 18 de septiembre de 2026
+Última actualización: 19 de septiembre de 2026
 Rama: `codex/pokemon-engine` · Worktree: `build/pokemon-engine` · Base: `dev`
 
 **Este documento es el punto de entrada.** Está escrito para que alguien sin contexto de la conversación pueda continuar. Lo que no esté aquí, está en los documentos que enlaza.
+
+## Para la siguiente sesión: empezar por el hito 5
+
+Los hitos 1 a 4 están hechos y probados. Lo siguiente es el **hito 5**, con su plan ya escrito en `docs/superpowers/plans/2026-09-19-pokemon-engine-hito-5-mundo.md`: catálogo de objetos, encuentros, captura, centros Pokémon y tiendas.
+
+Antes de escribir una línea, leer de este documento la **sección 3 (restricciones del entorno)**: cada punto de esa lista costó un fallo real.
+
+Orden mínimo para ponerse en marcha:
+
+```bash
+cd build/pokemon-engine
+"/c/Users/erale/Downloads/apache-maven-3.9.16-bin/apache-maven-3.9.16/bin/mvn.cmd" -o test   # 225 en verde
+grep -rn "com.eu.habbo" Desarrollo/PokemonEngine/src/main/java/com/retro/pokemonengine/{combate,entrenador,seguidor}/
+```
+
+El segundo comando **no debe devolver nada** salvo un comentario en `CatalogoAnimaciones`. Es la invariante que permite probar las reglas sin levantar el emulador.
 
 ---
 
@@ -18,6 +34,8 @@ Rama: `codex/pokemon-engine` · Worktree: `build/pokemon-engine` · Base: `dev`
 | `docs/superpowers/plans/2026-09-18-pokemon-engine-hito-2-catalogo.md` | Plan del hito 2 (hecho) |
 | `docs/superpowers/plans/2026-09-18-pokemon-engine-hito-3a-nucleo-numerico.md` | Plan del hito 3a (hecho) |
 | `docs/superpowers/plans/2026-09-18-pokemon-engine-hito-3b-turno.md` | Plan del hito 3b (hecho) |
+| `docs/superpowers/plans/2026-09-18-pokemon-engine-hito-4-entrenador.md` | Plan del hito 4 (hecho) |
+| `docs/superpowers/plans/2026-09-19-pokemon-engine-hito-5-mundo.md` | **Plan del hito 5 (siguiente)** |
 
 ---
 
@@ -65,7 +83,32 @@ Un `yarn install` rompió Subastas, Arcade y otros sistemas. `node_modules` y `v
 
 ### 3.2 El renderer de Nitro es una copia física, no un enlace
 
-`node_modules/@nitrots/nitro-renderer` está declarado como `file:submodules/renderer` pero en disco es una **copia de directorio** (verificado: `LinkType` vacío). Vite resuelve desde `node_modules`, así que **todo cambio en `submodules/renderer` hay que replicarlo a mano**. Verificar con `diff -r --strip-trailing-cr` (sin ese flag, los finales de línea marcan todo como distinto).
+`node_modules/@nitrots/nitro-renderer` está declarado como `file:submodules/renderer` pero en disco es una **copia de directorio** (verificado: `LinkType` vacío). Vite resuelve desde `node_modules`, así que **todo cambio en `submodules/renderer` hay que replicarlo a mano**.
+
+**Copiar solo los ficheros tocados, nunca el directorio entero.** Las dos copias pueden haber divergido, y un `cp -r` machacaría registros que solo existen en `node_modules`. Comprobar antes de dar nada por bueno, contra la copia de la rama principal:
+
+```bash
+A=xampp/htdocs/nitro-react/node_modules/@nitrots/nitro-renderer/src
+B=build/pokemon-engine/xampp/htdocs/nitro-react/node_modules/@nitrots/nitro-renderer/src
+diff --strip-trailing-cr "$A/<fichero>" "$B/<fichero>"
+```
+
+Sin `--strip-trailing-cr` los finales de línea marcan el fichero entero como distinto. **Lo correcto es que solo salgan líneas `>`**: si aparece alguna `<`, se ha borrado algo que hacía falta.
+
+Ficheros del renderer que Pokémon toca y hay que replicar tras cada cambio:
+
+```
+nitro/communication/NitroMessages.ts
+nitro/communication/messages/{incoming,outgoing}/{Incoming,Outgoing}Header.ts
+nitro/communication/messages/{incoming,outgoing,parser}/pokemonengine/*
+nitro/room/RoomContentLoader.ts
+nitro/room/RoomObjectLogicFactory.ts
+nitro/room/object/RoomObjectVisualizationFactory.ts
+nitro/room/object/{visualization,logic}/index.ts
+nitro/room/object/{visualization,logic}/pokemon/*
+api/nitro/room/IRoomEngine.ts
+api/nitro/room/object/RoomObject{Visualization,Logic}Type.ts
+```
 
 ### 3.3 Registrar el composer, no solo el evento
 
@@ -75,7 +118,13 @@ En `NitroMessages.ts` hay dos registros: `_events.set(...)` para lo entrante y `
 
 Asignar el 5060 rompió Cinema: Arcturus rechaza el segundo registro del mismo id con `Header already registered` y el plugin que pierde la carrera se queda roto con una sola línea en el log. **La mayoría de plugins en ejecución no tienen su código en el repositorio**, así que la única lista fiable sale de desensamblar los JAR. Método en `docs/REGISTRO-PACKET-IDS.md`.
 
-PokemonEngine tiene reservado **6400-6419**. En uso: 6400 (cliente→servidor) y 6401 (servidor→cliente).
+PokemonEngine tiene reservado **6400-6419**. En uso: 6400/6401 (estado y UI, JSON) y 6402/6403 (seguidor, binario).
+
+### 3.4 bis El runtime de pruebas solo tiene dos plugins
+
+`build/pokemon-test-runtime` carga **NitroWebsockets y pokemon-engine**, nada más. Producción tiene 92. En el cliente de pruebas los **arcades, las reacciones, las subastas y todo lo demás no funcionan**: el botón está, el paquete sale y no hay nadie al otro lado. No es un fallo, es lo que impide que un error aquí toque el hotel.
+
+Si hace falta probar algo junto a Pokémon, se copia ese JAR a `build/pokemon-test-runtime/plugins/` y se reinicia **ese** emulador.
 
 ### 3.5 El emulador en segundo plano llena el disco
 
@@ -145,7 +194,7 @@ Repositorio `PMDCollab/SpriteCollab`. Verificado en `sprite/0025`:
 
 ---
 
-## 5. Estado actual: 4 de 8 hitos, 29 commits, 225 pruebas
+## 5. Estado actual: 4 de 8 hitos, 34 commits, 225 pruebas
 
 ### Hecho y verificado
 
@@ -157,6 +206,7 @@ Repositorio `PMDCollab/SpriteCollab`. Verificado en `sprite/0025`:
 | **3b** | Modelo de estado en 3 niveles, orden del turno, impedimentos, ejecución de movimientos, fin de turno, `ServicioCombate` | 101 pruebas. Misma semilla reproduce el combate evento por evento |
 | **3c** | Mecánica real conectada, 12 condiciones de bando, 4 climas, 4 terrenos, volátiles | 138 pruebas |
 | **4** | Entrenador, equipo, 32 cajas, mochila, pokédex, pokédólares y **el seguidor server-side**, adelantado del hito 8 | 225 pruebas. Migración 4 aplicada en el runtime aislado; 1.025 especies con habilidades y género y 36.336 aprendizajes por nivel en memoria |
+| **Extra** | **El seguidor se ve en la sala**, con sprites de PMD, profundidad real y menú de acciones al pulsarlo. Es la capa de render de entidades de la fase 2, adelantada | Probado a mano en el cliente de pruebas: camina interpolado, gira, se sienta y se tumba con el avatar, y lo tapa el furni que tiene delante |
 
 **Invariante comprobada en cada commit**: ninguna clase de `combate/`, `entrenador/` ni `seguidor/` importa `com.eu.habbo`. Es lo que permite probar las reglas sin emulador y reutilizarlas en la fase 2. La única excepción deliberada es `DireccionTest`, que sí importa `Rotation` de Arcturus **a propósito**, para comprobar que las ocho direcciones del seguidor coinciden con las del emulador.
 
@@ -180,11 +230,11 @@ Repositorio `PMDCollab/SpriteCollab`. Verificado en `sprite/0025`:
 2. **`pokemon_move_effects.implemented` sigue a 0 en todas las filas.** Hay que marcar las primitivas ya implementadas para que el verificador informe de verdad
 3. **Habilidades sin implementar**: `pokemon_abilities_cat` está importada con nombres y descripciones, pero `effect_code` vale `sin_implementar` en las 374
 4. **Objetos**: `pokemon_items` existe desde la migración 4 pero **está vacía**. El importador es trabajo del hito 5. Hasta entonces la mochila funciona pero no hay nada que meter en ella
-5. **El seguidor se ve, pero como una calcomanía encima de la sala.** Los sprites PMD de Pikachu (0025) están descargados y el seguidor camina, gira y cambia de animación en el cliente de pruebas. Lo que **no** tiene es profundidad: se dibuja en una capa de HTML sobre el lienzo, así que pasa por delante del furni y de los avatares aunque esté detrás.
-
-   No hay atajo. `RoomSpriteCanvas` reconstruye su lista de sprites **en cada fotograma** a partir de los objetos de sala y la ordena por `z` (`_sortableSprites.sort((a, b) => (b.z - a.z))`), así que cualquier cosa inyectada a mano en el contenedor se borra o se reordena sola. Para que el Pokémon se ordene con los demás tiene que **ser un objeto de sala**: tipo propio, `RoomObjectVisualization`, `RoomObjectLogic` y alta en `RoomObjectVisualizationFactory` y `RoomObjectLogicFactory`, que viven en el submódulo del renderer. Eso es exactamente la capa de render de la fase 2
-6. **`HotelNight.tsx` tiene un error de sintaxis heredado** (`<div .../><` partido en dos líneas, línea 32) que rompe cualquier `tsc` y cualquier build del cliente. No es de Pokémon y no se ha tocado: viene del commit de importación `35147830b`
-7. **El `.gitignore` impide compilar Nitro desde un clon limpio** (§3.6)
+5. **Solo está descargado Pikachu (0025).** Los sprites viven en `xampp/htdocs/public/dist/pokemon/sprite/<id 4 dígitos>/` y son los `<Anim>-Anim.png` más el `AnimData.xml`. Para cualquier otra especie hay que bajarlos de `PMDCollab/SpriteCollab`. Falta decidir si se sirven desde ahí o desde `nitro-assets`, y falta el pipeline que los baje en masa
+6. **El variocolor no tiene sprite propio todavía.** En SpriteCollab las variantes son subcarpetas (`0025/0000`, `0025/0001`); el cargador aún no las mira, así que un shiny se dibuja como uno normal
+7. **Algunas animaciones de PMD solo traen una dirección.** El `Sit` de Pikachu es una hoja de 96×40: tres fotogramas y **una sola fila**. No es un fallo del mapeo, es lo que hay en el origen, y por eso cada estado lleva animación de respaldo y el cliente recorta la fila a las que existan
+8. **`HotelNight.tsx` tenía un error de sintaxis heredado** (`<div .../><` partido en dos líneas). Ya arreglado. **No rompía el build**: `esbuild` acepta el espacio dentro de la etiqueta de cierre y solo `tsc` lo rechazaba
+9. **El `.gitignore` impide compilar Nitro desde un clon limpio** (§3.6)
 
 ---
 
@@ -289,6 +339,41 @@ También sin dependencias del emulador.
 | `Direccion` | Las 8 direcciones de Habbo, comprobadas contra `Rotation.Calculate` |
 | `CatalogoAnimaciones` / `EstadoSeguidor` | **Fuente única** de los 37 estados y sus animaciones PMD. La migración 4 siembra la tabla leyendo de aquí, así que código y base de datos no pueden separarse |
 | `MaquinaAnimacion` | Precedencia: combate > interacción pedida > tumbado > sentado > durmiendo > bailando > gesto > caminando > parado |
+
+---
+
+## 7 bis. El seguidor en el cliente
+
+El Pokémon **es un objeto de sala de Nitro**, no una capa de HTML encima. Esa fue la diferencia entre «se ve» y «se ve bien»: los objetos de sala entran en la lista que `RoomSpriteCanvas` ordena por profundidad, así que el furni y los avatares lo tapan cuando toca. Una capa de HTML no puede conseguirlo, porque el lienzo **reconstruye y reordena esa lista en cada fotograma** (`_sortableSprites.sort((a, b) => (b.z - a.z))`) y borra cualquier cosa inyectada a mano.
+
+### Piezas
+
+| Fichero | Qué hace |
+|---|---|
+| `submodules/renderer/.../visualization/pokemon/PokemonFollowerVisualization.ts` | Copia al sprite la textura y el ancla que el cliente deja en el modelo del objeto |
+| `.../visualization/pokemon/PokemonFollowerVisualizationData.ts` | Trivial: `initialize()` devuelve `true` |
+| `submodules/renderer/.../logic/pokemon/PokemonFollowerLogic.ts` | Solo declara que escucha clics |
+| `RoomObjectVisualizationFactory` / `RoomObjectLogicFactory` | Tres `case` que dan de alta el tipo `pokemon_follower` |
+| `RoomContentLoader.isLoaderType` | Una línea que exime al tipo de la descarga de assets |
+| `IRoomEngine` | Declara `createRoomObjectUser` y `getRoomObjectUser`, que ya existían en `RoomEngine` pero no en la interfaz |
+| `src/api/pokemon/PokemonSprites.ts` | Carga el `AnimData.xml`, mide el ancla real y recorta cada fotograma a su propia textura |
+| `src/components/room/widgets/pokemon/PokemonFollowerLayer.tsx` | Crea el objeto, lo mueve y le da la textura de cada fotograma |
+| `.../pokemon/PokemonFollowerMenuView.tsx` | El menú al pulsarlo, paginado de seis en seis |
+
+### Las dos trampas
+
+1. **`RoomContentLoader.isLoaderType` devuelve `true` para todo menos `user`.** Sin la exención, el motor busca un `.nitro` para el tipo nuevo, no lo encuentra y lo sustituye por **el cubo negro del placeholder**. Si aparece ese cubo, es esto.
+2. **`RoomObjectSpriteVisualization.initialize` devuelve `false` en la clase base.** El gestor de salas lo interpreta como «esta visualización no vale» y **tira el objeto entero sin decir nada**. Hay que sobrescribirlo.
+
+### Decisiones que no son obvias
+
+- **Los fotogramas se recortan a texturas propias**, no se posiciona una hoja con CSS, porque un objeto de sala dibuja una textura. El escalado es de vecino más cercano: son píxeles.
+- **El ancla se mide leyendo la hoja**, no se pone a ojo. Los fotogramas de PMD son cajas grandes con el bicho en medio y mucho transparente; anclar la caja deja al Pokémon flotando, y al escalar el hueco crece igual que el dibujo.
+- **El paso se interpola en coordenadas de sala, con decimales**, no en píxeles de pantalla. El motor las acepta y así la cámara hace el resto sola.
+- **El clic no usa la selección del motor.** Para una unidad, el motor busca al usuario que hay detrás del objeto, y un seguidor no es ninguno. Se caza el `pointerdown` antes de que llegue al lienzo, se compara con el rectángulo del sprite y se traga si acierta, para que el avatar no eche a andar.
+- **`caminando` no sale de `RoomUnit.isWalking()`**, que es `!isAtGoal() && canWalk` y se queda en `true` para siempre si alguien pincha una baldosa inalcanzable. Sale de cuándo llegó el último paso.
+- **`sentado` y `tumbado` no miran `cmdSit` ni `cmdLay`**: esos guardan que el jugador *pidió* sentarse y no siempre se limpian al levantarse.
+- **La tabla de animaciones se sincroniza en cada arranque** desde `CatalogoAnimaciones`, no la siembra una migración. Quitar una animación es tocar el código y reiniciar.
 
 ---
 

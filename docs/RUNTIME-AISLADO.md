@@ -159,3 +159,76 @@ T="pkdev-$(date +%s)"
 ```
 
 Si el log del runtime dice `Someone tried to login with a non-existing SSO token`, el ticket ya se gastó.
+
+
+---
+
+## El ciclo completo de una prueba
+
+Lo que hay que hacer, en orden, para ver un cambio en el cliente de pruebas. Saltarse un paso da síntomas confusos: el cliente se conecta a producción, o carga el `dist` viejo, o el ticket ya está gastado.
+
+```bash
+cd build/pokemon-engine
+
+# 1. Plugin
+"/c/Users/erale/Downloads/apache-maven-3.9.16-bin/apache-maven-3.9.16/bin/mvn.cmd"     -o -q -f Desarrollo/PokemonEngine/pom.xml clean package
+
+# 2. Cliente (si se ha tocado). Replicar antes a node_modules lo del renderer.
+cd xampp/htdocs/nitro-react
+MSYS_NO_PATHCONV=1 node_modules/.bin/vite build --base=/pokemon-dist/
+
+# 3. Los dos parches obligatorios del dist
+cd ../public/dist
+V=$(date +%s)
+sed -i 's|"socket.url": "ws://localhost:2096"|"socket.url": "ws://localhost:2196"|' renderer-config.json
+sed -i "s|'/renderer-config.json', '/ui-config.json'|'/pokemon-dist/renderer-config.json?v=$V', '/pokemon-dist/ui-config.json?v=$V'|" index.html
+
+# 4. Parar SOLO el emulador de pruebas, por su puerto
+#    PowerShell: Get-NetTCPConnection -State Listen | ? LocalPort -eq 3200 | % { Stop-Process -Id $_.OwningProcess -Force }
+
+# 5. Desplegar y arrancar, con el filtro que impide el log de 95 GB
+cd ../../../../..
+cp build/pokemon-engine/Desarrollo/PokemonEngine/target/pokemon-engine-1.0.0.jar build/pokemon-test-runtime/plugins/
+cd build/pokemon-test-runtime
+java -Dfile.encoding=UTF8 -jar Habbo-3.6.0-jar-with-dependencies.jar 2>&1     | grep --line-buffered -v "Waiting for command" > runtime.log &
+
+# 6. Ticket nuevo, que Arcturus lo gasta en el primer login
+T="pkdev-$(date +%s)"
+./xampp/mysql/bin/mysql.exe -u root habbo_pokemon_test_20260918     -e "UPDATE users SET auth_ticket='$T' WHERE id=5;"
+echo "http://localhost/pokemon-dist/index.html?sso=$T"
+```
+
+**Parar el emulador por su puerto, nunca por el nombre del proceso**: hay más de un `java.exe` corriendo y matar el equivocado se lleva por delante el hotel o el runtime de otra persona.
+
+```powershell
+Get-NetTCPConnection -State Listen | Where-Object { $_.LocalPort -eq 3200 } |
+    ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
+```
+
+## Datos de prueba sembrados
+
+En `habbo_pokemon_test_20260918`, para el usuario 5 (Hokusei):
+
+| Qué | Dónde |
+|---|---|
+| Zona `ruta-1` | `pokemon_zones` id 1 |
+| Sala 203 («Prueba») dada de alta | `pokemon_zone_rooms` |
+| Entrenador con 3.000 pokédólares | `pokemon_trainers` |
+| Un Pikachu de nivel 12 en el equipo, puesto de seguidor | `pokemon_owned` id 1 |
+
+Sin la fila en `pokemon_zone_rooms` **no pasa nada de Pokémon en esa sala**, que es justo el gating.
+
+## Sprites
+
+Los de Pikachu están en `xampp/htdocs/public/dist/pokemon/sprite/0025/`, bajados de `PMDCollab/SpriteCollab`:
+
+```bash
+D=xampp/htdocs/public/dist/pokemon/sprite/0025
+BASE=https://raw.githubusercontent.com/PMDCollab/SpriteCollab/master/sprite/0025
+curl -s -o $D/AnimData.xml $BASE/AnimData.xml
+for a in Walk Idle Sleep Sit Laying Hop Nod Eat ... ; do
+    curl -s -f -o "$D/$a-Anim.png" "$BASE/$a-Anim.png"
+done
+```
+
+Como el `dist` se construye con `emptyOutDir: false`, un build nuevo **no** se los lleva por delante.
