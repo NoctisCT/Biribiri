@@ -1563,7 +1563,7 @@ Run:
 ```bash
 ./xampp/mysql/bin/mysql.exe -u root habbo_pokemon_test_20260918 -e "SELECT (SELECT COUNT(*) FROM pokemon_types) tipos, (SELECT COUNT(*) FROM pokemon_type_chart) tabla, (SELECT COUNT(*) FROM pokemon_species) especies, (SELECT COUNT(*) FROM pokemon_moves) movimientos; SELECT id,nombre_es,base_speed,yield_speed FROM pokemon_species LIMIT 3;"
 ```
-Expected: 18 tipos, 324 combinaciones en la tabla, 5 especies, 5 movimientos, y nombres en español.
+Expected: 19 tipos (PokéAPI incluye `stellar`, el tipo Teracristal de gen 9), 361 combinaciones en la tabla, 5 especies, 5 movimientos, y nombres en español.
 
 - [ ] **Step 4: Importación completa**
 
@@ -1719,7 +1719,7 @@ Run:
 ```bash
 cd xampp/htdocs && ../php/php.exe artisan pokemon:verify-catalog
 ```
-Expected: 18 tipos, 324 combinaciones, ~1.025 especies, ~937 movimientos importados de los que **~685 vigentes**, y unas 100.000 filas de learnset. Sin errores de coherencia.
+Expected: 19 tipos (PokéAPI incluye `stellar`, el tipo Teracristal de gen 9), 361 combinaciones, ~1.025 especies, ~937 movimientos importados de los que **~685 vigentes**, y unas 100.000 filas de learnset. Sin errores de coherencia.
 
 El número que decide el trabajo del hito 3 es el último: **cuántos movimientos vigentes siguen con `manual_`** una vez descontadas las primitivas. Ese recuento, y no el 138 de la estimación inicial con solo PokéAPI, es el alcance real del motor.
 

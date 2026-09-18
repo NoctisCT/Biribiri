@@ -146,7 +146,7 @@ Prefijo `pokemon_`. Tres grupos:
 | `pokemon_moves` | Tipo, categoría, potencia, precisión, PP, prioridad, objetivo, `effect_id`, `effect_chance`, flags (contacto, sonido, puño…), ratio de crítico, `field_effect` | ~937 |
 | `pokemon_move_effects` | Catálogo de efectos que el motor implementa, con flag `implemented` | ~150 |
 | `pokemon_learnsets` | Especie × movimiento × método (nivel, MT, huevo, tutor) × nivel | ~100.000 |
-| `pokemon_type_chart` | Atacante × defensor → multiplicador | 324 |
+| `pokemon_type_chart` | Atacante × defensor → multiplicador | 361 |
 | `pokemon_abilities` | `effect_id`, descripción | ~300 |
 | `pokemon_items` | Categoría, precio de compra y venta, `effect_id`, `effect_param`, `field_effect`, usable en combate, consumible | ~200 |
 | `pokemon_natures` | Sin cambios | 25 |
@@ -410,7 +410,7 @@ Las migraciones son idempotentes al arrancar. **Si una falla, el plugin no se ha
 
 `ServicioCombate` es puro, así que se prueba con JUnit sin levantar el emulador:
 
-- Los 324 casos de la tabla de tipos
+- Los casos de la tabla de tipos (361 con el tipo Astral de gen 9)
 - Orden de prioridad y de velocidad, incluidos empates
 - Fórmula de daño contra valores conocidos de los juegos
 - Cada efecto marcado como implementado
