@@ -3,6 +3,7 @@ import { FC, useCallback, useEffect, useState } from 'react';
 import { GetCommunication, GetConfiguration, GetNitroInstance, GetUIVersion } from './api';
 import { InstallGridNitroAdapter } from './api/rpg/grid';
 import { InstallRpgEngineAdapter } from './api/rpg/engine';
+import { InstallPokemonEngineAdapter } from './api/pokemon';
 import { Base, TransitionAnimation, TransitionAnimationTypes } from './common';
 import { LoadingView } from './components/loading/LoadingView';
 import { MainView } from './components/main/MainView';
@@ -76,6 +77,7 @@ export const App: FC<{}> = props =>
             case RoomEngineEvent.ENGINE_INITIALIZED:
                 InstallGridNitroAdapter();
                 InstallRpgEngineAdapter();
+                InstallPokemonEngineAdapter();
 
                 setPercent(prevValue => (prevValue + 20));
 
