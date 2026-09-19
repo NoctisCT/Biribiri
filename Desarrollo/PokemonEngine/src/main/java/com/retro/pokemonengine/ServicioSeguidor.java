@@ -418,7 +418,12 @@ public final class ServicioSeguidor
         if(seguidor == null) return;
 
         seguidor.enArena = true;
-        seguidor.rastro.aparecer(x, y, direccion);
+
+        // La rotacion del sprite del seguidor es la del **paso**, no la de la
+        // mirada: cuando va detras del entrenador se dibuja moviendose hacia
+        // el, no mirandole. Plantado de cara a un rival hay que darle la
+        // contraria o sale de espaldas. Comprobado en sala, no deducido.
+        seguidor.rastro.aparecer(x, y, (direccion + 4) % 8);
 
         Habbo habbo = Emulator.getGameEnvironment().getHabboManager().getHabbo(userId);
         Room room = habbo == null ? null : habbo.getHabboInfo().getCurrentRoom();
