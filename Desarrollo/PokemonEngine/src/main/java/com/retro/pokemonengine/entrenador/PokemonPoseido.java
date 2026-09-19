@@ -65,6 +65,15 @@ public final class PokemonPoseido
     private int hueco;
     private boolean favorito;
 
+    /*
+     * La piel: 'normal' o el disfraz de evento. El variocolor NO vive aqui, es
+     * un estado del juego con su propia columna, y los dos se pueden dar a la vez.
+     */
+    private String variante = "normal";
+
+    /* Los iniciales y los premios de evento nacen a false. */
+    private boolean intercambiable = true;
+
     private boolean huevo;
     private int pasosHuevo;
 
@@ -158,6 +167,16 @@ public final class PokemonPoseido
 
     public boolean favorito() { return this.favorito; }
     public void ponerFavorito(boolean favorito) { this.favorito = favorito; }
+
+    public String variante() { return this.variante; }
+
+    public void ponerVariante(String variante)
+    {
+        this.variante = (variante == null || variante.isBlank()) ? "normal" : variante;
+    }
+
+    public boolean intercambiable() { return this.intercambiable; }
+    public void ponerIntercambiable(boolean intercambiable) { this.intercambiable = intercambiable; }
 
     public boolean huevo() { return this.huevo; }
     public void ponerHuevo(boolean huevo) { this.huevo = huevo; }

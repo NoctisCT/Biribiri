@@ -49,7 +49,56 @@ class MapeadorEspecie
             'peso' => ((int) ($pokemon['weight'] ?? 0)) / 10,
             'es_legendario' => !empty($especie['is_legendary']) ? 1 : 0,
             'es_singular' => !empty($especie['is_mythical']) ? 1 : 0,
+
+            // Ficha de Pokedex y sonido. El numero regional hoy coincide con el
+            // nacional porque Kanto es 1-151, pero en Johto dejaria de coincidir
+            // y cambiarlo con miles de capturas encima seria un lio.
+            'descripcion_es' => self::descripcionEs($especie),
+            'categoria_es' => self::categoriaEs($especie),
+            'numero_regional' => self::numeroRegional($especie, 'kanto'),
+            'cry_url' => $pokemon['cries']['latest'] ?? null,
         ];
+    }
+
+    private static function categoriaEs(array $especie): ?string
+    {
+        foreach ($especie['genera'] ?? [] as $entrada) {
+            if (($entrada['language']['name'] ?? null) === 'es') {
+                return $entrada['genus'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Los textos de especie usan `flavor_text`, no `text` como los objetos.
+     * Vienen partidos a lo ancho de la pantalla del juego, con saltos de linea
+     * y saltos de pagina metidos a mano.
+     */
+    private static function descripcionEs(array $especie): ?string
+    {
+        foreach ($especie['flavor_text_entries'] ?? [] as $entrada) {
+            if (($entrada['language']['name'] ?? null) === 'es') {
+                $texto = str_replace(["
+", "", ""], ' ', $entrada['flavor_text']);
+
+                return trim(preg_replace('/\s+/u', ' ', $texto));
+            }
+        }
+
+        return null;
+    }
+
+    private static function numeroRegional(array $especie, string $pokedex): ?int
+    {
+        foreach ($especie['pokedex_numbers'] ?? [] as $entrada) {
+            if (($entrada['pokedex']['name'] ?? null) === $pokedex) {
+                return (int) $entrada['entry_number'];
+            }
+        }
+
+        return null;
     }
 
     private static function stats(array $pokemon): array

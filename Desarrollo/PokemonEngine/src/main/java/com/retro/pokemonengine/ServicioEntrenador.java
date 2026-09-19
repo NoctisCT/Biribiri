@@ -265,6 +265,8 @@ public final class ServicioEntrenador
         pokemon.ponerCaja(r.getInt("box_number"));
         pokemon.ponerHueco(r.getInt("slot"));
         pokemon.ponerFavorito(r.getInt("es_favorito") == 1);
+        pokemon.ponerVariante(r.getString("variante"));
+        pokemon.ponerIntercambiable(r.getInt("intercambiable") == 1);
         pokemon.ponerHuevo(r.getInt("es_huevo") == 1);
         pokemon.ponerPasosHuevo(r.getInt("pasos_huevo"));
         pokemon.ponerTemporadaId(r.getInt("season_id"));
@@ -296,9 +298,9 @@ public final class ServicioEntrenador
                     " naturaleza, ability_slot, ability_id, genero, es_shiny, ps_actual, estado," +
                     " amistad, pokerus, objeto_id, ball_id, met_zone_id, met_level," +
                     " original_trainer_user_id, ubicacion, box_number, slot, es_huevo, pasos_huevo," +
-                    " season_id)" +
+                    " season_id, variante, intercambiable)" +
                     " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?," +
-                    " ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    " ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     Statement.RETURN_GENERATED_KEYS))
         {
             int i = 1;
@@ -341,7 +343,9 @@ public final class ServicioEntrenador
             p.setInt(i++, pokemon.hueco());
             p.setInt(i++, pokemon.huevo() ? 1 : 0);
             p.setInt(i++, pokemon.pasosHuevo());
-            p.setInt(i, pokemon.temporadaId());
+            p.setInt(i++, pokemon.temporadaId());
+            p.setString(i++, pokemon.variante());
+            p.setInt(i, pokemon.intercambiable() ? 1 : 0);
 
             p.executeUpdate();
 
@@ -398,7 +402,8 @@ public final class ServicioEntrenador
                     " ev_defensa_esp = ?, ev_velocidad = ?," +
                     " ps_actual = ?, estado = ?, estado_turnos = ?, amistad = ?," +
                     " pokerus = ?, pokerus_dias = ?, objeto_id = ?, ubicacion = ?," +
-                    " box_number = ?, slot = ?, es_favorito = ?, es_huevo = ?, pasos_huevo = ?" +
+                    " box_number = ?, slot = ?, es_favorito = ?, es_huevo = ?, pasos_huevo = ?," +
+                    " variante = ?, intercambiable = ?" +
                     " WHERE id = ? AND user_id = ?"))
         {
             int i = 1;
@@ -425,6 +430,8 @@ public final class ServicioEntrenador
             p.setInt(i++, pokemon.favorito() ? 1 : 0);
             p.setInt(i++, pokemon.huevo() ? 1 : 0);
             p.setInt(i++, pokemon.pasosHuevo());
+            p.setString(i++, pokemon.variante());
+            p.setInt(i++, pokemon.intercambiable() ? 1 : 0);
             p.setLong(i++, pokemon.id());
             p.setInt(i, pokemon.userId());
 

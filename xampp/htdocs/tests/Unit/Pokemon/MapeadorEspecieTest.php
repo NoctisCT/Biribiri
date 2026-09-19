@@ -35,6 +35,40 @@ class MapeadorEspecieTest extends TestCase
         $this->assertSame(1, $fila['generacion']);
     }
 
+    public function test_ficha_de_pokedex_categoria_numero_regional_y_cry(): void
+    {
+        $fila = MapeadorEspecie::fila(
+            $this->fixture('species-25'),
+            $this->fixture('pokemon-25'),
+            ['electric' => 13]
+        );
+
+        $this->assertSame('Pokémon Ratón', $fila['categoria_es']);
+        $this->assertStringContainsString('cola', $fila['descripcion_es']);
+        $this->assertStringNotContainsString("
+", $fila['descripcion_es'], 'Sin saltos de linea del juego');
+        $this->assertSame(25, $fila['numero_regional'], 'En Kanto coincide con el nacional');
+        $this->assertStringEndsWith('25.ogg', $fila['cry_url']);
+    }
+
+    public function test_una_especie_sin_datos_en_espanol_no_revienta(): void
+    {
+        $especie = $this->fixture('species-25');
+        $especie['genera'] = [];
+        $especie['flavor_text_entries'] = [];
+        $especie['pokedex_numbers'] = [];
+
+        $pokemon = $this->fixture('pokemon-25');
+        unset($pokemon['cries']);
+
+        $fila = MapeadorEspecie::fila($especie, $pokemon, ['electric' => 13]);
+
+        $this->assertNull($fila['categoria_es']);
+        $this->assertNull($fila['descripcion_es']);
+        $this->assertNull($fila['numero_regional']);
+        $this->assertNull($fila['cry_url']);
+    }
+
     public function test_el_ratio_de_genero_negativo_significa_sin_genero(): void
     {
         $especie = $this->fixture('species-25');

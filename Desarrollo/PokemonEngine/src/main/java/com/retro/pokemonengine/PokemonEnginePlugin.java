@@ -53,17 +53,20 @@ public class PokemonEnginePlugin extends HabboPlugin implements EventListener
     public void onUserEnterRoom(UserEnterRoomEvent event)
     {
         ServicioSeguidor.alEntrar(event.habbo, event.room);
+        ServicioTiempoJugado.alEntrar(event.habbo, event.room);
     }
 
     @EventHandler
     public void onUserExitRoom(UserExitRoomEvent event)
     {
         ServicioSeguidor.alSalir(event.habbo);
+        ServicioTiempoJugado.alSalir(event.habbo);
 
         // Un encuentro no sobrevive a cambiar de sala: el Pokemon estaba alli.
+        // El enfriamiento tampoco, que muere con la sesion.
         if(event.habbo != null && event.habbo.getHabboInfo() != null)
         {
-            ServicioEncuentros.limpiar(event.habbo.getHabboInfo().getId());
+            ServicioEncuentros.olvidar(event.habbo.getHabboInfo().getId());
         }
     }
 
