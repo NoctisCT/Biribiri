@@ -1004,10 +1004,10 @@ EOF
 - Prueba: `Desarrollo/PokemonEngine/src/test/java/com/retro/pokemonengine/entrenador/ReglasEvolucionTest.java`
 
 **Interfaces:**
-- Consume: `PokemonPoseido` (con `especieId()`, `ponerEspecieId(int)`, `psMax(EspecieCatalogo)`, `psActual()`, `ponerPsActual(int)`, `variante()`, `ponerVariante(String)`, `abilitySlot()`, `ponerAbilityId(Integer)`), `EspecieGeneracion` (con `habilidad1Id()`, `habilidad2Id()`, `habilidadOcultaId()`).
+- Consume: `PokemonPoseido` (con `especieId()`, `ponerEspecieId(int)`, `psMax(EspecieCatalogo)`, `psActual()`, `ponerPsActual(int)`, `variante()`, `ponerVariante(String)`, `habilidadSlot()`, `ponerHabilidadId(Integer)`), `EspecieGeneracion` (con `habilidad1Id()`, `habilidad2Id()`, `habilidadOcultaId()`).
 - Produce: `ReglasEvolucion.evolucionar(PokemonPoseido pokemon, EspecieGeneracion nueva, java.util.Set<String> variantesDeLaNueva)`, que muta el Pokémon en sitio y devuelve `void`.
 
-> **Antes de escribir el código:** abrir `PokemonPoseido.java` y confirmar los nombres reales de los mutadores (`ponerEspecieId`, `ponerPsActual`, `ponerAbilityId`, `abilitySlot`). Si alguno no existe con ese nombre exacto, usar el que haya; si no existe en absoluto, añadirlo siguiendo el estilo del fichero (`public void ponerX(...)`).
+> **Antes de escribir el código:** abrir `PokemonPoseido.java` y confirmar los nombres reales de los mutadores (`ponerEspecieId`, `ponerPsActual`, `ponerHabilidadId`, `habilidadSlot`). Si alguno no existe con ese nombre exacto, usar el que haya; si no existe en absoluto, añadirlo siguiendo el estilo del fichero (`public void ponerX(...)`).
 
 - [ ] **Paso 1: Escribir la prueba que falla**
 
@@ -1072,11 +1072,11 @@ class ReglasEvolucionTest
         EspecieGeneracion despues = especie(25, 35, 900, 901, 902);
 
         PokemonPoseido p = pichu(especie(172, 20, 9, null, 31).base());
-        p.ponerAbilitySlot(2);
+        p.ponerHabilidadSlot(2);
 
         ReglasEvolucion.evolucionar(p, despues, Set.of());
 
-        assertEquals(901, p.abilityId(), "El hueco 2 pasa a ser la segunda habilidad de la nueva especie");
+        assertEquals(901, p.habilidadId(), "El hueco 2 pasa a ser la segunda habilidad de la nueva especie");
     }
 
     @Test
@@ -1085,12 +1085,12 @@ class ReglasEvolucionTest
         EspecieGeneracion despues = especie(25, 35, 900, 901, 902);
 
         PokemonPoseido p = pichu(especie(172, 20, 9, null, 31).base());
-        p.ponerAbilitySlot(3);
+        p.ponerHabilidadSlot(3);
 
         ReglasEvolucion.evolucionar(p, despues, Set.of());
 
-        assertEquals(902, p.abilityId());
-        assertEquals(3, p.abilitySlot());
+        assertEquals(902, p.habilidadId());
+        assertEquals(3, p.habilidadSlot());
     }
 
     @Test
@@ -1135,7 +1135,7 @@ class ReglasEvolucionTest
 }
 ```
 
-> Los nombres `ponerNivel`, `ponerIv`, `iv`, `abilityId`, `ponerAbilitySlot` hay que confirmarlos en `PokemonPoseido.java` antes de ejecutar, igual que arriba. El comportamiento que se prueba no cambia.
+> Los nombres `ponerNivel`, `ponerIv`, `iv`, `abilityId`, `ponerHabilidadSlot` hay que confirmarlos en `PokemonPoseido.java` antes de ejecutar, igual que arriba. El comportamiento que se prueba no cambia.
 
 - [ ] **Paso 2: Ver que falla**
 
@@ -1194,7 +1194,7 @@ public final class ReglasEvolucion
 
         pokemon.ponerPsActual(debilitado ? 0 : Math.max(1, psMaxNuevo - danoRecibido));
 
-        pokemon.ponerAbilityId(habilidadDelHueco(nueva, pokemon.abilitySlot()));
+        pokemon.ponerHabilidadId(habilidadDelHueco(nueva, pokemon.habilidadSlot()));
 
         String variante = pokemon.variante();
 
@@ -2162,7 +2162,7 @@ public final class ServicioBatalla
         {
             if(!"equipo".equals(p.ubicacion()) || p.psActual() <= 0) continue;
 
-            if(mejor == null || p.slot() < mejor.slot()) mejor = p;
+            if(mejor == null || p.hueco() < mejor.hueco()) mejor = p;
         }
 
         return mejor;
@@ -3158,7 +3158,7 @@ public final class ServicioRecompensas
                 ganador.ev(Stat.VELOCIDAD));
 
         Recompensas.Ev despues = Recompensas.sumar(
-                antes, repartoDe(especieDerrotadoId), ganador.pokerus() > 0);
+                antes, repartoDe(especieDerrotadoId), ganador.pokerus());
 
         ganador.ponerEv(Stat.PS, despues.ps());
         ganador.ponerEv(Stat.ATAQUE, despues.ataque());
