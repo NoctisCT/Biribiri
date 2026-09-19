@@ -7,6 +7,7 @@ import com.retro.pokemonengine.migraciones.M003SinShowdown;
 import com.retro.pokemonengine.migraciones.M004Entrenador;
 import com.retro.pokemonengine.migraciones.M005TablasHeredadas;
 import com.retro.pokemonengine.migraciones.M006Mundo;
+import com.retro.pokemonengine.migraciones.M007Mundo;
 import com.retro.pokemonengine.migraciones.Migracion;
 import com.retro.pokemonengine.migraciones.PlanMigracion;
 
@@ -31,7 +32,8 @@ public final class BaseDatosPokemon
                 new M003SinShowdown(),
                 new M004Entrenador(),
                 new M005TablasHeredadas(),
-                new M006Mundo()
+                new M006Mundo(),
+                new M007Mundo()
         );
     }
 
