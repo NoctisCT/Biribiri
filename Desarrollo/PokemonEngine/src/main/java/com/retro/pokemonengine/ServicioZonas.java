@@ -74,6 +74,16 @@ public final class ServicioZonas
         }
 
         zonas = Collections.unmodifiableMap(nuevasZonas);
+        // Una sala que pierde la condicion de sala Pokemon no puede seguir
+        // albergando un combate: se anula, sin ganador y sin castigo.
+        for(int roomId : salas.keySet())
+        {
+            if(!nuevasSalas.containsKey(roomId))
+            {
+                ServicioBatalla.anularDeSala(roomId, "sala_sin_zona");
+            }
+        }
+
         salas = Collections.unmodifiableMap(nuevasSalas);
 
         System.out.println("[PokemonEngine] Zonas: " + zonas.size()
