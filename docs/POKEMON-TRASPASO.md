@@ -16,10 +16,18 @@ Orden mínimo para ponerse en marcha:
 ```bash
 cd build/pokemon-engine
 "/c/Users/erale/Downloads/apache-maven-3.9.16-bin/apache-maven-3.9.16/bin/mvn.cmd" -o test   # 295 en verde
-grep -rn "com.eu.habbo" Desarrollo/PokemonEngine/src/main/java/com/retro/pokemonengine/{combate,entrenador,seguidor,encuentros,captura,tienda}/
+grep -rn "com.eu.habbo" Desarrollo/PokemonEngine/src/main/java/com/retro/pokemonengine/{combate,entrenador,seguidor,encuentros,captura,tienda,clima}/
 ```
 
 El segundo comando **no debe devolver nada** salvo un comentario en `CatalogoAnimaciones`. Es la invariante que permite probar las reglas sin levantar el emulador.
+
+### El orden que toca
+
+1. **Hito 6b, el combate.** Es lo único que separa al proyecto de ser jugable de verdad: hoy pisas la hierba, sale un Pokémon y solo puedes tirarle balls. No hay turnos, ni ataques, ni huida. Empezar por escribir su plan a partir de la sección 9 y de la spec de la fase 1, que ya tienen tomadas las decisiones.
+2. **Hito 7, el cliente**, en cuanto el 6b tenga eventos que pintar. Es el único hito que toca el cliente de producción y **compite con el trabajo del vestidor en `dev`**: coordinarlo antes de empezar.
+3. Lo demás puede esperar: efectos de objetos y habilidades, MOs, intercambio, ranking.
+
+**Lo que NO toca hacer todavía**: más contenido de mundo. Kanto ya tiene zonas, encuentros, clima, tiendas y centro; añadir rutas antes del combate es amueblar una casa sin puertas.
 
 ---
 
@@ -38,6 +46,8 @@ El segundo comando **no debe devolver nada** salvo un comentario en `CatalogoAni
 | `docs/superpowers/plans/2026-09-19-pokemon-engine-hito-5-mundo.md` | Plan del hito 5 (hecho) |
 | `docs/superpowers/specs/2026-09-19-pokemon-engine-6a-mundo-design.md` | **Spec del hito 6a**, con las decisiones de diseño y su razón |
 | `docs/superpowers/plans/2026-09-19-pokemon-engine-hito-6a-mundo.md` | Plan del hito 6a (hecho) |
+| Sección 9 de este documento | **Decisiones del 6b ya tomadas**: huida, abandono, dónde se pelea, evolución |
+| Sección 10 de este documento | Importador de salas desde otro hotel, proyecto aparte |
 
 ---
 
@@ -238,7 +248,7 @@ Lo que quedó en `habbo_pokemon_test_20260918` después de probar, por si estorb
 - Hokusei (id 5) tiene dos Rattata capturados, ninguna Poké Ball y 2.200 pokédólares. El Rattata `pokemon_owned` id 2 se capturó **antes** del arreglo de movimientos duplicados y conserva el 39 repetido; el id 3 ya sale limpio.
 - `pokemon_items` tiene los 2.223 objetos. **25 balls se quedan sin multiplicador** porque no son de Kanto; el verificador las lista y no falla por ello.
 - La sala 203 tiene una franja de **siete baldosas de hierba alta** en `y = 6`, puesta para probar el disparador.
-- `pokemon_encounter_furni` tiene dados de alta tres sprites: `jungle_c16_tallgrass` (8930) y las dos filas de `easter_c22_tallgrass` (19102868 y 60139172, que es el mismo furni duplicado en `items_base`). **Falta que el propietario diga cuáles quiere de verdad**; las demás se apagan con `activo = 0`.
+- `pokemon_encounter_furni` tiene dados de alta tres sprites, y **los tres se quedan** por decisión del propietario: `jungle_c16_tallgrass` (8930) es el de uso normal, y las dos filas de `easter_c22_tallgrass` (19102868 y 60139172, el mismo furni duplicado en `items_base`) quedan para uso puntual.
 - El Pikachu de Hokusei tiene `variante = 'pikachu_disfraz'` de una prueba. Se quita con un `UPDATE ... SET variante = 'normal'`.
 
 ### Pendiente
@@ -465,3 +475,17 @@ El caso raro es el disfraz: si la especie nueva no tiene esa variante, el Pokém
 
 - **Los objetos no tienen efecto.** Solo las balls llevan `effect_code` propio; pociones, curaciones de estado y MT se compran pero no se usan. El Repelente tampoco rellena el silenciado del disparador, que ya está escrito y esperando.
 - **Las habilidades tampoco**: `pokemon_abilities_cat` está importada con nombres y descripciones, y `effect_code` vale `sin_implementar` en las 374.
+
+---
+
+## 10. Proyecto aparte: importador de salas de otro hotel
+
+El propietario tiene salas Pokémon ya diseñadas en **hobba.tv**, donde no es administrador. Se estudió y esto es lo que hay:
+
+- **La mitad difícil ya está escrita en este hotel**: BuilderPro restaura copias de seguridad creando la sala, escribiendo el modelo en `room_models_custom` y colocando los furnis. No hace falta escribir un importador, sino **fabricar la copia de seguridad** con los datos de la otra sala.
+- Su `furniture.json` **no lleva salas**. Es el catálogo del hotel: sirve para traducir furnis entre hoteles por **nombre de clase**, que es lo único que viaja entre instalaciones; los `sprite_id` no.
+- Hacen falta tres cosas de allí: las filas de `items` de esa sala, la de `rooms` y, si el modelo es personalizado, su mapa de alturas.
+- **Su cliente no expone nada al `window`** — comprobado con `Object.keys(window)` — así que desde la consola no se puede leer el motor de sala. La vía sería un userscript con `@run-at document-start` que envuelva `WebSocket` y guarde los fotogramas entrantes, y descifrarlos aquí con los parsers del renderer que ya están en el repo. **Riesgo real**: si hobba.tv usa otra revisión de protocolo, los identificadores de paquete no coinciden y hay que emparejarlos a mano comparando con el tráfico propio.
+- **La vía barata es pedirle las tres tablas a un administrador de allí.** Si sale, lo demás es un script de traducción de una tarde.
+
+No bloquea nada del motor: sirve para tener rutas bonitas donde probar.
