@@ -32,14 +32,19 @@ class ClothingSwfMetadataInspector
 
         $bytes = file_get_contents($path);
 
-        if ($bytes === false || strlen($bytes) < 8) {
+        if (
+            $bytes === false ||
+            strlen($bytes) < 8
+        ) {
             throw new RuntimeException(
                 'No se pudo leer el SWF: ' .
                 basename($path)
             );
         }
 
-        $signature = substr($bytes, 0, 3);
+        $signature =
+            substr($bytes, 0, 3);
+
         $version = ord($bytes[3]);
 
         $declared = unpack(
@@ -47,9 +52,12 @@ class ClothingSwfMetadataInspector
             substr($bytes, 4, 4)
         );
 
-        $declaredLength = (int) (
-            $declared['length'] ?? 0
-        );
+        $declaredLength =
+            (int) (
+                $declared[
+                    'length'
+                ] ?? 0
+            );
 
         if (
             ! in_array(
@@ -64,11 +72,30 @@ class ClothingSwfMetadataInspector
             );
         }
 
+        if (
+            $declaredLength < 8 ||
+            $declaredLength >
+                self::MAX_SWF_BYTES
+        ) {
+            throw new RuntimeException(
+                'Tamaño SWF descomprimido declarado inválido: ' .
+                basename($path)
+            );
+        }
+
         $searchBytes = null;
         $inspectionMode = 'full';
 
         if ($signature === 'FWS') {
-            $searchBytes = substr($bytes, 8);
+            if ($size !== $declaredLength) {
+                throw new RuntimeException(
+                    'El tamaño real FWS no coincide con su cabecera: ' .
+                    basename($path)
+                );
+            }
+
+            $searchBytes =
+                substr($bytes, 8);
         } elseif ($signature === 'CWS') {
             if (! function_exists('gzuncompress')) {
                 throw new RuntimeException(
@@ -76,13 +103,29 @@ class ClothingSwfMetadataInspector
                 );
             }
 
+            /*
+             * Nunca inflamos sin tope: el segundo parámetro limita
+             * la salida máxima de zlib y la cabecera SWF ya fue
+             * limitada a 50 MiB.
+             */
             $inflated = @gzuncompress(
-                substr($bytes, 8)
+                substr($bytes, 8),
+                self::MAX_SWF_BYTES - 8
             );
 
             if ($inflated === false) {
                 throw new RuntimeException(
-                    'No se pudo descomprimir CWS: ' .
+                    'No se pudo descomprimir CWS dentro del límite seguro: ' .
+                    basename($path)
+                );
+            }
+
+            if (
+                strlen($inflated) + 8 !==
+                $declaredLength
+            ) {
+                throw new RuntimeException(
+                    'El tamaño CWS descomprimido no coincide con su cabecera: ' .
                     basename($path)
                 );
             }
@@ -90,10 +133,14 @@ class ClothingSwfMetadataInspector
             $searchBytes = $inflated;
         } else {
             /*
-             * ZWS usa LZMA. No intentamos reescribir ni descomprimir
-             * a ciegas sin una librería dedicada.
+             * ZWS usa LZMA. No lo descomprimimos aquí sin una
+             * librería dedicada. La cabecera y el tamaño físico ya
+             * están limitados, y el converter corre después con
+             * timeout y heap acotado.
              */
-            $inspectionMode = 'limited_zws';
+            $inspectionMode =
+                'limited_zws';
+
             $searchBytes = '';
         }
 
@@ -113,30 +160,35 @@ class ClothingSwfMetadataInspector
             );
         }
 
-        $joined = implode(
-            "\n",
-            $strings
-        );
+        $joined =
+            implode(
+                "\n",
+                $strings
+            );
 
-        $libraries = $this->matches(
-            '/<library\s+name=["\']([^"\']+)["\']/i',
-            $joined
-        );
+        $libraries =
+            $this->matches(
+                '/<library\s+name=["\']([^"\']+)["\']/i',
+                $joined
+            );
 
-        $objectDataTypes = $this->matches(
-            '/<objectData\s+type=["\']([^"\']+)["\']/i',
-            $joined
-        );
+        $objectDataTypes =
+            $this->matches(
+                '/<objectData\s+type=["\']([^"\']+)["\']/i',
+                $joined
+            );
 
-        $visualizationTypes = $this->matches(
-            '/<visualizationData\s+type=["\']([^"\']+)["\']/i',
-            $joined
-        );
+        $visualizationTypes =
+            $this->matches(
+                '/<visualizationData\s+type=["\']([^"\']+)["\']/i',
+                $joined
+            );
 
-        $objectTypes = $this->matches(
-            '/<object\s+type=["\']([^"\']+)["\']/i',
-            $joined
-        );
+        $objectTypes =
+            $this->matches(
+                '/<object\s+type=["\']([^"\']+)["\']/i',
+                $joined
+            );
 
         $builderMarkers = [];
 
@@ -153,7 +205,8 @@ class ClothingSwfMetadataInspector
                     $marker
                 ) !== false
             ) {
-                $builderMarkers[] = $marker;
+                $builderMarkers[] =
+                    $marker;
             }
         }
 
@@ -175,7 +228,10 @@ class ClothingSwfMetadataInspector
 
         $referenceCounts = [];
 
-        foreach ($candidateCodes as $code) {
+        foreach (
+            $candidateCodes
+            as $code
+        ) {
             $referenceCounts[$code] =
                 $searchBytes === ''
                     ? null
@@ -198,7 +254,8 @@ class ClothingSwfMetadataInspector
             ),
             'inspection_mode' =>
                 $inspectionMode,
-            'library_names' => $libraries,
+            'library_names' =>
+                $libraries,
             'object_data_types' =>
                 $objectDataTypes,
             'visualization_types' =>

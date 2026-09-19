@@ -10,6 +10,18 @@ class ClothingArchiveExtractor
     private const MAX_ARCHIVE_BYTES = 52428800; // 50 MiB
     private const MAX_FILES = 500;
     private const MAX_EXTRACTED_BYTES = 209715200; // 200 MiB
+    private const MAX_PROCESS_OUTPUT_BYTES = 1048576; // 1 MiB
+    private const LIST_TIMEOUT_SECONDS = 20;
+    private const EXTRACT_TIMEOUT_SECONDS = 90;
+
+    private const ALLOWED_FILE_EXTENSIONS = [
+        'txt',
+        'xml',
+        'swf',
+        'png',
+        'gif',
+        'json',
+    ];
 
     public function extract(
         string $archivePath,
@@ -60,7 +72,9 @@ class ClothingArchiveExtractor
                 );
             }
 
-            $this->validateExtractedTree($destination);
+            $this->validateExtractedTree(
+                $destination
+            );
 
             return $files;
         } catch (\Throwable $exception) {
@@ -96,6 +110,7 @@ class ClothingArchiveExtractor
 
             $entries = [];
             $total = 0;
+            $seen = [];
 
             for ($i = 0; $i < $zip->numFiles; $i++) {
                 $stat = $zip->statIndex($i);
@@ -113,8 +128,25 @@ class ClothingArchiveExtractor
                 }
 
                 $this->assertSafeRelativePath($name);
+                $this->assertUniqueArchivePath(
+                    $name,
+                    $seen
+                );
 
-                $entrySize = (int) ($stat['size'] ?? 0);
+                $normalized = str_replace(
+                    '\\',
+                    '/',
+                    $name
+                );
+
+                $isDirectory =
+                    str_ends_with(
+                        $normalized,
+                        '/'
+                    );
+
+                $entrySize =
+                    (int) ($stat['size'] ?? 0);
 
                 if ($entrySize < 0) {
                     throw new RuntimeException(
@@ -122,18 +154,28 @@ class ClothingArchiveExtractor
                     );
                 }
 
-                $total += $entrySize;
+                if (! $isDirectory) {
+                    $this->assertAllowedFileType(
+                        $name
+                    );
 
-                if ($total > self::MAX_EXTRACTED_BYTES) {
+                    $total += $entrySize;
+                }
+
+                if (
+                    $total >
+                    self::MAX_EXTRACTED_BYTES
+                ) {
                     throw new RuntimeException(
                         'El paquete expandido supera 200 MiB.'
                     );
                 }
 
                 $entries[] = [
-                    'index' => $i,
                     'name' => $name,
                     'size' => $entrySize,
+                    'directory' =>
+                        $isDirectory,
                 ];
             }
 
@@ -142,18 +184,26 @@ class ClothingArchiveExtractor
             foreach ($entries as $entry) {
                 $name = $entry['name'];
 
-                if (str_ends_with($name, '/')) {
-                    $dir = $destination .
+                if ($entry['directory']) {
+                    $dir =
+                        $destination .
                         DIRECTORY_SEPARATOR .
                         str_replace(
                             ['/', '\\'],
                             DIRECTORY_SEPARATOR,
-                            rtrim($name, '/\\')
+                            rtrim(
+                                $name,
+                                '/\\'
+                            )
                         );
 
                     if (
                         ! is_dir($dir) &&
-                        ! mkdir($dir, 0775, true) &&
+                        ! mkdir(
+                            $dir,
+                            0775,
+                            true
+                        ) &&
                         ! is_dir($dir)
                     ) {
                         throw new RuntimeException(
@@ -164,7 +214,8 @@ class ClothingArchiveExtractor
                     continue;
                 }
 
-                $target = $destination .
+                $target =
+                    $destination .
                     DIRECTORY_SEPARATOR .
                     str_replace(
                         ['/', '\\'],
@@ -176,7 +227,11 @@ class ClothingArchiveExtractor
 
                 if (
                     ! is_dir($parent) &&
-                    ! mkdir($parent, 0775, true) &&
+                    ! mkdir(
+                        $parent,
+                        0775,
+                        true
+                    ) &&
                     ! is_dir($parent)
                 ) {
                     throw new RuntimeException(
@@ -184,29 +239,50 @@ class ClothingArchiveExtractor
                     );
                 }
 
-                $stream = $zip->getStream($name);
+                $stream =
+                    $zip->getStream($name);
 
                 if (! is_resource($stream)) {
                     throw new RuntimeException(
-                        'No se pudo leer ' . $name . '.'
+                        'No se pudo leer ' .
+                        $name .
+                        '.'
                     );
                 }
 
-                $output = fopen($target, 'wb');
+                $output =
+                    fopen(
+                        $target,
+                        'wb'
+                    );
 
                 if (! is_resource($output)) {
                     fclose($stream);
 
                     throw new RuntimeException(
-                        'No se pudo escribir ' . $name . '.'
+                        'No se pudo escribir ' .
+                        $name .
+                        '.'
                     );
                 }
 
                 try {
-                    stream_copy_to_stream(
-                        $stream,
-                        $output
-                    );
+                    $written =
+                        stream_copy_to_stream(
+                            $stream,
+                            $output,
+                            self::MAX_EXTRACTED_BYTES + 1
+                        );
+
+                    if (
+                        $written === false ||
+                        $written >
+                            self::MAX_EXTRACTED_BYTES
+                    ) {
+                        throw new RuntimeException(
+                            'Una entrada ZIP supera el límite de extracción.'
+                        );
+                    }
                 } finally {
                     fclose($stream);
                     fclose($output);
@@ -232,7 +308,7 @@ class ClothingArchiveExtractor
             );
         }
 
-        return $this->extractRarExternal(
+        return $this->extractRarWithSevenZip(
             $archivePath,
             $destination
         );
@@ -267,34 +343,62 @@ class ClothingArchiveExtractor
 
             $total = 0;
             $files = [];
+            $seen = [];
 
             foreach ($entries as $entry) {
-                $name = (string) $entry->getName();
+                $name =
+                    (string) $entry->getName();
 
                 $this->assertSafeRelativePath($name);
+                $this->assertUniqueArchivePath(
+                    $name,
+                    $seen
+                );
 
-                $entrySize = (int) $entry->getUnpackedSize();
-                $total += $entrySize;
+                $entrySize =
+                    (int) $entry->getUnpackedSize();
 
-                if ($total > self::MAX_EXTRACTED_BYTES) {
+                if ($entrySize < 0) {
                     throw new RuntimeException(
-                        'El paquete expandido supera 200 MiB.'
+                        'Tamaño RAR inválido.'
                     );
                 }
 
                 if (! $entry->isDirectory()) {
+                    $this->assertAllowedFileType(
+                        $name
+                    );
+
+                    $total += $entrySize;
                     $files[] = $name;
+                }
+
+                if (
+                    $total >
+                    self::MAX_EXTRACTED_BYTES
+                ) {
+                    throw new RuntimeException(
+                        'El paquete expandido supera 200 MiB.'
+                    );
                 }
             }
 
             foreach ($entries as $entry) {
-                if (! $entry->extract($destination)) {
+                if (
+                    ! $entry->extract(
+                        $destination
+                    )
+                ) {
                     throw new RuntimeException(
                         'Falló la extracción de ' .
                         $entry->getName() .
                         '.'
                     );
                 }
+
+                $this->assertTreeWithinLimits(
+                    $destination
+                );
             }
 
             return $files;
@@ -303,97 +407,171 @@ class ClothingArchiveExtractor
         }
     }
 
-    private function extractRarExternal(
+    private function extractRarWithSevenZip(
         string $archivePath,
         string $destination
     ): array {
-        $binary = $this->findArchiveBinary();
+        $binary =
+            $this->findSevenZipBinary();
 
         if ($binary === null) {
             throw new RuntimeException(
-                'RAR necesita la extensión PHP rar o 7-Zip/UnRAR. ' .
-                'Configura CLOTHING_ARCHIVER_BINARY si no está en PATH.'
+                'Por seguridad, RAR requiere la extensión PHP rar o 7-Zip. UnRAR/WinRAR no se usa como fallback porque no permite esta validación previa de forma fiable.'
             );
         }
 
-        $kind = $this->archiveBinaryKind($binary);
-
-        if ($kind === '7z') {
-            $list = $this->runProcess([
+        $list = $this->runProcess(
+            [
                 $binary,
                 'l',
                 '-slt',
+                '-bd',
+                '-p__BIRIBIRI_REJECT_ENCRYPTED__',
                 $archivePath,
-            ]);
+            ],
+            self::LIST_TIMEOUT_SECONDS
+        );
 
-            $entries = $this->parse7zListing(
+        $entries =
+            $this->parse7zListing(
                 $list,
                 $archivePath
             );
 
-            $this->validateArchiveEntryList($entries);
+        $this->validate7zEntries(
+            $entries
+        );
 
-            $this->runProcess([
-                $binary,
-                'x',
-                '-y',
-                '-o' . $destination,
-                $archivePath,
-            ]);
-
-            return $entries;
-        }
-
-        $list = $this->runProcess([
-            $binary,
-            'lb',
-            $archivePath,
-        ]);
-
-        $entries = array_values(
-            array_filter(
-                array_map(
-                    'trim',
-                    preg_split(
-                        '/\R/',
-                        $list
-                    ) ?: []
-                ),
-                fn (string $line): bool =>
-                    $line !== ''
+        $files = array_values(
+            array_map(
+                static fn (array $entry): string =>
+                    (string) $entry['name'],
+                array_filter(
+                    $entries,
+                    static fn (array $entry): bool =>
+                        ! ($entry['directory'] ?? false)
+                )
             )
         );
 
-        $this->validateArchiveEntryList($entries);
+        $this->runProcess(
+            [
+                $binary,
+                'x',
+                '-y',
+                '-bd',
+                '-bb0',
+                '-p__BIRIBIRI_REJECT_ENCRYPTED__',
+                '-o' . $destination,
+                $archivePath,
+            ],
+            self::EXTRACT_TIMEOUT_SECONDS,
+            $destination
+        );
 
-        $this->runProcess([
-            $binary,
-            'x',
-            '-o+',
-            '-inul',
-            $archivePath,
-            rtrim(
-                $destination,
-                '\\/'
-            ) . DIRECTORY_SEPARATOR,
-        ]);
-
-        return $entries;
+        return $files;
     }
 
-    private function validateArchiveEntryList(
+    private function validate7zEntries(
         array $entries
     ): void {
+        if ($entries === []) {
+            throw new RuntimeException(
+                'El RAR no contiene entradas.'
+            );
+        }
+
         if (count($entries) > self::MAX_FILES) {
             throw new RuntimeException(
                 'El paquete contiene demasiados archivos.'
             );
         }
 
+        $total = 0;
+        $seen = [];
+
         foreach ($entries as $entry) {
-            $this->assertSafeRelativePath(
-                (string) $entry
+            $name = trim(
+                (string) (
+                    $entry['name'] ?? ''
+                )
             );
+
+            if ($name === '') {
+                throw new RuntimeException(
+                    '7-Zip devolvió una entrada sin ruta.'
+                );
+            }
+
+            $this->assertSafeRelativePath($name);
+            $this->assertUniqueArchivePath(
+                $name,
+                $seen
+            );
+
+            if (
+                $entry['encrypted'] ?? false
+            ) {
+                throw new RuntimeException(
+                    'No se permiten RAR cifrados.'
+                );
+            }
+
+            if (
+                $entry['link'] ?? false
+            ) {
+                throw new RuntimeException(
+                    'No se permiten enlaces dentro del RAR.'
+                );
+            }
+
+            if (
+                $entry['anti'] ?? false
+            ) {
+                throw new RuntimeException(
+                    'No se permiten anti-items dentro del RAR.'
+                );
+            }
+
+            if (
+                $entry['directory'] ?? false
+            ) {
+                continue;
+            }
+
+            $this->assertAllowedFileType($name);
+
+            if (
+                ! array_key_exists(
+                    'size',
+                    $entry
+                )
+            ) {
+                throw new RuntimeException(
+                    '7-Zip no informó el tamaño de ' .
+                    $name .
+                    '.'
+                );
+            }
+
+            $size = (int) $entry['size'];
+
+            if ($size < 0) {
+                throw new RuntimeException(
+                    'Tamaño inválido en el listado 7-Zip.'
+                );
+            }
+
+            $total += $size;
+
+            if (
+                $total >
+                self::MAX_EXTRACTED_BYTES
+            ) {
+                throw new RuntimeException(
+                    'El paquete expandido supera 200 MiB.'
+                );
+            }
         }
     }
 
@@ -401,51 +579,209 @@ class ClothingArchiveExtractor
         string $output,
         string $archivePath
     ): array {
-        $entries = [];
-        $archiveNormalized = str_replace(
-            '\\',
-            '/',
-            realpath($archivePath) ?: $archivePath
-        );
+        $records = [];
+        $current = [];
+
+        $flush = static function () use (
+            &$records,
+            &$current
+        ): void {
+            if (
+                isset($current['Path']) &&
+                trim(
+                    (string) $current['Path']
+                ) !== ''
+            ) {
+                $records[] = $current;
+            }
+
+            $current = [];
+        };
 
         foreach (
             preg_split('/\R/', $output) ?: []
             as $line
         ) {
-            if (! str_starts_with($line, 'Path = ')) {
+            if (trim($line) === '') {
+                $flush();
                 continue;
             }
 
-            $value = trim(substr($line, 7));
+            $separator = strpos(
+                $line,
+                ' = '
+            );
 
-            if ($value === '') {
+            if ($separator === false) {
                 continue;
             }
 
-            $normalized = str_replace(
-                '\\',
-                '/',
-                $value
+            $key = substr(
+                $line,
+                0,
+                $separator
+            );
+
+            $value = substr(
+                $line,
+                $separator + 3
             );
 
             if (
-                $normalized === $archiveNormalized ||
-                basename($normalized) ===
-                    basename($archiveNormalized) &&
-                ! str_contains($normalized, '/')
+                $key === 'Path' &&
+                isset($current['Path'])
+            ) {
+                $flush();
+            }
+
+            $current[$key] = $value;
+        }
+
+        $flush();
+
+        $archiveNormalized = str_replace(
+            '\\',
+            '/',
+            realpath($archivePath)
+                ?: $archivePath
+        );
+
+        $entries = [];
+
+        foreach ($records as $record) {
+            $name = trim(
+                (string) (
+                    $record['Path'] ?? ''
+                )
+            );
+
+            if ($name === '') {
+                continue;
+            }
+
+            $normalized =
+                str_replace(
+                    '\\',
+                    '/',
+                    $name
+                );
+
+            if (
+                $normalized ===
+                    $archiveNormalized ||
+                (
+                    basename($normalized) ===
+                        basename(
+                            $archiveNormalized
+                        ) &&
+                    ! str_contains(
+                        $normalized,
+                        '/'
+                    )
+                )
             ) {
                 continue;
             }
 
-            $entries[] = $value;
+            $size = null;
+
+            if (
+                array_key_exists(
+                    'Size',
+                    $record
+                )
+            ) {
+                $rawSize = trim(
+                    (string) $record['Size']
+                );
+
+                if (
+                    $rawSize !== '' &&
+                    ! ctype_digit($rawSize)
+                ) {
+                    throw new RuntimeException(
+                        '7-Zip devolvió un tamaño no numérico.'
+                    );
+                }
+
+                if ($rawSize !== '') {
+                    $size = (int) $rawSize;
+                }
+            }
+
+            $attributes = strtoupper(
+                trim(
+                    (string) (
+                        $record['Attributes']
+                        ?? ''
+                    )
+                )
+            );
+
+            $directory =
+                trim(
+                    (string) (
+                        $record['Folder']
+                        ?? ''
+                    )
+                ) === '+' ||
+                str_contains(
+                    $attributes,
+                    'D'
+                );
+
+            $link =
+                trim(
+                    (string) (
+                        $record[
+                            'Symbolic Link'
+                        ] ?? ''
+                    )
+                ) !== '' ||
+                trim(
+                    (string) (
+                        $record[
+                            'Hard Link'
+                        ] ?? ''
+                    )
+                ) !== '';
+
+            $encrypted =
+                trim(
+                    (string) (
+                        $record[
+                            'Encrypted'
+                        ] ?? ''
+                    )
+                ) === '+';
+
+            $anti =
+                trim(
+                    (string) (
+                        $record['Anti']
+                        ?? ''
+                    )
+                ) === '+';
+
+            $entry = [
+                'name' => $name,
+                'directory' => $directory,
+                'link' => $link,
+                'encrypted' => $encrypted,
+                'anti' => $anti,
+            ];
+
+            if ($size !== null) {
+                $entry['size'] = $size;
+            }
+
+            $entries[] = $entry;
         }
 
-        return array_values(
-            array_unique($entries)
-        );
+        return $entries;
     }
 
-    private function findArchiveBinary(): ?string
+    private function findSevenZipBinary(): ?string
     {
         $configured = trim(
             (string) env(
@@ -458,29 +794,45 @@ class ClothingArchiveExtractor
             $configured !== '' &&
             is_file($configured)
         ) {
+            $name = strtolower(
+                pathinfo(
+                    $configured,
+                    PATHINFO_FILENAME
+                )
+            );
+
+            if (
+                ! in_array(
+                    $name,
+                    ['7z', '7zz', '7za'],
+                    true
+                )
+            ) {
+                throw new RuntimeException(
+                    'CLOTHING_ARCHIVER_BINARY debe apuntar a 7-Zip por seguridad.'
+                );
+            }
+
             return $configured;
         }
 
-        $windowsCandidates = [
+        foreach ([
             'C:\\Program Files\\7-Zip\\7z.exe',
             'C:\\Program Files (x86)\\7-Zip\\7z.exe',
-            'C:\\Program Files\\WinRAR\\UnRAR.exe',
-            'C:\\Program Files\\WinRAR\\WinRAR.exe',
-        ];
-
-        foreach ($windowsCandidates as $candidate) {
+        ] as $candidate) {
             if (is_file($candidate)) {
                 return $candidate;
             }
         }
 
         foreach (
-            ['7z', '7zz', '7za', 'unrar']
+            ['7z', '7zz', '7za']
             as $candidate
         ) {
-            $resolved = $this->resolveFromPath(
-                $candidate
-            );
+            $resolved =
+                $this->resolveFromPath(
+                    $candidate
+                );
 
             if ($resolved !== null) {
                 return $resolved;
@@ -495,21 +847,34 @@ class ClothingArchiveExtractor
     ): ?string {
         $path = getenv('PATH');
 
-        if (! is_string($path) || $path === '') {
+        if (
+            ! is_string($path) ||
+            $path === ''
+        ) {
             return null;
         }
 
-        $extensions = PHP_OS_FAMILY === 'Windows'
-            ? ['', '.exe']
-            : [''];
+        $extensions =
+            PHP_OS_FAMILY === 'Windows'
+                ? ['', '.exe']
+                : [''];
 
         foreach (
-            explode(PATH_SEPARATOR, $path)
+            explode(
+                PATH_SEPARATOR,
+                $path
+            )
             as $directory
         ) {
-            foreach ($extensions as $extension) {
+            foreach (
+                $extensions
+                as $extension
+            ) {
                 $candidate =
-                    rtrim($directory, '\\/') .
+                    rtrim(
+                        $directory,
+                        '\\/'
+                    ) .
                     DIRECTORY_SEPARATOR .
                     $binary .
                     $extension;
@@ -523,24 +888,10 @@ class ClothingArchiveExtractor
         return null;
     }
 
-    private function archiveBinaryKind(
-        string $binary
-    ): string {
-        $name = strtolower(
-            pathinfo($binary, PATHINFO_FILENAME)
-        );
-
-        return in_array(
-            $name,
-            ['7z', '7zz', '7za'],
-            true
-        )
-            ? '7z'
-            : 'unrar';
-    }
-
     private function runProcess(
-        array $command
+        array $command,
+        int $timeoutSeconds,
+        ?string $watchDirectory = null
     ): string {
         $descriptor = [
             0 => ['pipe', 'r'],
@@ -565,41 +916,158 @@ class ClothingArchiveExtractor
 
         fclose($pipes[0]);
 
-        $stdout = stream_get_contents($pipes[1]);
-        $stderr = stream_get_contents($pipes[2]);
+        stream_set_blocking(
+            $pipes[1],
+            false
+        );
+
+        stream_set_blocking(
+            $pipes[2],
+            false
+        );
+
+        $stdout = '';
+        $stderr = '';
+        $failure = null;
+        $exitCode = null;
+        $startedAt = microtime(true);
+        $lastWatch = 0.0;
+
+        while (true) {
+            $stdout .= (string)
+                stream_get_contents(
+                    $pipes[1]
+                );
+
+            $stderr .= (string)
+                stream_get_contents(
+                    $pipes[2]
+                );
+
+            if (
+                strlen($stdout) +
+                strlen($stderr) >
+                self::MAX_PROCESS_OUTPUT_BYTES
+            ) {
+                $failure =
+                    'El descompresor generó demasiada salida.';
+            }
+
+            $now = microtime(true);
+
+            if (
+                $failure === null &&
+                $now - $startedAt >
+                    $timeoutSeconds
+            ) {
+                $failure =
+                    'El descompresor superó el tiempo máximo de ' .
+                    $timeoutSeconds .
+                    ' segundos.';
+            }
+
+            if (
+                $failure === null &&
+                $watchDirectory !== null &&
+                $now - $lastWatch >= 0.1
+            ) {
+                try {
+                    $this->assertTreeWithinLimits(
+                        $watchDirectory
+                    );
+                } catch (\Throwable $exception) {
+                    $failure =
+                        $exception->getMessage();
+                }
+
+                $lastWatch = $now;
+            }
+
+            $status =
+                proc_get_status($process);
+
+            if ($failure !== null) {
+                if (
+                    $status['running']
+                    ?? false
+                ) {
+                    @proc_terminate(
+                        $process
+                    );
+                }
+
+                break;
+            }
+
+            if (
+                ! (
+                    $status['running']
+                    ?? false
+                )
+            ) {
+                $exitCode =
+                    (int) (
+                        $status[
+                            'exitcode'
+                        ] ?? -1
+                    );
+
+                break;
+            }
+
+            usleep(50000);
+        }
+
+        $stdout .= (string)
+            stream_get_contents(
+                $pipes[1]
+            );
+
+        $stderr .= (string)
+            stream_get_contents(
+                $pipes[2]
+            );
 
         fclose($pipes[1]);
         fclose($pipes[2]);
 
-        $exit = proc_close($process);
+        $closedExit =
+            proc_close($process);
 
-        if ($exit !== 0) {
+        if ($failure !== null) {
             throw new RuntimeException(
-                'El descompresor devolvió error ' .
-                $exit .
-                ': ' .
-                trim((string) $stderr)
+                $failure
             );
         }
 
-        return (string) $stdout;
+        if (
+            $exitCode === null ||
+            $exitCode < 0
+        ) {
+            $exitCode = $closedExit;
+        }
+
+        if ($exitCode !== 0) {
+            throw new RuntimeException(
+                'El descompresor devolvió error ' .
+                $exitCode .
+                ': ' .
+                trim($stderr)
+            );
+        }
+
+        return $stdout;
     }
 
     private function assertSafeRelativePath(
         string $path
     ): void {
-        $normalized = str_replace(
-            '\\',
-            '/',
-            trim($path)
-        );
-
         if (
-            $normalized === '' ||
-            str_starts_with($normalized, '/') ||
+            $path === '' ||
+            $path !== trim($path) ||
             preg_match(
-                '/^[A-Za-z]:\//',
-                $normalized
+                '/[\x00-\x1F\x7F]/',
+                $path
             ) === 1
         ) {
             throw new RuntimeException(
@@ -608,36 +1076,137 @@ class ClothingArchiveExtractor
             );
         }
 
-        $segments = explode('/', $normalized);
+        $normalized =
+            str_replace(
+                '\\',
+                '/',
+                $path
+            );
+
+        if (
+            strlen($normalized) > 500 ||
+            str_starts_with(
+                $normalized,
+                '/'
+            ) ||
+            str_contains(
+                $normalized,
+                ':'
+            )
+        ) {
+            throw new RuntimeException(
+                'Ruta insegura en el paquete: ' .
+                $path
+            );
+        }
+
+        $normalized =
+            rtrim(
+                $normalized,
+                '/'
+            );
+
+        if ($normalized === '') {
+            throw new RuntimeException(
+                'Ruta insegura en el paquete: ' .
+                $path
+            );
+        }
+
+        $segments =
+            explode(
+                '/',
+                $normalized
+            );
 
         foreach ($segments as $segment) {
-            if ($segment === '..') {
+            if (
+                $segment === '' ||
+                $segment === '.' ||
+                $segment === '..' ||
+                strlen($segment) > 240 ||
+                preg_match(
+                    '/[. ]$/',
+                    $segment
+                ) === 1 ||
+                preg_match(
+                    '/^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)/i',
+                    $segment
+                ) === 1
+            ) {
                 throw new RuntimeException(
-                    'Path traversal detectado: ' .
+                    'Ruta insegura en el paquete: ' .
                     $path
                 );
             }
         }
     }
 
-    private function validateExtractedTree(
-        string $destination
+    private function assertUniqueArchivePath(
+        string $path,
+        array &$seen
     ): void {
-        $root = realpath($destination);
+        $normalized = strtolower(
+            rtrim(
+                str_replace(
+                    '\\',
+                    '/',
+                    $path
+                ),
+                '/'
+            )
+        );
 
-        if ($root === false) {
+        if (isset($seen[$normalized])) {
             throw new RuntimeException(
-                'No existe el staging extraído.'
+                'Ruta duplicada en el paquete: ' .
+                $path
             );
         }
 
-        $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator(
-                $root,
-                \FilesystemIterator::SKIP_DOTS
-            ),
-            \RecursiveIteratorIterator::SELF_FIRST
+        $seen[$normalized] = true;
+    }
+
+    private function assertAllowedFileType(
+        string $path
+    ): void {
+        $extension = strtolower(
+            pathinfo(
+                $path,
+                PATHINFO_EXTENSION
+            )
         );
+
+        if (
+            $extension === '' ||
+            ! in_array(
+                $extension,
+                self::ALLOWED_FILE_EXTENSIONS,
+                true
+            )
+        ) {
+            throw new RuntimeException(
+                'Tipo de archivo no permitido en el paquete: ' .
+                $path
+            );
+        }
+    }
+
+    private function assertTreeWithinLimits(
+        string $destination
+    ): void {
+        if (! is_dir($destination)) {
+            return;
+        }
+
+        $iterator =
+            new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator(
+                    $destination,
+                    \FilesystemIterator::SKIP_DOTS
+                ),
+                \RecursiveIteratorIterator::SELF_FIRST
+            );
 
         $count = 0;
         $bytes = 0;
@@ -657,7 +1226,73 @@ class ClothingArchiveExtractor
                 );
             }
 
-            $real = $file->getRealPath();
+            if ($file->isFile()) {
+                $bytes +=
+                    $file->getSize();
+
+                if (
+                    $bytes >
+                    self::MAX_EXTRACTED_BYTES
+                ) {
+                    throw new RuntimeException(
+                        'El staging supera 200 MiB.'
+                    );
+                }
+            }
+        }
+    }
+
+    private function validateExtractedTree(
+        string $destination
+    ): void {
+        $root =
+            realpath($destination);
+
+        if ($root === false) {
+            throw new RuntimeException(
+                'No existe el staging extraído.'
+            );
+        }
+
+        $rootNormalized =
+            rtrim(
+                str_replace(
+                    '\\',
+                    '/',
+                    $root
+                ),
+                '/'
+            );
+
+        $iterator =
+            new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator(
+                    $root,
+                    \FilesystemIterator::SKIP_DOTS
+                ),
+                \RecursiveIteratorIterator::SELF_FIRST
+            );
+
+        $count = 0;
+        $bytes = 0;
+
+        foreach ($iterator as $file) {
+            $count++;
+
+            if ($count > self::MAX_FILES) {
+                throw new RuntimeException(
+                    'El staging contiene demasiadas entradas.'
+                );
+            }
+
+            if ($file->isLink()) {
+                throw new RuntimeException(
+                    'No se permiten enlaces simbólicos.'
+                );
+            }
+
+            $real =
+                $file->getRealPath();
 
             if ($real === false) {
                 throw new RuntimeException(
@@ -665,27 +1300,61 @@ class ClothingArchiveExtractor
                 );
             }
 
-            $relativeCheck = substr(
-                $real,
-                0,
-                strlen($root)
-            );
+            $realNormalized =
+                str_replace(
+                    '\\',
+                    '/',
+                    $real
+                );
 
             if (
                 strcasecmp(
-                    $relativeCheck,
-                    $root
-                ) !== 0
+                    $realNormalized,
+                    $rootNormalized
+                ) !== 0 &&
+                ! str_starts_with(
+                    strtolower(
+                        $realNormalized
+                    ),
+                    strtolower(
+                        $rootNormalized .
+                        '/'
+                    )
+                )
             ) {
                 throw new RuntimeException(
                     'Archivo extraído fuera del staging.'
                 );
             }
 
-            if ($file->isFile()) {
-                $bytes += $file->getSize();
+            $relative = ltrim(
+                substr(
+                    $realNormalized,
+                    strlen(
+                        $rootNormalized
+                    )
+                ),
+                '/'
+            );
 
-                if ($bytes > self::MAX_EXTRACTED_BYTES) {
+            if ($relative !== '') {
+                $this->assertSafeRelativePath(
+                    $relative
+                );
+            }
+
+            if ($file->isFile()) {
+                $this->assertAllowedFileType(
+                    $relative
+                );
+
+                $bytes +=
+                    $file->getSize();
+
+                if (
+                    $bytes >
+                    self::MAX_EXTRACTED_BYTES
+                ) {
                     throw new RuntimeException(
                         'El staging supera 200 MiB.'
                     );
@@ -698,11 +1367,17 @@ class ClothingArchiveExtractor
         string $destination
     ): void {
         if (file_exists($destination)) {
-            $this->deleteTree($destination);
+            $this->deleteTree(
+                $destination
+            );
         }
 
         if (
-            ! mkdir($destination, 0775, true) &&
+            ! mkdir(
+                $destination,
+                0775,
+                true
+            ) &&
             ! is_dir($destination)
         ) {
             throw new RuntimeException(
@@ -718,24 +1393,35 @@ class ClothingArchiveExtractor
             return;
         }
 
-        if (is_file($path) || is_link($path)) {
+        if (
+            is_file($path) ||
+            is_link($path)
+        ) {
             @unlink($path);
             return;
         }
 
-        $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator(
-                $path,
-                \FilesystemIterator::SKIP_DOTS
-            ),
-            \RecursiveIteratorIterator::CHILD_FIRST
-        );
+        $iterator =
+            new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator(
+                    $path,
+                    \FilesystemIterator::SKIP_DOTS
+                ),
+                \RecursiveIteratorIterator::CHILD_FIRST
+            );
 
         foreach ($iterator as $entry) {
-            if ($entry->isDir() && ! $entry->isLink()) {
-                @rmdir($entry->getPathname());
+            if (
+                $entry->isDir() &&
+                ! $entry->isLink()
+            ) {
+                @rmdir(
+                    $entry->getPathname()
+                );
             } else {
-                @unlink($entry->getPathname());
+                @unlink(
+                    $entry->getPathname()
+                );
             }
         }
 
