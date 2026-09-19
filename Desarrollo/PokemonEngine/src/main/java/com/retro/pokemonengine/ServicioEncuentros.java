@@ -1,6 +1,7 @@
 package com.retro.pokemonengine;
 
 import com.eu.habbo.Emulator;
+import com.retro.pokemonengine.clima.Clima;
 import com.retro.pokemonengine.combate.EspecieCatalogo;
 import com.retro.pokemonengine.combate.PokemonCombate;
 import com.retro.pokemonengine.combate.RngCombate;
@@ -15,7 +16,8 @@ import com.retro.pokemonengine.entrenador.PokemonPoseido;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
-import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -79,7 +81,7 @@ public final class ServicioEncuentros
         try(Connection c = Emulator.getDatabase().getDataSource().getConnection();
             Statement s = c.createStatement();
             ResultSet r = s.executeQuery(
-                    "SELECT zone_id, species_id, form_id, nivel_min, nivel_max, peso, metodo, franja" +
+                    "SELECT zone_id, species_id, form_id, nivel_min, nivel_max, peso, metodo, franja, clima" +
                     " FROM pokemon_zone_encounters ORDER BY zone_id, id"))
         {
             while(r.next())
@@ -92,7 +94,12 @@ public final class ServicioEncuentros
                                 r.getInt("nivel_max"),
                                 r.getInt("peso"),
                                 MetodoEncuentro.porNombre(r.getString("metodo")),
-                                Franja.porNombre(r.getString("franja"))));
+                                Franja.porNombre(r.getString("franja")),
+                                // porNombre devuelve DESPEJADO ante lo desconocido,
+                                // y aqui null significa "con cualquier tiempo".
+                                r.getString("clima") == null
+                                        ? null
+                                        : Clima.porNombre(r.getString("clima"))));
             }
         }
 
@@ -116,9 +123,15 @@ public final class ServicioEncuentros
         return !deZona(zonaId).isEmpty();
     }
 
+    /**
+     * La hora del hotel es la de Espana, clavada: mudar el emulador de servidor
+     * no debe mover el ciclo dia/noche sin que nadie lo toque.
+     */
+    public static final ZoneId ZONA_HORARIA = ZoneId.of("Europe/Madrid");
+
     public static Franja franjaActual()
     {
-        return Franja.deHora(LocalTime.now().getHour());
+        return Franja.deHora(ZonedDateTime.now(ZONA_HORARIA).getHour());
     }
 
     /**
@@ -131,7 +144,7 @@ public final class ServicioEncuentros
                                  int temporadaId)
     {
         List<Encuentro> candidatos = TablaEncuentros.disponibles(
-                deZona(zonaId), metodo, franjaActual());
+                deZona(zonaId), metodo, franjaActual(), ServicioClima.clima(zonaId));
 
         long semilla = System.nanoTime() ^ ((long) userId << 20);
         RngCombate rng = new RngCombate(semilla);

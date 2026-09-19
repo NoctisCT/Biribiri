@@ -1,5 +1,7 @@
 package com.retro.pokemonengine.encuentros;
 
+import com.retro.pokemonengine.clima.Clima;
+
 /**
  * Una fila de la tabla de encuentros de una zona.
  *
@@ -15,9 +17,10 @@ public final class Encuentro
     private final int peso;
     private final MetodoEncuentro metodo;
     private final Franja franja;
+    private final Clima clima;
 
     public Encuentro(int especieId, int formaId, int nivelMin, int nivelMax, int peso,
-                     MetodoEncuentro metodo, Franja franja)
+                     MetodoEncuentro metodo, Franja franja, Clima clima)
     {
         if(nivelMin < 1 || nivelMax > 100)
         {
@@ -41,11 +44,12 @@ public final class Encuentro
         this.peso = peso;
         this.metodo = metodo == null ? MetodoEncuentro.HIERBA : metodo;
         this.franja = franja;
+        this.clima = clima;
     }
 
     public static Encuentro de(int especieId, int nivelMin, int nivelMax, int peso)
     {
-        return new Encuentro(especieId, 0, nivelMin, nivelMax, peso, MetodoEncuentro.HIERBA, null);
+        return new Encuentro(especieId, 0, nivelMin, nivelMax, peso, MetodoEncuentro.HIERBA, null, null);
     }
 
     public int especieId() { return this.especieId; }
@@ -58,10 +62,18 @@ public final class Encuentro
     /** null = a cualquier hora. */
     public Franja franja() { return this.franja; }
 
-    public boolean apareceEn(MetodoEncuentro metodo, Franja franja)
+    /** null = con cualquier tiempo. */
+    public Clima clima() { return this.clima; }
+
+    public boolean apareceEn(MetodoEncuentro metodo, Franja franja, Clima clima)
     {
         if(metodo != null && this.metodo != metodo) return false;
 
-        return this.franja == null || franja == null || this.franja == franja;
+        if(this.franja != null && franja != null && this.franja != franja) return false;
+
+        // Sin clima exigido aparece con cualquiera. Con clima exigido y sin clima
+        // conocido se deja pasar: mas vale un encuentro de mas que una zona muda
+        // porque su estado de clima todavia no se haya sorteado.
+        return this.clima == null || clima == null || this.clima == clima;
     }
 }

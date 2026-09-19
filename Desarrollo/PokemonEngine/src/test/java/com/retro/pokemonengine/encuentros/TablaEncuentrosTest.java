@@ -1,5 +1,6 @@
 package com.retro.pokemonengine.encuentros;
 
+import com.retro.pokemonengine.clima.Clima;
 import com.retro.pokemonengine.combate.RngCombate;
 import org.junit.jupiter.api.Test;
 
@@ -9,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -162,10 +164,10 @@ class TablaEncuentrosTest
     void soloEntranLosEncuentrosDelMetodoPedido()
     {
         List<Encuentro> tabla = List.of(
-                new Encuentro(16, 0, 2, 4, 70, MetodoEncuentro.HIERBA, null),
-                new Encuentro(129, 0, 5, 15, 30, MetodoEncuentro.PESCA, null));
+                new Encuentro(16, 0, 2, 4, 70, MetodoEncuentro.HIERBA, null, null),
+                new Encuentro(129, 0, 5, 15, 30, MetodoEncuentro.PESCA, null, null));
 
-        List<Encuentro> hierba = TablaEncuentros.disponibles(tabla, MetodoEncuentro.HIERBA, Franja.DIA);
+        List<Encuentro> hierba = TablaEncuentros.disponibles(tabla, MetodoEncuentro.HIERBA, Franja.DIA, null);
 
         assertEquals(1, hierba.size());
         assertEquals(16, hierba.get(0).especieId());
@@ -175,11 +177,11 @@ class TablaEncuentrosTest
     void soloEntranLosEncuentrosDeLaFranjaActual()
     {
         List<Encuentro> tabla = List.of(
-                new Encuentro(16, 0, 2, 4, 70, MetodoEncuentro.HIERBA, null),
-                new Encuentro(41, 0, 3, 5, 20, MetodoEncuentro.HIERBA, Franja.NOCHE),
-                new Encuentro(21, 0, 3, 5, 20, MetodoEncuentro.HIERBA, Franja.DIA));
+                new Encuentro(16, 0, 2, 4, 70, MetodoEncuentro.HIERBA, null, null),
+                new Encuentro(41, 0, 3, 5, 20, MetodoEncuentro.HIERBA, Franja.NOCHE, null),
+                new Encuentro(21, 0, 3, 5, 20, MetodoEncuentro.HIERBA, Franja.DIA, null));
 
-        List<Encuentro> deNoche = TablaEncuentros.disponibles(tabla, MetodoEncuentro.HIERBA, Franja.NOCHE);
+        List<Encuentro> deNoche = TablaEncuentros.disponibles(tabla, MetodoEncuentro.HIERBA, Franja.NOCHE, null);
 
         assertEquals(2, deNoche.size(), "El encuentro sin franja aparece a cualquier hora");
         assertTrue(deNoche.stream().anyMatch(e -> e.especieId() == 16));
@@ -190,12 +192,52 @@ class TablaEncuentrosTest
     void unaZonaSinFilasParaEsaFranjaNoSorteaNada()
     {
         List<Encuentro> tabla = List.of(
-                new Encuentro(41, 0, 3, 5, 20, MetodoEncuentro.HIERBA, Franja.NOCHE));
+                new Encuentro(41, 0, 3, 5, 20, MetodoEncuentro.HIERBA, Franja.NOCHE, null));
 
-        List<Encuentro> deDia = TablaEncuentros.disponibles(tabla, MetodoEncuentro.HIERBA, Franja.DIA);
+        List<Encuentro> deDia = TablaEncuentros.disponibles(tabla, MetodoEncuentro.HIERBA, Franja.DIA, null);
 
         assertTrue(deDia.isEmpty());
         assertNull(TablaEncuentros.sortear(deDia, new RngCombate(5L)));
+    }
+
+    @Test
+    void soloEntranLosEncuentrosDelClimaActual()
+    {
+        List<Encuentro> tabla = List.of(
+                new Encuentro(16, 0, 2, 4, 70, MetodoEncuentro.HIERBA, null, null),
+                new Encuentro(60, 0, 3, 5, 30, MetodoEncuentro.HIERBA, null, Clima.LLUVIA));
+
+        List<Encuentro> conSol = TablaEncuentros.disponibles(
+                tabla, MetodoEncuentro.HIERBA, Franja.DIA, Clima.SOL);
+
+        assertEquals(1, conSol.size(), "Poliwag solo sale con lluvia");
+        assertEquals(16, conSol.get(0).especieId());
+
+        List<Encuentro> conLluvia = TablaEncuentros.disponibles(
+                tabla, MetodoEncuentro.HIERBA, Franja.DIA, Clima.LLUVIA);
+
+        assertEquals(2, conLluvia.size(), "El que no pide clima sale con cualquiera");
+    }
+
+    @Test
+    void unEncuentroPuedePedirFranjaYClimaALaVez()
+    {
+        Encuentro exigente = new Encuentro(
+                37, 0, 5, 7, 10, MetodoEncuentro.HIERBA, Franja.NOCHE, Clima.SOL);
+
+        assertTrue(exigente.apareceEn(MetodoEncuentro.HIERBA, Franja.NOCHE, Clima.SOL));
+        assertFalse(exigente.apareceEn(MetodoEncuentro.HIERBA, Franja.DIA, Clima.SOL));
+        assertFalse(exigente.apareceEn(MetodoEncuentro.HIERBA, Franja.NOCHE, Clima.LLUVIA));
+    }
+
+    @Test
+    void sinClimaConocidoNoSeEsconeNada()
+    {
+        // Una zona cuyo clima aun no se ha sorteado no puede quedarse muda.
+        Encuentro deLluvia = new Encuentro(
+                60, 0, 3, 5, 30, MetodoEncuentro.HIERBA, null, Clima.LLUVIA);
+
+        assertTrue(deLluvia.apareceEn(MetodoEncuentro.HIERBA, Franja.DIA, null));
     }
 
     @Test

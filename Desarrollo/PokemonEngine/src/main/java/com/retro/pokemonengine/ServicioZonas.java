@@ -5,7 +5,9 @@ import com.eu.habbo.Emulator;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -105,6 +107,19 @@ public final class ServicioZonas
         SalaZona sala = salas.get(roomId);
 
         return sala == null ? null : sala.zonaId();
+    }
+
+    /** Las salas dadas de alta en esa zona. Para avisar a quien este dentro. */
+    public static List<Integer> salasDeZona(int zonaId)
+    {
+        List<Integer> salida = new ArrayList<>();
+
+        for(SalaZona sala : salas.values())
+        {
+            if(sala.zonaId() == zonaId) salida.add(sala.roomId());
+        }
+
+        return salida;
     }
 
     public static int totalSalas()

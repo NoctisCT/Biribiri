@@ -1,7 +1,10 @@
 package com.retro.pokemonengine;
 
+import com.eu.habbo.Emulator;
+import com.eu.habbo.habbohotel.rooms.Room;
 import com.eu.habbo.habbohotel.users.Habbo;
 import com.google.gson.JsonObject;
+import com.retro.pokemonengine.clima.Clima;
 import com.retro.pokemonengine.encuentros.MetodoEncuentro;
 import com.retro.pokemonengine.entrenador.PokemonPoseido;
 import com.retro.pokemonengine.tienda.ReglasTienda;
@@ -60,7 +63,15 @@ public final class AccionesMundo
 
     private static Respuesta zonaInfo(Habbo habbo)
     {
-        int roomId = salaActual(habbo);
+        return Respuesta.bien(cuerpoZona(salaActual(habbo)));
+    }
+
+    /**
+     * El cuerpo de ZONA_INFO. Lo usan la accion y el aviso de cambio de clima:
+     * un solo sitio para que las dos digan exactamente lo mismo.
+     */
+    public static Map<String, Object> cuerpoZona(int roomId)
+    {
         Integer zonaId = roomId == 0 ? null : ServicioZonas.zonaDeSala(roomId);
 
         Map<String, Object> salida = new LinkedHashMap<>();
@@ -72,10 +83,11 @@ public final class AccionesMundo
         {
             salida.put("salaPokemon", false);
 
-            return Respuesta.bien(salida);
+            return salida;
         }
 
         ServicioZonas.Zona zona = ServicioZonas.zona(zonaId);
+        Clima clima = ServicioClima.clima(zonaId);
 
         salida.put("salaPokemon", true);
         salida.put("codigo", zona == null ? null : zona.codigo());
@@ -84,6 +96,9 @@ public final class AccionesMundo
         salida.put("seguidorPermitido", ServicioZonas.permiteSeguidor(roomId));
         salida.put("tieneEncuentros", ServicioEncuentros.zonaTieneEncuentros(zonaId));
         salida.put("franja", ServicioEncuentros.franjaActual().name());
+        salida.put("clima", clima.name());
+        salida.put("climaNombre", clima.nombreEs());
+        salida.put("climaHasta", ServicioClima.hasta(zonaId));
 
         List<Map<String, Object>> tiendas = new ArrayList<>();
 
@@ -102,13 +117,41 @@ public final class AccionesMundo
 
         salida.put("tiendas", tiendas);
 
-        return Respuesta.bien(salida);
+        return salida;
+    }
+
+    /** Empuja el estado de la zona a quien este dentro, sin que nadie lo pida. */
+    public static void avisarClima(int zonaId)
+    {
+        for(int roomId : ServicioZonas.salasDeZona(zonaId))
+        {
+            Room room = Emulator.getGameEnvironment().getRoomManager().getRoom(roomId);
+
+            if(room == null) continue;
+
+            room.sendComposer(PokemonPackets.resultado(
+                    PokemonAcciones.ZONA_INFO, true, PokemonCuerpo.datos(cuerpoZona(roomId))));
+        }
     }
 
     // --- Encuentros ---
 
+    /**
+     * Pedir un encuentro a mano es herramienta de pruebas: mientras se pueda, la
+     * hierba es decorativa y el enfriamiento no significa nada. Rango 7 y no 6,
+     * porque los co-administradores son jugadores y deben poder jugar sin tener
+     * a mano un boton que les saque el Pokemon que quieran.
+     */
+    private static final int RANGO_DUENO = 7;
+
     private static Respuesta buscarEncuentro(Habbo habbo, int userId, JsonObject datos) throws Exception
     {
+        if(habbo.getHabboInfo().getRank() == null
+                || habbo.getHabboInfo().getRank().getId() < RANGO_DUENO)
+        {
+            return Respuesta.mal("SIN_PERMISO", "Camina por la hierba");
+        }
+
         int roomId = salaActual(habbo);
         Integer zonaId = roomId == 0 ? null : ServicioZonas.zonaDeSala(roomId);
 

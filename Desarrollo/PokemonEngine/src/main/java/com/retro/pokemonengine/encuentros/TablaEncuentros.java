@@ -1,5 +1,6 @@
 package com.retro.pokemonengine.encuentros;
 
+import com.retro.pokemonengine.clima.Clima;
 import com.retro.pokemonengine.combate.RngCombate;
 
 import java.util.ArrayList;
@@ -17,8 +18,9 @@ public final class TablaEncuentros
     {
     }
 
-    /** Las filas que aplican a este metodo y esta franja, en el mismo orden. */
-    public static List<Encuentro> disponibles(List<Encuentro> encuentros, MetodoEncuentro metodo, Franja franja)
+    /** Las filas que aplican a este metodo, franja y clima, en el mismo orden. */
+    public static List<Encuentro> disponibles(List<Encuentro> encuentros, MetodoEncuentro metodo,
+                                              Franja franja, Clima clima)
     {
         List<Encuentro> resultado = new ArrayList<>();
 
@@ -26,7 +28,7 @@ public final class TablaEncuentros
 
         for(Encuentro encuentro : encuentros)
         {
-            if(encuentro != null && encuentro.apareceEn(metodo, franja)) resultado.add(encuentro);
+            if(encuentro != null && encuentro.apareceEn(metodo, franja, clima)) resultado.add(encuentro);
         }
 
         return resultado;

@@ -35,8 +35,10 @@ public class PokemonEnginePlugin extends HabboPlugin implements EventListener
         ServicioObjetos.cargar();
         ServicioEncuentros.cargar();
         ServicioTienda.cargar();
+        ServicioClima.cargar();
         ServicioAnimacionesSeguidor.sincronizar();
         ServicioSeguidor.iniciar();
+        ServicioClima.iniciar();
 
         Emulator.getGameServer().getPacketManager()
                 .registerHandler(PACKET_POKEMON_COMMAND, PokemonCommandHandler.class);
@@ -73,6 +75,7 @@ public class PokemonEnginePlugin extends HabboPlugin implements EventListener
     @Override
     public void onDisable()
     {
+        ServicioClima.parar();
     }
 
     @Override
