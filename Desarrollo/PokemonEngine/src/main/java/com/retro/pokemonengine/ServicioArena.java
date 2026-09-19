@@ -26,8 +26,13 @@ import java.util.concurrent.ConcurrentHashMap;
  * quien se acerca. Si donde esta el que acepta no cabe la linea, la busqueda
  * abre el radio y entonces se mueven los dos lo justo.
  *
- * El Pokemon que pelea se pone **delante** de su entrenador, en el hueco que le
- * toca de la formacion, en vez de seguir a su espalda.
+ * Delante de cada entrenador se ve **al Pokemon que pelea**, y contra la
+ * hierba tambien se ve al salvaje. La linea completa es
+ *
+ *     Entrenador - Pokemon - (hueco) - Pokemon o salvaje - Entrenador
+ *
+ * La formacion se guarda mientras dure el combate y no solo mientras se monta,
+ * porque hace falta entera para recolocar a quien se reconecte a mitad.
  *
  * La caminabilidad se mira en el estado real de la baldosa y no en si hay furni
  * encima: una hierba alta pisable, una alfombra o un suelo decorativo no
@@ -49,18 +54,16 @@ public final class ServicioArena
         final int roomId;
         final short x;
         final short y;
-        final RoomUserRotation rotacion;
 
-        Sitio(int roomId, RoomTile baldosa, RoomUserRotation rotacion)
+        Sitio(int roomId, RoomTile baldosa)
         {
             this.roomId = roomId;
             this.x = baldosa.x;
             this.y = baldosa.y;
-            this.rotacion = rotacion;
         }
     }
 
-    /** Un combatiente de camino a su hueco. */
+    /** Un combatiente y su hueco. */
     private static final class Puesto
     {
         final int userId;
@@ -91,24 +94,38 @@ public final class ServicioArena
         }
     }
 
-    /** Una formacion montandose. */
-    private static final class Montaje
+    /** La formacion de un combate, viva mientras el combate lo este. */
+    private static final class Formacion
     {
         final long batallaId;
         final int roomId;
         final List<Puesto> puestos;
-        final long desdeMs = System.currentTimeMillis();
+        final PlanArena.Hueco salvaje;
 
-        Montaje(long batallaId, int roomId, List<Puesto> puestos)
+        long esperandoDesdeMs = System.currentTimeMillis();
+        boolean salvajeFuera;
+
+        Formacion(long batallaId, int roomId, List<Puesto> puestos, PlanArena.Hueco salvaje)
         {
             this.batallaId = batallaId;
             this.roomId = roomId;
             this.puestos = puestos;
+            this.salvaje = salvaje;
+        }
+
+        Puesto de(int userId)
+        {
+            for(Puesto puesto : this.puestos)
+            {
+                if(puesto.userId == userId) return puesto;
+            }
+
+            return null;
         }
     }
 
     private static final Map<Integer, Sitio> ORIGEN = new ConcurrentHashMap<>();
-    private static final Map<Long, Montaje> MONTAJES = new ConcurrentHashMap<>();
+    private static final Map<Long, Formacion> FORMACIONES = new ConcurrentHashMap<>();
 
     /** Baldosas ocupadas por un combate, por sala. */
     private static final Map<Integer, Set<Integer>> RESERVADAS = new ConcurrentHashMap<>();
@@ -120,6 +137,12 @@ public final class ServicioArena
     private static int clave(int x, int y)
     {
         return x * 1000 + y;
+    }
+
+    /** La clave del salvaje: el combate en negativo, porque no hay jugador detras. */
+    private static int claveSalvaje(long batallaId)
+    {
+        return -(int) batallaId;
     }
 
     public static boolean reservada(int roomId, int x, int y)
@@ -171,38 +194,40 @@ public final class ServicioArena
 
         PlanArena.Transitable transitable = (x, y) -> libre(room, x, y, desdeAncla, desdeOtro);
 
-        PlanArena.Formacion formacion = desdeOtro == null
+        PlanArena.Formacion plan = desdeOtro == null
                 ? PlanArena.resolver(desdeAncla.x, desdeAncla.y, sesion.formato, transitable)
                 : PlanArena.resolverHacia(desdeAncla.x, desdeAncla.y, desdeOtro.x, desdeOtro.y,
                         sesion.formato, transitable);
 
-        if(formacion == null) return false;
+        if(plan == null) return false;
 
-        PlanArena.Hueco huecoAncla = formacion.de(PlanArena.ROL_ENTRENADOR_A);
-        PlanArena.Hueco pokemonAncla = formacion.de(PlanArena.ROL_POKEMON_A);
+        PlanArena.Hueco huecoAncla = plan.de(PlanArena.ROL_ENTRENADOR_A);
 
         if(huecoAncla == null) return false;
 
         List<Puesto> puestos = new ArrayList<>();
 
         guardarOrigen(anclaje, room, unidadAncla);
-        puestos.add(new Puesto(anclaje.getHabboInfo().getId(), huecoAncla, pokemonAncla));
-        encaminar(room, unidadAncla, huecoAncla);
+        puestos.add(new Puesto(anclaje.getHabboInfo().getId(), huecoAncla,
+                plan.de(PlanArena.ROL_POKEMON_A)));
+        andarHasta(room, unidadAncla, huecoAncla.x(), huecoAncla.y());
 
         if(queCamina != null)
         {
-            PlanArena.Hueco huecoOtro = formacion.de(PlanArena.ROL_ENTRENADOR_B);
-            PlanArena.Hueco pokemonOtro = formacion.de(PlanArena.ROL_POKEMON_B);
+            PlanArena.Hueco huecoOtro = plan.de(PlanArena.ROL_ENTRENADOR_B);
 
             if(huecoOtro == null) return false;
 
             guardarOrigen(queCamina, room, unidadQueCamina);
-            puestos.add(new Puesto(queCamina.getHabboInfo().getId(), huecoOtro, pokemonOtro));
-            encaminar(room, unidadQueCamina, huecoOtro);
+            puestos.add(new Puesto(queCamina.getHabboInfo().getId(), huecoOtro,
+                    plan.de(PlanArena.ROL_POKEMON_B)));
+            andarHasta(room, unidadQueCamina, huecoOtro.x(), huecoOtro.y());
         }
 
-        reservar(room.getId(), formacion);
-        MONTAJES.put(sesion.id, new Montaje(sesion.id, room.getId(), puestos));
+        reservar(room.getId(), plan);
+
+        FORMACIONES.put(sesion.id, new Formacion(
+                sesion.id, room.getId(), puestos, plan.de(PlanArena.ROL_SALVAJE)));
 
         // Se comprueba ya por si alguno estaba justo en su baldosa: contra la
         // hierba lo normal es que el jugador no tenga que dar ni un paso.
@@ -211,16 +236,50 @@ public final class ServicioArena
         return true;
     }
 
+    /**
+     * Vuelve a llevar a su hueco a quien se habia ido.
+     *
+     * Es lo que cierra la reconexion: el combate no se habia acabado, asi que
+     * al volver a la sala hay que devolver al jugador a su sitio y sacarle otra
+     * vez el Pokemon. Sin esto se vuelve a un combate en curso con los dos
+     * paseando por la sala.
+     */
+    public static void recolocar(ServicioBatalla.Sesion sesion, Habbo habbo)
+    {
+        if(sesion == null || habbo == null || habbo.getHabboInfo() == null) return;
+
+        Formacion formacion = FORMACIONES.get(sesion.id);
+
+        if(formacion == null) return;
+
+        Room room = habbo.getHabboInfo().getCurrentRoom();
+
+        if(room == null || room.getLayout() == null || room.getId() != formacion.roomId) return;
+
+        Puesto puesto = formacion.de(habbo.getHabboInfo().getId());
+        RoomUnit unidad = habbo.getRoomUnit();
+
+        if(puesto == null || unidad == null || unidad.getCurrentLocation() == null) return;
+
+        puesto.fijado = false;
+        formacion.esperandoDesdeMs = System.currentTimeMillis();
+
+        guardarOrigen(habbo, room, unidad);
+        andarHasta(room, unidad, puesto.x, puesto.y);
+
+        repasar();
+    }
+
     private static void guardarOrigen(Habbo habbo, Room room, RoomUnit unidad)
     {
         ORIGEN.putIfAbsent(habbo.getHabboInfo().getId(),
-                new Sitio(room.getId(), unidad.getCurrentLocation(), unidad.getBodyRotation()));
+                new Sitio(room.getId(), unidad.getCurrentLocation()));
     }
 
     /** Le pone el destino y le deja andar. Nada de setLocation. */
-    private static void encaminar(Room room, RoomUnit unidad, PlanArena.Hueco hueco)
+    private static void andarHasta(Room room, RoomUnit unidad, int x, int y)
     {
-        RoomTile destino = room.getLayout().getTile((short) hueco.x(), (short) hueco.y());
+        RoomTile destino = room.getLayout().getTile((short) x, (short) y);
 
         if(destino == null) return;
 
@@ -239,41 +298,37 @@ public final class ServicioArena
     {
         long ahora = System.currentTimeMillis();
 
-        for(Montaje montaje : new ArrayList<>(MONTAJES.values()))
+        for(Formacion formacion : new ArrayList<>(FORMACIONES.values()))
         {
-            boolean todos = true;
+            boolean faltaAlguien = false;
 
-            for(Puesto puesto : montaje.puestos)
+            for(Puesto puesto : formacion.puestos)
             {
                 if(puesto.fijado) continue;
 
-                if(fijarSiLlego(montaje, puesto)) continue;
-
-                todos = false;
+                if(!fijarSiLlego(formacion, puesto)) faltaAlguien = true;
             }
 
-            if(todos)
+            if(!faltaAlguien)
             {
-                MONTAJES.remove(montaje.batallaId);
+                // Con los entrenadores en su sitio sale el salvaje, si lo hay.
+                sacarSalvaje(formacion);
                 continue;
             }
 
-            if(ahora - montaje.desdeMs < ESPERA_MAX_MS) continue;
+            if(ahora - formacion.esperandoDesdeMs < ESPERA_MAX_MS) continue;
 
             // Se acabo la espera: nadie se queda a medias en mitad de la sala.
             System.out.println("[PokemonEngine] La formacion del combate "
-                    + montaje.batallaId + " no se ha podido montar: a interfaz.");
+                    + formacion.batallaId + " no se ha podido montar: a interfaz.");
 
-            MONTAJES.remove(montaje.batallaId);
-            RESERVADAS.remove(montaje.roomId);
+            soltarFormacion(formacion);
 
-            for(Puesto puesto : montaje.puestos) soltar(puesto.userId);
-
-            ServicioBatalla.pasarAInterfaz(montaje.batallaId);
+            ServicioBatalla.pasarAInterfaz(formacion.batallaId);
         }
     }
 
-    private static boolean fijarSiLlego(Montaje montaje, Puesto puesto)
+    private static boolean fijarSiLlego(Formacion formacion, Puesto puesto)
     {
         Habbo habbo = ServicioBatalla.conectado(puesto.userId);
 
@@ -281,7 +336,7 @@ public final class ServicioArena
 
         Room room = habbo.getHabboInfo().getCurrentRoom();
 
-        if(room.getId() != montaje.roomId) return false;
+        if(room.getId() != formacion.roomId) return false;
 
         RoomUnit unidad = habbo.getRoomUnit();
 
@@ -330,6 +385,28 @@ public final class ServicioArena
                 puesto.pokemonDireccion, sesion.propios[bando]);
     }
 
+    /** Contra la hierba, el salvaje tambien se ve: enfrente y mirando al jugador. */
+    private static void sacarSalvaje(Formacion formacion)
+    {
+        if(formacion.salvajeFuera || formacion.salvaje == null) return;
+
+        ServicioBatalla.Sesion sesion = ServicioBatalla.deId(formacion.batallaId);
+
+        if(sesion == null || sesion.salvaje == null) return;
+
+        Habbo alguno = ServicioBatalla.conectado(sesion.userIds[0]);
+        Room room = alguno == null ? null : alguno.getHabboInfo().getCurrentRoom();
+
+        if(room == null || room.getId() != formacion.roomId) return;
+
+        ServicioSeguidor.salvajeAArena(
+                claveSalvaje(formacion.batallaId), room,
+                formacion.salvaje.x(), formacion.salvaje.y(), formacion.salvaje.direccion(),
+                sesion.salvaje.pokemon(), sesion.salvaje.especie());
+
+        formacion.salvajeFuera = true;
+    }
+
     private static void reservar(int roomId, PlanArena.Formacion formacion)
     {
         Set<Integer> baldosas = RESERVADAS.computeIfAbsent(roomId, r -> new HashSet<>());
@@ -345,12 +422,35 @@ public final class ServicioArena
     {
         if(sesion == null) return;
 
-        MONTAJES.remove(sesion.id);
-        RESERVADAS.remove(sesion.roomId);
+        Formacion formacion = FORMACIONES.get(sesion.id);
 
-        for(int userId : sesion.userIds)
+        if(formacion != null)
         {
-            soltar(userId);
+            soltarFormacion(formacion);
+            return;
+        }
+
+        for(int userId : sesion.userIds) soltar(userId);
+    }
+
+    private static void soltarFormacion(Formacion formacion)
+    {
+        FORMACIONES.remove(formacion.batallaId);
+        RESERVADAS.remove(formacion.roomId);
+
+        Habbo alguno = null;
+
+        for(Puesto puesto : formacion.puestos)
+        {
+            if(alguno == null) alguno = ServicioBatalla.conectado(puesto.userId);
+
+            soltar(puesto.userId);
+        }
+
+        if(formacion.salvajeFuera && alguno != null)
+        {
+            ServicioSeguidor.quitarSalvaje(claveSalvaje(formacion.batallaId),
+                    alguno.getHabboInfo().getCurrentRoom());
         }
     }
 
@@ -417,8 +517,8 @@ public final class ServicioArena
         return ORIGEN.size();
     }
 
-    public static int totalMontandose()
+    public static int totalFormaciones()
     {
-        return MONTAJES.size();
+        return FORMACIONES.size();
     }
 }

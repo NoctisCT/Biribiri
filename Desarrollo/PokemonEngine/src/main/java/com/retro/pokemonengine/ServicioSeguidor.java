@@ -257,6 +257,9 @@ public final class ServicioSeguidor
 
     private static void revisar(Seguidor seguidor)
     {
+        // El salvaje no tiene jugador detras: vive y muere con el combate.
+        if(seguidor.userId < 0) return;
+
         Habbo habbo = Emulator.getGameEnvironment().getHabboManager().getHabbo(seguidor.userId);
 
         if(habbo == null || habbo.getHabboInfo().getCurrentRoom() == null)
@@ -269,6 +272,10 @@ public final class ServicioSeguidor
         RoomUnit unidad = habbo.getRoomUnit();
 
         if(unidad == null) return;
+
+        // En el hueco de combate no se mueve, no sigue a nadie y no gesticula:
+        // la formacion manda hasta que el combate acabe.
+        if(seguidor.enArena) return;
 
         // El saludo si deja rastro en el avatar, asi que este no hace falta que lo
         // cuente el cliente.
@@ -511,6 +518,47 @@ public final class ServicioSeguidor
         // siguiente latido ya le lleva el ritmo.
         room.sendComposer(SeguidorPackets.mensaje(
                 SeguidorPackets.TIPO_ALTA, entradaDe(seguidor, room)));
+    }
+
+    /**
+     * Saca al Pokemon salvaje a su hueco de la formacion.
+     *
+     * Va por la misma via que los seguidores porque para el cliente es lo
+     * mismo: un Pokemon dibujado en una baldosa. La clave es **negativa** — el
+     * id del combate en negativo — porque no hay ningun jugador detras y las
+     * claves positivas son de usuarios reales.
+     */
+    public static void salvajeAArena(int clave, Room room, int x, int y, int direccion,
+                                     PokemonPoseido salvaje, EspecieCatalogo especie)
+    {
+        if(room == null || salvaje == null) return;
+
+        Seguidor seguidor = new Seguidor(clave);
+
+        seguidor.roomId = room.getId();
+        seguidor.soloParaCombate = true;
+        seguidor.enArena = true;
+        seguidor.ownedId = salvaje.id();
+        seguidor.especieId = salvaje.especieId();
+        seguidor.formaId = salvaje.formaId();
+        seguidor.shiny = salvaje.shiny();
+        seguidor.nombre = salvaje.nombreMostrado(especie);
+
+        seguidor.rastro.aparecer(x, y, direccion);
+
+        porUsuario.put(clave, seguidor);
+
+        room.sendComposer(SeguidorPackets.mensaje(
+                SeguidorPackets.TIPO_ALTA, entradaDe(seguidor, room)));
+    }
+
+    /** Se lleva al salvaje cuando el combate termina. */
+    public static void quitarSalvaje(int clave, Room room)
+    {
+        if(porUsuario.remove(clave) == null || room == null) return;
+
+        room.sendComposer(SeguidorPackets.mensaje(
+                SeguidorPackets.TIPO_BAJA, SeguidorPackets.Entrada.baja(clave)));
     }
 
     /** El Pokemon que va detras, o 0 si no hay ninguno. */

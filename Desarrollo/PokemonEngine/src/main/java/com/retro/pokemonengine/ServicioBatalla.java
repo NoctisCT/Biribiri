@@ -150,6 +150,12 @@ public final class ServicioBatalla
         return id == null ? null : SESIONES.get(id);
     }
 
+    /** La sesion por su id de combate. La usa la arena para el salvaje. */
+    public static Sesion deId(long batallaId)
+    {
+        return SESIONES.get(batallaId);
+    }
+
     public static boolean enCombate(int userId)
     {
         return de(userId) != null;
@@ -613,6 +619,10 @@ public final class ServicioBatalla
             sesion.ausenteDesdeMs = 0;
             sesion.ausenteBando = -1;
         }
+
+        // El combate seguia vivo: hay que devolverle a su hueco y sacarle otra
+        // vez el Pokemon, o vuelve a una pelea con los dos paseando.
+        if(!sesion.enInterfaz) ServicioArena.recolocar(sesion, conectado(userId));
 
         empujarEstado(sesion);
     }
