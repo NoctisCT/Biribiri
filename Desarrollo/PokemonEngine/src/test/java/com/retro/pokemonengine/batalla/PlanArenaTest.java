@@ -16,8 +16,11 @@ class PlanArenaTest
     @Test
     void elCombateSalvajeSonTresHuecos()
     {
-        assertEquals(3, PlanArena.roles(Formato.SALVAJE).size());
-        assertEquals(4, PlanArena.roles(Formato.PVP_AMISTOSO).size());
+        // Entrenador, Pokemon, hueco, salvaje.
+        assertEquals(4, PlanArena.roles(Formato.SALVAJE).size());
+
+        // Entrenador, Pokemon, hueco, Pokemon, entrenador.
+        assertEquals(5, PlanArena.roles(Formato.PVP_AMISTOSO).size());
     }
 
     @Test
@@ -28,7 +31,8 @@ class PlanArenaTest
 
         assertEquals(4, f.de(PlanArena.ROL_ENTRENADOR_A).x());
         assertEquals(5, f.de(PlanArena.ROL_POKEMON_A).x());
-        assertEquals(6, f.de(PlanArena.ROL_SALVAJE).x());
+        assertEquals(6, f.de(PlanArena.ROL_HUECO).x(), "El hueco del medio no lo ocupa nadie");
+        assertEquals(7, f.de(PlanArena.ROL_SALVAJE).x());
 
         for(PlanArena.Hueco hueco : f.huecos()) assertEquals(4, hueco.y());
     }
@@ -51,10 +55,13 @@ class PlanArenaTest
 
         assertEquals(2, f.de(PlanArena.ROL_ENTRENADOR_A).x());
         assertEquals(3, f.de(PlanArena.ROL_POKEMON_A).x());
-        assertEquals(4, f.de(PlanArena.ROL_POKEMON_B).x());
-        assertEquals(5, f.de(PlanArena.ROL_ENTRENADOR_B).x());
+        assertEquals(4, f.de(PlanArena.ROL_HUECO).x());
+        assertEquals(5, f.de(PlanArena.ROL_POKEMON_B).x());
+        assertEquals(6, f.de(PlanArena.ROL_ENTRENADOR_B).x());
 
         assertEquals(6, f.de(PlanArena.ROL_ENTRENADOR_B).direccion());
+        assertEquals(6, f.de(PlanArena.ROL_POKEMON_B).direccion(),
+                "El Pokemon mira al rival, no a la espalda de su entrenador");
     }
 
     @Test
@@ -78,7 +85,7 @@ class PlanArenaTest
 
         assertNotNull(f);
         assertEquals(6, f.direccion());
-        assertEquals(7, f.de(PlanArena.ROL_SALVAJE).x());
+        assertEquals(6, f.de(PlanArena.ROL_SALVAJE).x());
     }
 
     @Test
@@ -95,7 +102,7 @@ class PlanArenaTest
     {
         // Hueco de sobra en la fila 6; el jugador esta en (4,4), en una isla.
         PlanArena.Transitable apartado = (x, y) ->
-                (x == 4 && y == 4) || (y == 6 && x >= 3 && x <= 8);
+                (x == 4 && y == 4) || (y == 6 && x >= 2 && x <= 9);
 
         PlanArena.Formacion f = PlanArena.resolver(4, 4, Formato.SALVAJE, apartado);
 
@@ -125,7 +132,7 @@ class PlanArenaTest
         assertNotNull(f);
         assertEquals(5, f.de(PlanArena.ROL_ENTRENADOR_A).x(), "El que ancla no se mueve");
         assertEquals(5, f.de(PlanArena.ROL_ENTRENADOR_A).y());
-        assertEquals(8, f.de(PlanArena.ROL_ENTRENADOR_B).x(), "Y el otro se planta a tres");
+        assertEquals(9, f.de(PlanArena.ROL_ENTRENADOR_B).x(), "Y el otro se planta enfrente");
         assertEquals(5, f.de(PlanArena.ROL_ENTRENADOR_B).y());
     }
 
@@ -137,20 +144,21 @@ class PlanArenaTest
 
         assertNotNull(f);
         assertEquals(6, f.direccion(), "Hacia el oeste, que es donde esta el rival");
-        assertEquals(2, f.de(PlanArena.ROL_ENTRENADOR_B).x());
+        assertEquals(1, f.de(PlanArena.ROL_ENTRENADOR_B).x());
     }
 
     @Test
-    void losEntrenadoresAcabanATresBaldosas()
+    void losEntrenadoresAcabanACuatroBaldosas()
     {
         PlanArena.Formacion f = PlanArena.resolverHacia(
                 5, 5, 9, 5, Formato.PVP_AMISTOSO, this.salaLibre);
 
         assertNotNull(f);
-        assertEquals(3, PlanArena.distancia(
+        assertEquals(4, PlanArena.distancia(
                 f.de(PlanArena.ROL_ENTRENADOR_A).x(), f.de(PlanArena.ROL_ENTRENADOR_A).y(),
                 f.de(PlanArena.ROL_ENTRENADOR_B).x(), f.de(PlanArena.ROL_ENTRENADOR_B).y()),
-                "Entrenador - Pokemon - Pokemon - Entrenador son tres de distancia");
+                "Entrenador - Pokemon - hueco - Pokemon - Entrenador son cuatro"
+                        + " de distancia, y por eso el reto llega hasta cinco");
     }
 
     @Test

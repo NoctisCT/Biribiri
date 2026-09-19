@@ -68,9 +68,10 @@ public final class ServicioArena
         final int y;
         final int direccion;
 
-        /** El hueco donde va su Pokemon, delante de el. */
+        /** El hueco donde va su Pokemon, delante de el, con su propia mirada. */
         final int pokemonX;
         final int pokemonY;
+        final int pokemonDireccion;
 
         boolean fijado;
 
@@ -82,6 +83,11 @@ public final class ServicioArena
             this.direccion = suyo.direccion();
             this.pokemonX = deSuPokemon == null ? suyo.x() : deSuPokemon.x();
             this.pokemonY = deSuPokemon == null ? suyo.y() : deSuPokemon.y();
+
+            // La suya, no la de su entrenador: el Pokemon mira al rival.
+            this.pokemonDireccion = deSuPokemon == null
+                    ? suyo.direccion()
+                    : deSuPokemon.direccion();
         }
     }
 
@@ -321,7 +327,8 @@ public final class ServicioArena
 
         if(ServicioSeguidor.ownedIdDe(puesto.userId) != sesion.propios[bando].id()) return;
 
-        ServicioSeguidor.aArena(puesto.userId, puesto.pokemonX, puesto.pokemonY, puesto.direccion);
+        ServicioSeguidor.aArena(puesto.userId, puesto.pokemonX, puesto.pokemonY,
+                puesto.pokemonDireccion);
     }
 
     private static void reservar(int roomId, PlanArena.Formacion formacion)

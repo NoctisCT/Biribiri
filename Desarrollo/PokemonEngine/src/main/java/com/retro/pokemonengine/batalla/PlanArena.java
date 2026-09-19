@@ -6,9 +6,15 @@ import java.util.List;
 /**
  * Donde se coloca cada uno para pelear.
  *
- * La formacion es una linea: Entrenador - Pokemon - Pokemon - Entrenador en
- * PvP, y Entrenador - Pokemon - Salvaje contra la hierba. Los entrenadores en
- * los extremos, mirando al centro.
+ * La formacion es una linea con un hueco en medio:
+ *
+ *     Entrenador - Pokemon - (hueco) - Pokemon - Entrenador
+ *
+ * y contra la hierba, Entrenador - Pokemon - (hueco) - Salvaje. Los
+ * entrenadores en los extremos, y todo el mundo mirando al centro.
+ *
+ * El hueco del medio no lo ocupa nadie y aun asi se reserva: dos Pokemon
+ * pegados el uno al otro se tapan y no se ve quien pelea contra quien.
  *
  * Esta clase es geometria pura y no sabe nada de salas: la caminabilidad entra
  * como un predicado. Eso la hace probable con un tablero de mentira y deja
@@ -20,6 +26,9 @@ import java.util.List;
  */
 public final class PlanArena
 {
+    /** El hueco del medio: no lo ocupa nadie, pero se reserva. */
+    public static final String ROL_HUECO = "hueco";
+
     public static final String ROL_ENTRENADOR_A = "entrenador_a";
     public static final String ROL_POKEMON_A = "pokemon_a";
     public static final String ROL_POKEMON_B = "pokemon_b";
@@ -67,11 +76,25 @@ public final class PlanArena
     {
     }
 
+    /**
+     * Los roles de la linea, en orden y contando el hueco del medio.
+     *
+     * Se escriben uno a uno en vez de calcularse: con un hueco que no es de
+     * nadie, cualquier aritmetica de indices acaba dandole al Pokemon de un
+     * bando la orientacion del otro, que es exactamente el fallo que esto evita.
+     */
     public static List<String> roles(Formato formato)
     {
         return formato == Formato.SALVAJE
-                ? List.of(ROL_ENTRENADOR_A, ROL_POKEMON_A, ROL_SALVAJE)
-                : List.of(ROL_ENTRENADOR_A, ROL_POKEMON_A, ROL_POKEMON_B, ROL_ENTRENADOR_B);
+                ? List.of(ROL_ENTRENADOR_A, ROL_POKEMON_A, ROL_HUECO, ROL_SALVAJE)
+                : List.of(ROL_ENTRENADOR_A, ROL_POKEMON_A, ROL_HUECO,
+                        ROL_POKEMON_B, ROL_ENTRENADOR_B);
+    }
+
+    /** true si ese rol es del bando que ancla la formacion. */
+    private static boolean esDelBandoA(String rol)
+    {
+        return ROL_ENTRENADOR_A.equals(rol) || ROL_POKEMON_A.equals(rol);
     }
 
     public static Formacion enLinea(int anclaX, int anclaY, int direccion, Formato formato)
@@ -81,16 +104,15 @@ public final class PlanArena
 
         int opuesta = (direccion + 4) % 8;
 
-        // Con tres roles el corte cae en 2: los dos primeros son del bando A.
-        int mitad = (roles.size() + 1) / 2;
-
         for(int i = 0; i < roles.size(); i++)
         {
+            String rol = roles.get(i);
+
             huecos.add(new Hueco(
-                    roles.get(i),
+                    rol,
                     anclaX + DX[direccion] * i,
                     anclaY + DY[direccion] * i,
-                    i < mitad ? direccion : opuesta));
+                    esDelBandoA(rol) ? direccion : opuesta));
         }
 
         return new Formacion(direccion, List.copyOf(huecos));
