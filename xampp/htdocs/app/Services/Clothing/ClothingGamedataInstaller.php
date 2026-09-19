@@ -477,7 +477,8 @@ class ClothingGamedataInstaller
             $redeemableCode,
             $publicBaseItemId,
             $catalogItemId,
-            (string) $submission->clothing_name
+            (string) $submission->clothing_name,
+            $setIds
         );
 
         $preparedGamedata =
@@ -1330,7 +1331,8 @@ class ClothingGamedataInstaller
         string $newClass,
         int $newId,
         int $catalogItemId,
-        string $displayName
+        string $displayName,
+        array $setIds
     ): void {
         $replacements = [
             [
@@ -1341,6 +1343,14 @@ class ClothingGamedataInstaller
                     $displayName,
                 'offerid' =>
                     $catalogItemId,
+                'customparams' =>
+                    implode(
+                        ',',
+                        array_map(
+                            'strval',
+                            $setIds
+                        )
+                    ),
                 'specialtype' => 23,
             ],
         ];

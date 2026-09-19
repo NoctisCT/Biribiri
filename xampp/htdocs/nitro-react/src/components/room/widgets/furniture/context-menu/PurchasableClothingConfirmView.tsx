@@ -33,9 +33,11 @@ export const PurchasableClothingConfirmView: FC<PurchasableClothingConfirmViewPr
     {
         let mode = MODE_DEFAULT;
 
-        const figure = GetSessionDataManager().figure;
-        const gender = GetSessionDataManager().gender;
-        const previewFigure = GetAvatarRenderManager().createFigureContainer(figure);
+        const sessionFigure = GetSessionDataManager().figure;
+        const sessionGender = GetSessionDataManager().gender;
+
+        let previewGender = sessionGender;
+        let previewFigure = GetAvatarRenderManager().createFigureContainer(sessionFigure);
 
         if(roomSession && (objectId >= 0))
         {
@@ -48,14 +50,54 @@ export const PurchasableClothingConfirmView: FC<PurchasableClothingConfirmViewPr
                     case FurniCategory.FIGURE_PURCHASABLE_SET:
                         mode = MODE_PURCHASABLE_CLOTHING;
 
-                        const setIds = furniData.customParams.split(',').map(part => parseInt(part));
+                        const setIds = furniData.customParams
+                            .split(',')
+                            .map(part => parseInt(part))
+                            .filter(setId => Number.isFinite(setId));
 
-                        for(const setId of setIds)
+                        const partSets = setIds
+                            .map(setId => GetAvatarRenderManager().structureData.getFigurePartSet(setId))
+                            .filter(partSet => !!partSet);
+
+                        const hasCompatibleSet = partSets.some(
+                            partSet =>
+                                (partSet.gender === sessionGender) ||
+                                (partSet.gender === FigureData.UNISEX)
+                        );
+
+                        if(!hasCompatibleSet)
                         {
-                            const partSet = GetAvatarRenderManager().structureData.getFigurePartSet(setId);
+                            const specificGenders = Array.from(
+                                new Set(
+                                    partSets
+                                        .map(partSet => partSet.gender)
+                                        .filter(
+                                            value =>
+                                                (value === FigureData.MALE) ||
+                                                (value === FigureData.FEMALE)
+                                        )
+                                )
+                            );
 
-                            if(!partSet) continue;
-                            if((partSet.gender !== gender) && (partSet.gender !== FigureData.UNISEX)) continue;
+                            if(specificGenders.length === 1)
+                            {
+                                previewGender = specificGenders[0];
+
+                                const fallbackFigure =
+                                    (previewGender === FigureData.FEMALE)
+                                        ? 'hr-515-33.hd-600-1.ch-635-70.lg-716-66-62.sh-735-68'
+                                        : 'hr-100.hd-180-7.ch-215-66.lg-270-79.sh-305-62.ha-1002-70.wa-2007';
+
+                                previewFigure = GetAvatarRenderManager().createFigureContainer(fallbackFigure);
+                            }
+                        }
+
+                        for(const partSet of partSets)
+                        {
+                            if(
+                                (partSet.gender !== previewGender) &&
+                                (partSet.gender !== FigureData.UNISEX)
+                            ) continue;
 
                             previewFigure.updatePart(
                                 partSet.type,
@@ -76,7 +118,7 @@ export const PurchasableClothingConfirmView: FC<PurchasableClothingConfirmViewPr
             return;
         }
         
-        setGender(gender);
+        setGender(previewGender);
         setNewFigure(previewFigure.getFigureString());
 
         // if owns clothing, change to it

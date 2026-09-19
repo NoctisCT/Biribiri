@@ -11,6 +11,7 @@ export class CategoryBaseModel implements IAvatarEditorCategoryModel
 
     constructor()
     {
+        this._categories = new Map();
         this._isInitalized = false;
         this._maxPaletteCount = 0;
     }

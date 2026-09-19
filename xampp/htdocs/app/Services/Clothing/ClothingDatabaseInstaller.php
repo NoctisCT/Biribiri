@@ -162,6 +162,29 @@ class ClothingDatabaseInstaller
             );
         }
 
+        $setIds = array_values(
+            array_unique(
+                array_map(
+                    'strval',
+                    is_array(
+                        $plan[
+                            'set_ids'
+                        ] ?? null
+                    )
+                        ? $plan[
+                            'set_ids'
+                        ]
+                        : []
+                )
+            )
+        );
+
+        if ($setIds === []) {
+            throw new RuntimeException(
+                'No hay set IDs para catalog_clothing.'
+            );
+        }
+
         $publicRow =
             (array) $template;
 
@@ -186,6 +209,14 @@ class ClothingDatabaseInstaller
         $publicRow[
             'interaction_type'
         ] = 'clothing';
+
+        $publicRow[
+            'customparams'
+        ] =
+            implode(
+                ',',
+                $setIds
+            );
 
         DB::table('items_base')
             ->insert($publicRow);
@@ -216,29 +247,6 @@ class ClothingDatabaseInstaller
 
         DB::table('items_base')
             ->insert($designerRow);
-
-        $setIds = array_values(
-            array_unique(
-                array_map(
-                    'strval',
-                    is_array(
-                        $plan[
-                            'set_ids'
-                        ] ?? null
-                    )
-                        ? $plan[
-                            'set_ids'
-                        ]
-                        : []
-                )
-            )
-        );
-
-        if ($setIds === []) {
-            throw new RuntimeException(
-                'No hay set IDs para catalog_clothing.'
-            );
-        }
 
         $clothingCatalogId = null;
 

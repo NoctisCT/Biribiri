@@ -74,7 +74,7 @@ export const AvatarEditorModelView: FC<AvatarEditorModelViewProps> = props =>
         }
     }, [ model, selectCategory ]);
 
-    if(!model || !activeCategory) return null;
+    if(!model || !model.categories || !activeCategory) return null;
 
     // BIRIBIRI_CATEGORY_VISIBILITY_V1
     // Mostramos todas las categorias registradas aunque todavia no exista
