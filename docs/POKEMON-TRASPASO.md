@@ -5,9 +5,9 @@ Rama: `codex/pokemon-engine` · Worktree: `build/pokemon-engine` · Base: `dev`
 
 **Este documento es el punto de entrada.** Está escrito para que alguien sin contexto de la conversación pueda continuar. Lo que no esté aquí, está en los documentos que enlaza.
 
-## Para la siguiente sesión: empezar por el hito 6
+## Para la siguiente sesión: empezar por el hito 6b
 
-Los hitos 1 a 5 están hechos. Lo siguiente es el **hito 6**: combate de punta a punta, salvaje y PvP, con `ServicioArena`, formación en sala y bloqueo de posición. Su plan **está por escribir**.
+Los hitos 1 a 5 y el **6a** están hechos. Lo siguiente es el **hito 6b**: combate de punta a punta, salvaje y PvP, con `ServicioArena`, formación en sala y bloqueo de posición. Su plan **está por escribir**, y las decisiones de diseño ya tomadas están en la spec del 6a y en la sección 9 de este documento.
 
 Antes de escribir una línea, leer de este documento la **sección 3 (restricciones del entorno)**: cada punto de esa lista costó un fallo real.
 
@@ -15,7 +15,7 @@ Orden mínimo para ponerse en marcha:
 
 ```bash
 cd build/pokemon-engine
-"/c/Users/erale/Downloads/apache-maven-3.9.16-bin/apache-maven-3.9.16/bin/mvn.cmd" -o test   # 263 en verde
+"/c/Users/erale/Downloads/apache-maven-3.9.16-bin/apache-maven-3.9.16/bin/mvn.cmd" -o test   # 295 en verde
 grep -rn "com.eu.habbo" Desarrollo/PokemonEngine/src/main/java/com/retro/pokemonengine/{combate,entrenador,seguidor,encuentros,captura,tienda}/
 ```
 
@@ -36,6 +36,8 @@ El segundo comando **no debe devolver nada** salvo un comentario en `CatalogoAni
 | `docs/superpowers/plans/2026-09-18-pokemon-engine-hito-3b-turno.md` | Plan del hito 3b (hecho) |
 | `docs/superpowers/plans/2026-09-18-pokemon-engine-hito-4-entrenador.md` | Plan del hito 4 (hecho) |
 | `docs/superpowers/plans/2026-09-19-pokemon-engine-hito-5-mundo.md` | Plan del hito 5 (hecho) |
+| `docs/superpowers/specs/2026-09-19-pokemon-engine-6a-mundo-design.md` | **Spec del hito 6a**, con las decisiones de diseño y su razón |
+| `docs/superpowers/plans/2026-09-19-pokemon-engine-hito-6a-mundo.md` | Plan del hito 6a (hecho) |
 
 ---
 
@@ -210,7 +212,7 @@ Y la categoría `gameplay`, que es donde viven la bici, el mapa y las cañas de 
 
 ---
 
-## 5. Estado actual: 5 de 8 hitos, 263 pruebas de Java y 25 de PHP
+## 5. Estado actual: 6 de 9 hitos, 295 pruebas de Java y 27 de PHP
 
 ### Hecho y verificado
 
@@ -223,6 +225,7 @@ Y la categoría `gameplay`, que es donde viven la bici, el mapa y las cañas de 
 | **3c** | Mecánica real conectada, 12 condiciones de bando, 4 climas, 4 terrenos, volátiles | 138 pruebas |
 | **4** | Entrenador, equipo, 32 cajas, mochila, pokédex, pokédólares y **el seguidor server-side**, adelantado del hito 8 | 225 pruebas. Migración 4 aplicada en el runtime aislado; 1.025 especies con habilidades y género y 36.336 aprendizajes por nivel en memoria |
 | **5** | Catálogo de objetos importado, encuentros por zona, captura con la fórmula real, centros Pokémon y tiendas. Migración 6 y acciones 7, 60-62 y 120-123 | 36 pruebas nuevas de Java y 12 de PHP. **Probado de punta a punta en el runtime aislado**: en la sala 203 apareció un Rattata de nivel 4, la primera Poké Ball falló con una sacudida y la segunda lo capturó; quedó en el equipo con sus cuatro movimientos, la mochila bajó de 10 a 8 balls y la Pokédex lo marcó visto y capturado. En la sala 206 (Ciudad Verde) se compraron 5 Poké Balls por 1.000, se rechazó una compra sin saldo, se vendieron 2 por 200 y el Centro curó el equipo entero. La prueba destapó que `GeneradorPokemon` repetía movimientos del learnset; arreglado y con dos pruebas propias |
+| **6a** | El mundo con iniciativa propia: disparador por furni con doble llave, probabilidad por paso con enfriamiento, clima por zona cada 4 horas, franja clavada a `Europe/Madrid`, y los cimientos de datos que no podían esperar | 32 pruebas nuevas de Java y 2 de PHP. **Probado en el runtime**: caminar por una franja de hierba en la sala 203 sacó un Rattata sin pulsar nada; el clima sorteó Sol y sobrevivió a cuatro reinicios; el tiempo jugado sumó 45 s en la sala 203 y 37 en la 206, y cero en una sala sin zona |
 | **Extra** | **El seguidor se ve en la sala**, con sprites de PMD, profundidad real y menú de acciones al pulsarlo. Es la capa de render de entidades de la fase 2, adelantada | Probado a mano en el cliente de pruebas: camina interpolado, gira, se sienta y se tumba con el avatar, y lo tapa el furni que tiene delante |
 
 **Invariante comprobada en cada commit**: ninguna clase de `combate/`, `entrenador/`, `seguidor/`, `encuentros/`, `captura/` ni `tienda/` importa `com.eu.habbo`. Es lo que permite probar las reglas sin emulador y reutilizarlas en la fase 2. La única excepción deliberada es `DireccionTest`, que sí importa `Rotation` de Arcturus **a propósito**, para comprobar que las ocho direcciones del seguidor coinciden con las del emulador.
@@ -234,13 +237,16 @@ Lo que quedó en `habbo_pokemon_test_20260918` después de probar, por si estorb
 - La sala **206 («Centro Pokémon»)** está dada de alta en `pokemon_zone_rooms` apuntando a Ciudad Verde. Es lo que permite probar tienda y centro; se quita con un `DELETE FROM pokemon_zone_rooms WHERE room_id = 206`.
 - Hokusei (id 5) tiene dos Rattata capturados, ninguna Poké Ball y 2.200 pokédólares. El Rattata `pokemon_owned` id 2 se capturó **antes** del arreglo de movimientos duplicados y conserva el 39 repetido; el id 3 ya sale limpio.
 - `pokemon_items` tiene los 2.223 objetos. **25 balls se quedan sin multiplicador** porque no son de Kanto; el verificador las lista y no falla por ello.
+- La sala 203 tiene una franja de **siete baldosas de hierba alta** en `y = 6`, puesta para probar el disparador.
+- `pokemon_encounter_furni` tiene dados de alta tres sprites: `jungle_c16_tallgrass` (8930) y las dos filas de `easter_c22_tallgrass` (19102868 y 60139172, que es el mismo furni duplicado en `items_base`). **Falta que el propietario diga cuáles quiere de verdad**; las demás se apagan con `activo = 0`.
+- El Pikachu de Hokusei tiene `variante = 'pikachu_disfraz'` de una prueba. Se quita con un `UPDATE ... SET variante = 'normal'`.
 
 ### Pendiente
 
 | Hito | Contenido | Tamaño |
 |---|---|---|
 | **5** | Zonas de Kanto, gating por `pokemon_zone_rooms`, encuentros y spawns, captura con fórmula real, centros Pokémon, modelo de tiendas | Medio |
-| **6** | Combate de punta a punta: salvaje y PvP, formación, `ServicioArena` con arenas predefinidas y resolución dinámica, bloqueo de posición, reserva de baldosas | Grande |
+| **6b** | Combate de punta a punta: salvaje y PvP, formación, `ServicioArena` con arenas predefinidas y resolución dinámica, bloqueo de posición, reserva de baldosas, huida solo en salvaje, abandono y anulación por expulsión | Grande |
 | **7** | **Cliente nuevo completo**: 11 vistas, `PokemonStateProvider` con reducer, SCSS del holo, cero `any`. Y eliminar `PokemonBackend/` y `usePokemonSocket.ts` | El más grande |
 | **8** | MOs de interfaz (Destello, Vuelo, Surf), intercambio entre jugadores, ranking de temporada | Medio |
 
@@ -426,3 +432,36 @@ El Pokémon **es un objeto de sala de Nitro**, no una capa de HTML encima. Esa f
 3. **Nada de acentos en identificadores Java.** Da problemas de codificación
 4. **El motor no escribe texto**: emite eventos con datos y el cliente traduce
 5. **Truncado entero en cada paso** de las fórmulas, como en los juegos. Calcular en coma flotante de una pasada da valores distintos
+
+---
+
+## 9. Decisiones del hito 6b ya tomadas
+
+Se acordaron con el propietario mientras se diseñaba el 6a. **No hace falta volver a discutirlas**, solo implementarlas.
+
+### Huida y abandono
+
+- **Contra entrenador no se huye.** En salvaje sí, con la fórmula de los juegos: Velocidad e intentos acumulados.
+- **Cambiar de sala se bloquea durante el combate**: navegador, teletransporte y vista del hotel responden que estás en combate. Es coherente con el bloqueo de posición que ya estaba decidido: si no te dejo andar, tampoco te dejo teletransportarte.
+- **Cerrar sesión o caerse la conexión sí saca**, y ahí entra el plazo de gracia de la spec de la fase 1: al reconectar vuelves al combate donde lo dejaste y, si expira, derrota por abandono.
+
+### Salida forzada
+
+Si te **echan, te banean, cierran o borran la sala, o le quitan la condición de sala Pokémon** a mitad de combate, el combate se **anula**: sin ganador, sin premio y sin penalización. En salvaje, el Pokémon desaparece.
+
+El filo del otro lado, que hay que tener presente cuando llegue el ranking: si anular es gratis, el que va perdiendo le pide a un amigo dueño de la sala que le eche. La salida acordada es que **los combates que cuentan solo ocurran en salas oficiales** — gimnasios y torneos, donde no hay un dueño con botón de echar. En salas de jugador, todo amistoso.
+
+### Dónde se pelea
+
+**Obligatorio en sala.** Si no hay hueco para la formación, los siguientes combates se resuelven **en interfaz**, no se cancelan: el jugador nunca pierde el encuentro por estar la ruta llena, solo pierde el espectáculo. Es una bandera en `pokemon_battles`, no un segundo motor.
+
+### Evolución
+
+Al evolucionar cambia `species_id` y nada más: se conservan IV, EV, naturaleza, género, variocolor, entrenador original, ball, dónde y a qué nivel se capturó, mote, amistad y experiencia. La habilidad **se vuelve a resolver por el hueco**, y la oculta sigue siendo oculta. Los PS máximos se recalculan con las bases nuevas arrastrando el daño recibido.
+
+El caso raro es el disfraz: si la especie nueva no tiene esa variante, el Pokémon se queda en `normal`.
+
+### Lo que el motor todavía no tiene
+
+- **Los objetos no tienen efecto.** Solo las balls llevan `effect_code` propio; pociones, curaciones de estado y MT se compran pero no se usan. El Repelente tampoco rellena el silenciado del disparador, que ya está escrito y esperando.
+- **Las habilidades tampoco**: `pokemon_abilities_cat` está importada con nombres y descripciones, y `effect_code` vale `sin_implementar` en las 374.
