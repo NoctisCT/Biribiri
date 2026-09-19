@@ -99,6 +99,7 @@ public final class AccionesMundo
         salida.put("clima", clima.name());
         salida.put("climaNombre", clima.nombreEs());
         salida.put("climaHasta", ServicioClima.hasta(zonaId));
+        salida.put("metodos", ServicioEncuentros.metodosDe(zonaId));
 
         List<Map<String, Object>> tiendas = new ArrayList<>();
 
@@ -201,7 +202,8 @@ public final class AccionesMundo
         return Respuesta.bien(salida);
     }
 
-    private static Map<String, Object> cuerpoSalvaje(ServicioEncuentros.Salvaje salvaje)
+    /** El cuerpo del encuentro. Lo usan la accion manual y el disparador de la hierba. */
+    public static Map<String, Object> cuerpoSalvaje(ServicioEncuentros.Salvaje salvaje)
     {
         PokemonPoseido pokemon = salvaje.pokemon();
         Map<String, Object> salida = new LinkedHashMap<>();

@@ -9,6 +9,7 @@ import com.retro.pokemonengine.encuentros.Encuentro;
 import com.retro.pokemonengine.encuentros.Franja;
 import com.retro.pokemonengine.encuentros.MetodoEncuentro;
 import com.retro.pokemonengine.encuentros.TablaEncuentros;
+import com.retro.pokemonengine.encuentros.TiradaEncuentro;
 import com.retro.pokemonengine.entrenador.EspecieGeneracion;
 import com.retro.pokemonengine.entrenador.GeneradorPokemon;
 import com.retro.pokemonengine.entrenador.PokemonPoseido;
@@ -68,7 +69,13 @@ public final class ServicioEncuentros
 
     private static Map<Integer, List<Encuentro>> porZona = Collections.emptyMap();
 
+    /** Probabilidad por paso, por zona y metodo, en milesimas. */
+    private static Map<Integer, Map<MetodoEncuentro, Integer>> ratios = Collections.emptyMap();
+
     private static final Map<Integer, Salvaje> ACTIVOS = new ConcurrentHashMap<>();
+
+    /** El enfriamiento de cada jugador. Se pierde al desconectar, y esta bien asi. */
+    private static final Map<Integer, TiradaEncuentro.Estado> TIRADAS = new ConcurrentHashMap<>();
 
     private ServicioEncuentros()
     {
@@ -109,8 +116,75 @@ public final class ServicioEncuentros
 
         porZona = Collections.unmodifiableMap(nuevos);
 
+        Map<Integer, Map<MetodoEncuentro, Integer>> nuevosRatios = new HashMap<>();
+
+        try(Connection c = Emulator.getDatabase().getDataSource().getConnection();
+            Statement s = c.createStatement();
+            ResultSet r = s.executeQuery(
+                    "SELECT zone_id, metodo, por_mil FROM pokemon_zone_encounter_rates"))
+        {
+            while(r.next())
+            {
+                nuevosRatios
+                        .computeIfAbsent(r.getInt("zone_id"), z -> new HashMap<>())
+                        .put(MetodoEncuentro.porNombre(r.getString("metodo")), r.getInt("por_mil"));
+            }
+        }
+
+        ratios = Collections.unmodifiableMap(nuevosRatios);
+
         System.out.println("[PokemonEngine] Encuentros: " + total
-                + " filas en " + porZona.size() + " zonas.");
+                + " filas en " + porZona.size() + " zonas, "
+                + ratios.size() + " zonas con probabilidad por paso.");
+    }
+
+    /**
+     * Probabilidad por paso en milesimas. Sin fila, cero: una zona nueva no
+     * empieza a escupir Pokemon por haberse olvidado de configurarla.
+     */
+    public static int porMil(int zonaId, MetodoEncuentro metodo)
+    {
+        Map<MetodoEncuentro, Integer> deZona = ratios.get(zonaId);
+
+        if(deZona == null) return 0;
+
+        Integer valor = deZona.get(metodo);
+
+        return valor == null ? 0 : valor;
+    }
+
+    /** Los metodos que esa zona tiene configurados con probabilidad mayor que cero. */
+    public static List<String> metodosDe(int zonaId)
+    {
+        List<String> salida = new ArrayList<>();
+        Map<MetodoEncuentro, Integer> deZona = ratios.get(zonaId);
+
+        if(deZona == null) return salida;
+
+        for(Map.Entry<MetodoEncuentro, Integer> entrada : deZona.entrySet())
+        {
+            if(entrada.getValue() != null && entrada.getValue() > 0) salida.add(entrada.getKey().name());
+        }
+
+        Collections.sort(salida);
+
+        return salida;
+    }
+
+    public static TiradaEncuentro.Estado estadoTirada(int userId)
+    {
+        return TIRADAS.getOrDefault(userId, TiradaEncuentro.inicial());
+    }
+
+    public static void ponerEstadoTirada(int userId, TiradaEncuentro.Estado estado)
+    {
+        TIRADAS.put(userId, estado);
+    }
+
+    /** El enganche del Repelente: tantos pasos sin tirar nada. */
+    public static void silenciar(int userId, int pasos)
+    {
+        TIRADAS.put(userId, TiradaEncuentro.silenciar(estadoTirada(userId), pasos));
     }
 
     public static List<Encuentro> deZona(int zonaId)
@@ -179,6 +253,13 @@ public final class ServicioEncuentros
     public static void limpiar(int userId)
     {
         ACTIVOS.remove(userId);
+    }
+
+    /** Al desconectar: ni encuentro en curso ni enfriamiento pendiente. */
+    public static void olvidar(int userId)
+    {
+        ACTIVOS.remove(userId);
+        TIRADAS.remove(userId);
     }
 
     public static int totalActivos()

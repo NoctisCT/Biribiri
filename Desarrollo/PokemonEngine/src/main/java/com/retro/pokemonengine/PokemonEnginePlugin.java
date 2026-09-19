@@ -36,6 +36,7 @@ public class PokemonEnginePlugin extends HabboPlugin implements EventListener
         ServicioEncuentros.cargar();
         ServicioTienda.cargar();
         ServicioClima.cargar();
+        ServicioFurniEncuentro.cargar();
         ServicioAnimacionesSeguidor.sincronizar();
         ServicioSeguidor.iniciar();
         ServicioClima.iniciar();
@@ -70,6 +71,9 @@ public class PokemonEnginePlugin extends HabboPlugin implements EventListener
     public void onUserTakeStep(UserTakeStepEvent event)
     {
         ServicioSeguidor.alPaso(event.habbo, event.fromLocation, event.toLocation);
+
+        // Detras del seguidor a proposito: primero llega el Pokemon a su baldosa.
+        DisparadorEncuentros.alPaso(event.habbo, event.toLocation);
     }
 
     @Override
