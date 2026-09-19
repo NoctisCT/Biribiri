@@ -87,32 +87,131 @@
                     </button>
                 </div>
 
-                <section x-show="tab === 'market'" x-cloak>
-                    <h3 class="text-base font-bold">Tienda semanal de ropa</h3>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        Aquí aparecerán las prendas activas y la ropa limitada de semanas anteriores. La compra web se conectará en la siguiente fase del marketplace.
-                    </p>
+                                <section x-show="tab === 'market'" x-cloak>
+                    @php($currentProducts = $marketProducts->where('status', 'active'))
+                    @php($previousProducts = $marketProducts->where('status', 'previous'))
 
-                    @if ($marketProducts->isEmpty())
+                    <div class="flex flex-wrap items-end justify-between gap-3">
+                        <div>
+                            <h3 class="text-base font-bold">Tienda semanal de ropa</h3>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                La rotación cambia cada domingo a las 00:00 (Europe/Madrid). Comprar se conectará en P10; P9 deja listo el escaparate y la planificación.
+                            </p>
+                        </div>
+
+                        <div class="rounded bg-blue-500/10 px-3 py-2 text-xs text-blue-700 dark:text-blue-300">
+                            El furni comprado será canjeable y tradeable antes de usarlo.
+                        </div>
+                    </div>
+
+                    @if ($currentProducts->isEmpty())
                         <div class="mt-4 rounded border border-dashed border-gray-300 p-8 text-center text-gray-500 dark:border-gray-700">
-                            Todavía no hay ropa publicada en el marketplace.
+                            No hay prendas activas en la rotación actual.
                         </div>
                     @else
-                        <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                            @foreach ($marketProducts as $product)
-                                <div class="rounded border border-gray-300 p-4 dark:border-gray-700">
-                                    <div class="font-bold">{{ $product->name }}</div>
-                                    <div class="mt-1 text-xs text-gray-500">
-                                        {{ $product->package_kind === 'set' ? 'Set' : 'Prenda' }} · {{ $product->piece_count }} pieza{{ $product->piece_count === 1 ? '' : 's' }}
+                        <h4 class="mt-5 font-bold">Esta semana</h4>
+
+                        <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            @foreach ($currentProducts as $product)
+                                <div class="rounded border border-gray-300 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
+                                    <div class="flex gap-3">
+                                        @if ($product->icon_url)
+                                            <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded bg-gray-100 p-2 dark:bg-gray-800">
+                                                <img
+                                                    src="{{ $product->icon_url }}"
+                                                    alt=""
+                                                    class="max-h-12 max-w-12"
+                                                >
+                                            </div>
+                                        @endif
+
+                                        <div class="min-w-0">
+                                            <div class="font-bold">{{ $product->name }}</div>
+
+                                            @if ($product->tag)
+                                                <div class="mt-1 text-xs text-gray-500">
+                                                    #{{ ltrim($product->tag, '#') }}
+                                                </div>
+                                            @endif
+
+                                            <div class="mt-1 text-xs text-gray-500">
+                                                {{ $product->clothing_submission_id ? 'Diseñador' : 'Legacy Biribiri' }}
+                                                · {{ $product->creator_username }}
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="mt-3 text-sm">
-                                        {{ number_format($product->unit_price, 0, ',', '.') }} créditos
+
+                                    <div class="mt-4 flex items-end justify-between gap-3">
+                                        <div>
+                                            <div class="text-lg font-bold">
+                                                {{ number_format($product->unit_price, 0, ',', '.') }} créditos
+                                            </div>
+
+                                            <div class="mt-1 text-xs text-gray-500">
+                                                @if ($product->stock_mode === 'unlimited')
+                                                    Stock ilimitado
+                                                @else
+                                                    Quedan {{ number_format((int) $product->remaining_stock, 0, ',', '.') }} de {{ number_format((int) $product->stock_total, 0, ',', '.') }}
+                                                @endif
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            disabled
+                                            class="cursor-not-allowed rounded bg-gray-200 px-3 py-2 text-xs font-bold text-gray-500 dark:bg-gray-800"
+                                            title="La compra se conecta en P10"
+                                        >
+                                            Comprar · P10
+                                        </button>
                                     </div>
-                                    <div class="mt-2 rounded bg-blue-500/10 p-2 text-xs text-blue-600 dark:text-blue-300">
-                                        Escaparate preparado · compra web pendiente de conectar
-                                    </div>
+
+                                    @if ($product->window_end_display)
+                                        <div class="mt-3 text-[11px] text-gray-400">
+                                            Rotación actual hasta {{ $product->window_end_display }}.
+                                        </div>
+                                    @endif
                                 </div>
                             @endforeach
+                        </div>
+                    @endif
+
+                    @if ($previousProducts->isNotEmpty())
+                        <div class="mt-8 border-t border-gray-200 pt-5 dark:border-gray-800">
+                            <h4 class="font-bold">Ropa de semanas anteriores</h4>
+                            <p class="mt-1 text-xs text-gray-500">
+                                Solo permanecen aquí las prendas limitadas con unidades disponibles.
+                            </p>
+
+                            <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                @foreach ($previousProducts as $product)
+                                    <div class="rounded border border-gray-300 p-4 dark:border-gray-700">
+                                        <div class="flex gap-3">
+                                            @if ($product->icon_url)
+                                                <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded bg-gray-100 p-2 dark:bg-gray-800">
+                                                    <img
+                                                        src="{{ $product->icon_url }}"
+                                                        alt=""
+                                                        class="max-h-10 max-w-10"
+                                                    >
+                                                </div>
+                                            @endif
+
+                                            <div>
+                                                <div class="font-bold">{{ $product->name }}</div>
+                                                <div class="mt-1 text-xs text-gray-500">
+                                                    {{ number_format($product->unit_price, 0, ',', '.') }} créditos
+                                                    · quedan {{ number_format((int) $product->remaining_stock, 0, ',', '.') }}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="mt-3 rounded bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-300">
+                                            Disponible hasta agotar existencias.
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
                         </div>
                     @endif
                 </section>
@@ -147,8 +246,7 @@
                                     <div class="text-gray-500">máximo por RAR</div>
                                 </div>
                                 <div class="rounded bg-gray-100 p-3 dark:bg-gray-800">
-                                    <div class="text-lg font-bold">{{ $maxPending }}</div>
-                                    <div class="text-gray-500">pendientes por cuenta</div>
+                                    <div class="text-lg font-bold">Sin límite</div><div class="text-gray-500">envíos pendientes</div>
                                 </div>
                             </div>
                         </div>
@@ -302,7 +400,7 @@
                         </div>
 
                         <div class="text-xs text-gray-500">
-                            Pendientes: {{ $pendingCount }}/{{ $maxPending }}
+                            Pendientes: {{ $pendingCount }}
                         </div>
                     </div>
 

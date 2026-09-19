@@ -21,8 +21,7 @@ use Throwable;
 
 class ClothingCreatorController extends Controller
 {
-    private const MAX_PENDING = 3;
-    private const MAX_ARCHIVE_KB = 51200;
+private const MAX_ARCHIVE_KB = 51200;
 
     private const CATEGORIES = [
         'hd' => 'Cara',
@@ -194,7 +193,6 @@ class ClothingCreatorController extends Controller
                     )
                     ->count();
         }
-
         $marketProducts = collect();
 
         if (
@@ -204,6 +202,7 @@ class ClothingCreatorController extends Controller
         ) {
             $marketProducts =
                 ClothingProduct::query()
+                    ->with('submission')
                     ->where(
                         'web_visible',
                         true
@@ -215,10 +214,148 @@ class ClothingCreatorController extends Controller
                             'previous',
                         ]
                     )
-                    ->latest('created_at')
-                    ->limit(24)
+                    ->orderByRaw(
+                        "CASE WHEN status = 'active' THEN 0 ELSE 1 END"
+                    )
+                    ->orderByDesc('starts_at')
+                    ->limit(60)
                     ->get();
+
+            $creatorIds =
+                $marketProducts
+                    ->pluck(
+                        'creator_user_id'
+                    )
+                    ->filter()
+                    ->map(
+                        static fn (
+                            $value
+                        ): int =>
+                            (int) $value
+                    )
+                    ->unique()
+                    ->values();
+
+            $creatorNames =
+                $creatorIds->isEmpty()
+                    ? collect()
+                    : DB::table('users')
+                        ->whereIn(
+                            'id',
+                            $creatorIds
+                        )
+                        ->pluck(
+                            'username',
+                            'id'
+                        );
+
+            $baseIds =
+                $marketProducts
+                    ->pluck(
+                        'redeemable_base_item_id'
+                    )
+                    ->filter()
+                    ->map(
+                        static fn (
+                            $value
+                        ): int =>
+                            (int) $value
+                    )
+                    ->unique()
+                    ->values();
+
+            $baseItems =
+                $baseIds->isEmpty()
+                    ? collect()
+                    : DB::table(
+                        'items_base'
+                    )
+                        ->whereIn(
+                            'id',
+                            $baseIds
+                        )
+                        ->get([
+                            'id',
+                            'item_name',
+                        ])
+                        ->keyBy('id');
+
+            foreach (
+                $marketProducts
+                as $product
+            ) {
+                $product
+                    ->creator_username =
+                    $product
+                        ->creator_user_id
+                            ? (
+                                $creatorNames[
+                                    (int)
+                                    $product
+                                        ->creator_user_id
+                                ]
+                                ??
+                                (
+                                    '#' .
+                                    (int)
+                                    $product
+                                        ->creator_user_id
+                                )
+                            )
+                            : 'Biribiri';
+
+                $base =
+                    $product
+                        ->redeemable_base_item_id
+                            ? (
+                                $baseItems[
+                                    (int)
+                                    $product
+                                        ->redeemable_base_item_id
+                                ]
+                                ?? null
+                            )
+                            : null;
+
+                $code =
+                    $base
+                        ? trim(
+                            (string)
+                            $base->item_name
+                        )
+                        : '';
+
+                $product->icon_url =
+                    $code !== ''
+                        ? asset(
+                            'swf/dcr/hof_furni/icons/' .
+                            rawurlencode(
+                                $code
+                            ) .
+                            '_icon.png'
+                        )
+                        : null;
+
+                $product->remaining_stock =
+                    $product
+                        ->remainingStock();
+
+                $product->window_end_display =
+                    $product
+                        ->weekly_window_ends_at
+                            ? $product
+                                ->weekly_window_ends_at
+                                ->copy()
+                                ->setTimezone(
+                                    'Europe/Madrid'
+                                )
+                                ->format(
+                                    'd/m/Y H:i'
+                                )
+                            : null;
+            }
         }
+
 
 
         $requestedTab = (string)
@@ -256,9 +393,7 @@ class ClothingCreatorController extends Controller
                     $submissions,
                 'pendingCount' =>
                     $pendingCount,
-                'maxPending' =>
-                    self::MAX_PENDING,
-                'categories' =>
+'categories' =>
                     self::CATEGORIES,
                 'marketProducts' =>
                     $marketProducts,
@@ -369,28 +504,6 @@ class ClothingCreatorController extends Controller
                     'Ese personaje no puede presentar ropa para esta cuenta.',
             ]);
         }
-
-        $pending =
-            ClothingSubmission::query()
-                ->where(
-                    'account_id',
-                    $accountId
-                )
-                ->where(
-                    'status',
-                    'pending'
-                )
-                ->count();
-
-        if ($pending >= self::MAX_PENDING) {
-            throw ValidationException::withMessages([
-                'package' =>
-                    'Ya tienes el máximo de ' .
-                    self::MAX_PENDING .
-                    ' solicitudes pendientes de revisión.',
-            ]);
-        }
-
         $archive = $validated['package'];
 
         if (
