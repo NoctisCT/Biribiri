@@ -7,7 +7,7 @@ Rama: `codex/pokemon-engine` · Worktree: `build/pokemon-engine` · Base: `dev`
 
 ## Para la siguiente sesión: empezar por el hito 6b
 
-Los hitos 1 a 5 y el **6a** están hechos. Lo siguiente es el **hito 6b**: combate de punta a punta, salvaje y PvP, con `ServicioArena`, formación en sala y bloqueo de posición. Su plan **está por escribir**, y las decisiones de diseño ya tomadas están en la spec del 6a y en la sección 9 de este documento.
+Los hitos 1 a 5 y el **6a** están hechos. Lo siguiente es el **hito 6b**: combate de punta a punta, salvaje y PvP, con `ServicioArena`, formación en sala y bloqueo de posición. Su plan está escrito en `docs/superpowers/plans/2026-09-19-pokemon-engine-hito-6b-combate.md`, con las decisiones de diseño ya tomadas de la spec del 6a y de la sección 9 de este documento.
 
 Antes de escribir una línea, leer de este documento la **sección 3 (restricciones del entorno)**: cada punto de esa lista costó un fallo real.
 
@@ -46,6 +46,7 @@ El segundo comando **no debe devolver nada** salvo un comentario en `CatalogoAni
 | `docs/superpowers/plans/2026-09-19-pokemon-engine-hito-5-mundo.md` | Plan del hito 5 (hecho) |
 | `docs/superpowers/specs/2026-09-19-pokemon-engine-6a-mundo-design.md` | **Spec del hito 6a**, con las decisiones de diseño y su razón |
 | `docs/superpowers/plans/2026-09-19-pokemon-engine-hito-6a-mundo.md` | Plan del hito 6a (hecho) |
+| `docs/superpowers/plans/2026-09-19-pokemon-engine-hito-6b-combate.md` | **Plan del hito 6b, el combate.** Lo que toca ahora |
 | Sección 9 de este documento | **Decisiones del 6b ya tomadas**: huida, abandono, dónde se pelea, evolución |
 | Sección 10 de este documento | Importador de salas desde otro hotel, proyecto aparte |
 
