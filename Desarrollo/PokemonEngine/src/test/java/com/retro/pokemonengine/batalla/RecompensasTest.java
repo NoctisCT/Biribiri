@@ -10,34 +10,59 @@ class RecompensasTest
     private static final Recompensas.Ev CERO = new Recompensas.Ev(0, 0, 0, 0, 0, 0);
 
     @Test
-    void unRattataDeNivelDosDaMuyPocaExperiencia()
+    void aIgualNivelElFactorNoQuitaCasiNada()
     {
-        // Rattata: base_experience 51.
-        assertEquals(51L * 2 / 7, Recompensas.experiencia(51, 2, 1, false));
+        // Con Lderrotado == Lganador el factor vale (2L+10)/(2L+10) elevado a
+        // 2,5, que es 1 solo cuando ademas los dos son iguales al mismo nivel.
+        long exp = Recompensas.experiencia(51, 20, 20, 1, false);
+
+        assertTrue(exp > 100, "A su nivel, un rival decente sigue pagando: " + exp);
     }
 
     @Test
-    void repartirEntreDosDaLaMitadACadaUno()
+    void subirDeNivelHaceQueLosBichosFlojosDejenDeCompensar()
     {
-        long solo = Recompensas.experiencia(200, 50, 1, false);
-        long acompanado = Recompensas.experiencia(200, 50, 2, false);
+        long aNivelCinco = Recompensas.experiencia(51, 2, 5, 1, false);
+        long aNivelSesenta = Recompensas.experiencia(51, 2, 60, 1, false);
 
-        assertEquals(solo / 2, acompanado);
+        assertTrue(aNivelSesenta * 5 < aNivelCinco,
+                "La Ruta 1 tiene que agotarse sola: " + aNivelCinco + " -> " + aNivelSesenta);
+        assertEquals(1L, aNivelSesenta,
+                "A nivel 60 un Rattata de nivel 2 ya solo paga el minimo");
+    }
+
+    @Test
+    void unRivalDeMayorNivelPagaMas()
+    {
+        long flojo = Recompensas.experiencia(100, 10, 30, 1, false);
+        long fuerte = Recompensas.experiencia(100, 40, 30, 1, false);
+
+        assertTrue(fuerte > flojo * 4,
+                "Buscar rivales de tu nivel tiene que notarse: " + flojo + " -> " + fuerte);
+    }
+
+    @Test
+    void repartirEntreDosDaCasiLaMitadACadaUno()
+    {
+        long solo = Recompensas.experiencia(200, 50, 50, 1, false);
+        long acompanado = Recompensas.experiencia(200, 50, 50, 2, false);
+
+        assertEquals(solo / 2, acompanado, 1);
     }
 
     @Test
     void unEntrenadorPagaLaMitadMas()
     {
-        long salvaje = Recompensas.experiencia(200, 50, 1, false);
-        long entrenador = Recompensas.experiencia(200, 50, 1, true);
+        long salvaje = Recompensas.experiencia(200, 50, 50, 1, false);
+        long entrenador = Recompensas.experiencia(200, 50, 50, 1, true);
 
-        assertEquals(salvaje * 3 / 2, entrenador);
+        assertEquals(salvaje * 3 / 2, entrenador, 1);
     }
 
     @Test
     void nuncaSeGanaCero()
     {
-        assertEquals(1L, Recompensas.experiencia(1, 1, 6, false),
+        assertEquals(1L, Recompensas.experiencia(1, 1, 100, 6, false),
                 "Un combate ganado siempre tiene que sumar algo");
     }
 

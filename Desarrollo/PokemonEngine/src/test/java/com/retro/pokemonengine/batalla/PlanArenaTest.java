@@ -115,6 +115,53 @@ class PlanArenaTest
     }
 
     @Test
+    void elRetadorCaminaHaciaElLadoEnElQueYaEsta()
+    {
+        // El que ancla esta en (5,5) y el rival al este, en (9,5). La linea
+        // tiene que salir hacia el este para que el rival casi no ande.
+        PlanArena.Formacion f = PlanArena.resolverHacia(
+                5, 5, 9, 5, Formato.PVP_AMISTOSO, this.salaLibre);
+
+        assertNotNull(f);
+        assertEquals(5, f.de(PlanArena.ROL_ENTRENADOR_A).x(), "El que ancla no se mueve");
+        assertEquals(5, f.de(PlanArena.ROL_ENTRENADOR_A).y());
+        assertEquals(8, f.de(PlanArena.ROL_ENTRENADOR_B).x(), "Y el otro se planta a tres");
+        assertEquals(5, f.de(PlanArena.ROL_ENTRENADOR_B).y());
+    }
+
+    @Test
+    void siElRivalEstaAlOtroLadoLaLineaSeDaLaVuelta()
+    {
+        PlanArena.Formacion f = PlanArena.resolverHacia(
+                5, 5, 1, 5, Formato.PVP_AMISTOSO, this.salaLibre);
+
+        assertNotNull(f);
+        assertEquals(6, f.direccion(), "Hacia el oeste, que es donde esta el rival");
+        assertEquals(2, f.de(PlanArena.ROL_ENTRENADOR_B).x());
+    }
+
+    @Test
+    void losEntrenadoresAcabanATresBaldosas()
+    {
+        PlanArena.Formacion f = PlanArena.resolverHacia(
+                5, 5, 9, 5, Formato.PVP_AMISTOSO, this.salaLibre);
+
+        assertNotNull(f);
+        assertEquals(3, PlanArena.distancia(
+                f.de(PlanArena.ROL_ENTRENADOR_A).x(), f.de(PlanArena.ROL_ENTRENADOR_A).y(),
+                f.de(PlanArena.ROL_ENTRENADOR_B).x(), f.de(PlanArena.ROL_ENTRENADOR_B).y()),
+                "Entrenador - Pokemon - Pokemon - Entrenador son tres de distancia");
+    }
+
+    @Test
+    void siNoCabeEnNingunSitioResolverHaciaTambienDevuelveNulo()
+    {
+        PlanArena.Transitable unaBaldosa = (x, y) -> x == 4 && y == 4;
+
+        assertNull(PlanArena.resolverHacia(4, 4, 6, 4, Formato.PVP_AMISTOSO, unaBaldosa));
+    }
+
+    @Test
     void laDistanciaEsLaQueAndaUnAvatar()
     {
         // En diagonal se anda igual de rapido que en recto: distancia de Chebyshev.

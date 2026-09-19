@@ -46,7 +46,7 @@ public final class ServicioRecompensas
 
         try
         {
-            if(!ServicioBatalla.MOTIVO_ANULADA.equals(motivo)) guardarDesgaste(sesion);
+            if(!ServicioBatalla.esAnulacion(motivo)) guardarDesgaste(sesion);
 
             if(ganadorBando >= 0 && sesion.formato.daRecompensa()
                     && sesion.userIds[ganadorBando] != 0)
@@ -84,7 +84,12 @@ public final class ServicioRecompensas
             }
         }
 
-        cerrar(sesion, -1, ServicioBatalla.MOTIVO_ANULADA);
+        System.out.println("[PokemonEngine] Combate " + sesion.id + " anulado: " + motivo + ".");
+
+        // El motivo real y no un generico "anulada": sin el no hay forma de
+        // saber despues si fue una expulsion, una sala cerrada o una zona
+        // retirada, que es justo lo que hay que mirar si alguien se queja.
+        cerrar(sesion, -1, motivo);
     }
 
     /** Los PS, los PP y el estado con los que sale cada Pokemon del combate. */
@@ -129,6 +134,7 @@ public final class ServicioRecompensas
         long ganada = Recompensas.experiencia(
                 especieDerrotado.baseExperience(),
                 derrotado.nivelEfectivo(),
+                ganador.nivel(),
                 1,
                 sesion.formato != Formato.SALVAJE);
 
@@ -277,7 +283,7 @@ public final class ServicioRecompensas
                     "UPDATE pokemon_battles SET estado = ?, ganador_user_id = ?," +
                     " motivo_fin = ?, terminada_en = CURRENT_TIMESTAMP WHERE id = ?"))
         {
-            p.setString(1, ServicioBatalla.MOTIVO_ANULADA.equals(motivo) ? "anulada" : "terminada");
+            p.setString(1, ServicioBatalla.esAnulacion(motivo) ? "anulada" : "terminada");
 
             if(ganadorBando < 0 || sesion.userIds[ganadorBando] == 0)
             {

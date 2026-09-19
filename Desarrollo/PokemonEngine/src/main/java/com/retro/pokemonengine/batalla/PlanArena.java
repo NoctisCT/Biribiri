@@ -135,6 +135,62 @@ public final class PlanArena
         return null;
     }
 
+    /**
+     * Como `resolver`, pero eligiendo la formacion que deje al **segundo**
+     * combatiente lo mas cerca posible de donde ya esta.
+     *
+     * Existe porque en un reto solo debe moverse uno. Con `resolver` a secas la
+     * linea sale en la primera direccion que quepa, que puede mandar al rival a
+     * dar la vuelta a la sala; asi, de todas las que caben, se queda la que le
+     * pilla mas a mano.
+     */
+    public static Formacion resolverHacia(int origenX, int origenY, int rivalX, int rivalY,
+                                          Formato formato, Transitable transitable)
+    {
+        Formacion mejor = null;
+        int mejorCoste = Integer.MAX_VALUE;
+
+        for(int radio = 0; radio <= RADIO_BUSQUEDA; radio++)
+        {
+            for(int dx = -radio; dx <= radio; dx++)
+            {
+                for(int dy = -radio; dy <= radio; dy++)
+                {
+                    if(Math.max(Math.abs(dx), Math.abs(dy)) != radio) continue;
+
+                    for(int direccion : CARDINALES)
+                    {
+                        Formacion formacion = enLinea(
+                                origenX + dx, origenY + dy, direccion, formato);
+
+                        if(!cabe(formacion, transitable)) continue;
+
+                        Hueco suyo = formacion.de(ROL_ENTRENADOR_B);
+
+                        if(suyo == null) continue;
+
+                        // Lo que anda el rival, y a igualdad lo que se mueve el
+                        // que ancla, que en principio no deberia moverse nada.
+                        int coste = distancia(suyo.x(), suyo.y(), rivalX, rivalY) * 100
+                                + Math.max(Math.abs(dx), Math.abs(dy));
+
+                        if(coste < mejorCoste)
+                        {
+                            mejorCoste = coste;
+                            mejor = formacion;
+                        }
+                    }
+                }
+            }
+
+            // Con el ancla encontrada no hace falta seguir abriendo el radio:
+            // alejar mas la formacion solo empeora el paseo de los dos.
+            if(mejor != null) return mejor;
+        }
+
+        return mejor;
+    }
+
     /** Distancia de Chebyshev, que es como anda un avatar de Habbo: la diagonal cuesta uno. */
     public static int distancia(int ax, int ay, int bx, int by)
     {

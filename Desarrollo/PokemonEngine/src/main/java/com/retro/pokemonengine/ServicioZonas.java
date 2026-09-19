@@ -80,7 +80,7 @@ public final class ServicioZonas
         {
             if(!nuevasSalas.containsKey(roomId))
             {
-                ServicioBatalla.anularDeSala(roomId, "sala_sin_zona");
+                ServicioBatalla.anularDeSala(roomId, ServicioBatalla.MOTIVO_SALA_SIN_ZONA);
             }
         }
 

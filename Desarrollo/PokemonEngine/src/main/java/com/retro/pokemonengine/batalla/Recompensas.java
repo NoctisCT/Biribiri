@@ -26,23 +26,36 @@ public final class Recompensas
     }
 
     /**
-     * Formula de quinta generacion sin el factor de nivel del ganador: la base
-     * del derrotado por su nivel, entre siete, repartida entre los que
-     * participaron. El factor se deja fuera a proposito: sin intercambio ni
-     * Pokemon regalados solo anadiria ruido.
+     * La experiencia que deja un Pokemon derrotado, con la formula de quinta
+     * generacion en adelante.
+     *
+     * La base del derrotado por su nivel entre siete, repartida entre los que
+     * participaron, y despues **el factor de nivel**:
+     *
+     *     ((2·Lderrotado + 10) / (Lderrotado + Lganador + 10))^2,5
+     *
+     * Ese factor es lo que hace que la Ruta 1 se agote sola. Sin el, un nivel
+     * 60 sacaria de un Rattata lo mismo que un nivel 5, y el nivel pasaria a
+     * ser una cuestion de tiempo conectado en vez de una de juego — que en un
+     * hotel, donde cualquiera puede dejar un script andando toda la noche, es
+     * el riesgo real.
      */
     public static long experiencia(int baseExperienceDerrotado, int nivelDerrotado,
-                                   int participantes, boolean contraEntrenador)
+                                   int nivelGanador, int participantes, boolean contraEntrenador)
     {
         int reparto = Math.max(1, participantes);
+        int lDerrotado = Math.max(1, nivelDerrotado);
+        int lGanador = Math.max(1, nivelGanador);
 
-        long bruta = (long) Math.max(0, baseExperienceDerrotado)
-                * Math.max(1, nivelDerrotado) / 7L / reparto;
+        double bruta = (double) Math.max(0, baseExperienceDerrotado) * lDerrotado / 7.0 / reparto;
 
-        if(contraEntrenador) bruta = bruta * 3L / 2L;
+        if(contraEntrenador) bruta *= 1.5;
+
+        double factor = Math.pow(
+                (2.0 * lDerrotado + 10.0) / (lDerrotado + lGanador + 10.0), 2.5);
 
         // Un combate ganado siempre suma algo: cero desmotiva y no protege nada.
-        return Math.max(1L, bruta);
+        return Math.max(1L, (long) (bruta * factor));
     }
 
     public static Ev sumar(Ev actuales, Ev reparto, boolean pokerus)

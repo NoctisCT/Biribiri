@@ -111,14 +111,12 @@ public class PokemonEnginePlugin extends HabboPlugin implements EventListener
 
         // A la vista del hotel se puede salir siempre: Arcturus no deja
         // cancelarlo. Se trata como lo que es, una ausencia, y empieza el
-        // plazo de gracia. Si te echan, en cambio, el combate se anula: eso
-        // no es una decision tuya.
-        if(event.reason == UserExitRoomEvent.UserExitRoomReason.KICKED_HABBO)
-        {
-            ServicioBatalla.anularDe(userId, "expulsado");
-            return;
-        }
-
+        // plazo de gracia.
+        //
+        // Aqui no se mira el motivo de salida: KICKED_HABBO existe en el enum
+        // pero **Arcturus no lo usa en ningun sitio** (comprobado en el
+        // bytecode: solo aparece en la propia clase del enum). Las expulsiones
+        // llegan por UserKickEvent, que si se dispara.
         ServicioBatalla.ausentarse(userId);
     }
 
@@ -127,7 +125,8 @@ public class PokemonEnginePlugin extends HabboPlugin implements EventListener
     {
         if(event.target == null || event.target.getHabboInfo() == null) return;
 
-        ServicioBatalla.anularDe(event.target.getHabboInfo().getId(), "expulsado");
+        ServicioBatalla.anularDe(event.target.getHabboInfo().getId(),
+                ServicioBatalla.MOTIVO_EXPULSADO);
     }
 
     @EventHandler
@@ -152,7 +151,7 @@ public class PokemonEnginePlugin extends HabboPlugin implements EventListener
     {
         if(event.room == null) return;
 
-        ServicioBatalla.anularDeSala(event.room.getId(), "sala_cerrada");
+        ServicioBatalla.anularDeSala(event.room.getId(), ServicioBatalla.MOTIVO_SALA_CERRADA);
     }
 
     @EventHandler

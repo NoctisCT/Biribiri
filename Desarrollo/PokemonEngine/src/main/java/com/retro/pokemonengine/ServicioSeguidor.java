@@ -71,6 +71,16 @@ public final class ServicioSeguidor
         String interaccion;
         long interaccionHastaMs;
 
+        /**
+         * Puesto en el hueco de combate.
+         *
+         * Mientras dura, el seguidor deja de ir detras del jugador: se queda en
+         * la baldosa que le toca de la formacion, mirando al rival. Es lo que
+         * hace que el Pokemon que pelea se ponga delante en vez de seguir a la
+         * espalda de su entrenador.
+         */
+        boolean enArena;
+
         String ultimoEstado = CatalogoAnimaciones.PARADO;
         String ultimaAnimacion = "Idle";
         String ultimoRespaldo = "Walk";
@@ -151,6 +161,9 @@ public final class ServicioSeguidor
         Seguidor seguidor = porUsuario.get(habbo.getHabboInfo().getId());
 
         if(seguidor == null) return;
+
+        // En el hueco de combate el Pokemon no sigue a nadie: se queda plantado.
+        if(seguidor.enArena) return;
 
         Room room = habbo.getHabboInfo().getCurrentRoom();
 
@@ -251,7 +264,8 @@ public final class ServicioSeguidor
         // cuente el cliente.
         if(unidad.hasStatus(RoomUnitStatus.WAVE)) gesto(seguidor.userId, CatalogoAnimaciones.SALUDANDO);
 
-        if(recolocar(seguidor, unidad, room)) return;
+        // En el hueco de combate la posicion la manda la formacion, no el rastro.
+        if(!seguidor.enArena && recolocar(seguidor, unidad, room)) return;
 
         EstadoSeguidor estado = seguidor.maquina.resolver(foto(seguidor, unidad));
 
@@ -388,6 +402,52 @@ public final class ServicioSeguidor
         }
 
         return SeguidorPackets.mensaje(SeguidorPackets.TIPO_FOTO, entradas);
+    }
+
+    /**
+     * Lleva al seguidor a su hueco de la formacion.
+     *
+     * No anda hasta alli: aparece. Un Pokemon que sale de su ball no camina
+     * desde detras de su entrenador, y ademas no hay ninguna garantia de que
+     * haya un camino libre entre una baldosa y la otra.
+     */
+    public static void aArena(int userId, int x, int y, int direccion)
+    {
+        Seguidor seguidor = porUsuario.get(userId);
+
+        if(seguidor == null) return;
+
+        seguidor.enArena = true;
+        seguidor.rastro.aparecer(x, y, direccion);
+
+        Habbo habbo = Emulator.getGameEnvironment().getHabboManager().getHabbo(userId);
+        Room room = habbo == null ? null : habbo.getHabboInfo().getCurrentRoom();
+
+        if(room == null) return;
+
+        room.sendComposer(SeguidorPackets.mensaje(
+                SeguidorPackets.TIPO_ALTA, entradaDe(seguidor, room)));
+    }
+
+    /** Lo devuelve a la espalda de su entrenador. */
+    public static void fueraDeArena(int userId)
+    {
+        Seguidor seguidor = porUsuario.get(userId);
+
+        if(seguidor == null || !seguidor.enArena) return;
+
+        seguidor.enArena = false;
+
+        // El proximo latido lo recoloca detras solo, que es justo lo que hace
+        // `recolocar` cuando el rastro se queda lejos del jugador.
+    }
+
+    /** El Pokemon que va detras, o 0 si no hay ninguno. */
+    public static long ownedIdDe(int userId)
+    {
+        Seguidor seguidor = porUsuario.get(userId);
+
+        return seguidor == null ? 0L : seguidor.ownedId;
     }
 
     public static boolean tieneSeguidor(int userId)

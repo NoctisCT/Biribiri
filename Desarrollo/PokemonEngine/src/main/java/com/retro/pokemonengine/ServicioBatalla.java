@@ -56,6 +56,26 @@ public final class ServicioBatalla
     public static final String MOTIVO_ABANDONO = "abandono";
     public static final String MOTIVO_ANULADA = "anulada";
 
+    /** Motivos que anulan: ninguno de ellos es decision del que combate. */
+    public static final String MOTIVO_EXPULSADO = "expulsado";
+    public static final String MOTIVO_SALA_CERRADA = "sala_cerrada";
+    public static final String MOTIVO_SALA_SIN_ZONA = "sala_sin_zona";
+
+    /**
+     * Si ese final cuenta como anulacion.
+     *
+     * Se compara contra una lista y no contra una sola constante porque el
+     * motivo que se guarda es el real — "expulsado", "sala_cerrada" — y no un
+     * generico que borraria la unica informacion util.
+     */
+    public static boolean esAnulacion(String motivo)
+    {
+        return MOTIVO_ANULADA.equals(motivo)
+                || MOTIVO_EXPULSADO.equals(motivo)
+                || MOTIVO_SALA_CERRADA.equals(motivo)
+                || MOTIVO_SALA_SIN_ZONA.equals(motivo);
+    }
+
     /** Cada cuanto se miran los dos relojes. */
     public static final long LATIDO_MS = 1000L;
 
@@ -263,7 +283,9 @@ public final class ServicioBatalla
         POR_JUGADOR.put(userA, id);
         POR_JUGADOR.put(userB, id);
 
-        colocarOInterfaz(sesion, a, b);
+        // Ancla el que acepta y camina el que reto: quien busca pelea es quien
+        // se acerca.
+        colocarOInterfaz(sesion, b, a);
         empujarEstado(sesion);
 
         return sesion;
@@ -289,20 +311,31 @@ public final class ServicioBatalla
      * Busca sitio para la formacion. Si no cabe, el combate se juega en
      * interfaz: **no se cancela nunca**. El jugador no puede perder el
      * encuentro por estar la ruta llena, solo el espectaculo.
+     *
+     * @param anclaje   el que no se mueve
+     * @param queCamina el que se acerca, o null contra un salvaje
      */
-    private static void colocarOInterfaz(Sesion sesion, Habbo a, Habbo b) throws Exception
+    private static void colocarOInterfaz(Sesion sesion, Habbo anclaje, Habbo queCamina)
     {
-        boolean cabe = ServicioArena.colocar(sesion, a);
-
-        // El & no es un &&: si el primero no cabe, el segundo tiene que
-        // soltarse igual, o se queda plantado en medio de nada.
-        if(b != null) cabe = ServicioArena.colocar(sesion, b) & cabe;
-
-        sesion.enInterfaz = !cabe;
-
-        if(!sesion.enInterfaz) return;
+        if(ServicioArena.colocar(sesion, anclaje, queCamina)) return;
 
         ServicioArena.soltar(sesion);
+        pasarAInterfaz(sesion.id);
+    }
+
+    /**
+     * El combate se resuelve en interfaz.
+     *
+     * Pasa cuando la formacion no cabe o cuando alguien no llega andando a su
+     * hueco. Nunca cancela nada: se pierde el espectaculo, no el combate.
+     */
+    public static void pasarAInterfaz(long batallaId)
+    {
+        Sesion sesion = SESIONES.get(batallaId);
+
+        if(sesion == null || sesion.enInterfaz) return;
+
+        sesion.enInterfaz = true;
 
         try(Connection c = Emulator.getDatabase().getDataSource().getConnection();
             PreparedStatement p = c.prepareStatement(
@@ -311,6 +344,13 @@ public final class ServicioBatalla
             p.setLong(1, sesion.id);
             p.executeUpdate();
         }
+        catch(Exception error)
+        {
+            System.out.println("[PokemonEngine] No se pudo marcar en interfaz el combate "
+                    + batallaId + ": " + error.getMessage());
+        }
+
+        empujarEstado(sesion);
     }
 
     /** El primero del equipo que no este debilitado, por orden de hueco. */
@@ -646,6 +686,7 @@ public final class ServicioBatalla
             }
         }
 
+        ServicioArena.repasar();
         ServicioRetos.caducar();
     }
 
