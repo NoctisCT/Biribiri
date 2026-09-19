@@ -4,6 +4,7 @@ import com.eu.habbo.Emulator;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import com.retro.pokemonengine.combate.CatalogoCombate;
 import com.retro.pokemonengine.combate.EjecutorMovimiento;
 import com.retro.pokemonengine.combate.EspecieCatalogo;
 import com.retro.pokemonengine.combate.MovimientoCatalogo;
@@ -212,5 +213,38 @@ public final class ServicioPokedex
     public static int totalMovimientos()
     {
         return movimientos.size();
+    }
+
+    /**
+     * El catalogo visto por el motor.
+     *
+     * Existe porque el paquete `combate` no puede importar este servicio — lo
+     * arrastraria al emulador — y el motor pide la interfaz. Es una vista y no
+     * una copia: lee siempre los mapas vivos.
+     */
+    private static final CatalogoCombate CATALOGO = new CatalogoCombate()
+    {
+        @Override
+        public MovimientoCatalogo movimiento(int id)
+        {
+            return ServicioPokedex.movimiento(id);
+        }
+
+        @Override
+        public EspecieCatalogo especie(int id)
+        {
+            return ServicioPokedex.especie(id);
+        }
+
+        @Override
+        public TablaTipos tipos()
+        {
+            return ServicioPokedex.tipos();
+        }
+    };
+
+    public static CatalogoCombate catalogo()
+    {
+        return CATALOGO;
     }
 }

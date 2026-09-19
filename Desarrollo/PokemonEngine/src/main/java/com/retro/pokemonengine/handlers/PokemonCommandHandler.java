@@ -4,6 +4,7 @@ import com.eu.habbo.habbohotel.users.Habbo;
 import com.eu.habbo.messages.incoming.MessageHandler;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.retro.pokemonengine.AccionesBatalla;
 import com.retro.pokemonengine.AccionesEntrenador;
 import com.retro.pokemonengine.AccionesMundo;
 import com.retro.pokemonengine.PokemonAcciones;
@@ -45,9 +46,13 @@ public class PokemonCommandHandler extends MessageHandler
             {
                 case PokemonAcciones.SALUDO -> saludo(userId, habbo);
                 case PokemonAcciones.CATALOGO -> catalogo();
-                default -> AccionesMundo.esAccionDeMundo(accion)
-                        ? AccionesMundo.ejecutar(habbo, userId, accion, datos)
-                        : AccionesEntrenador.ejecutar(habbo, userId, accion, datos);
+                // La batalla va primero: desde el hito 6b el 61 y el 62 del
+                // mundo acaban delegando en ella de todas formas.
+                default -> AccionesBatalla.esAccionDeBatalla(accion)
+                        ? AccionesBatalla.ejecutar(habbo, userId, accion, datos)
+                        : AccionesMundo.esAccionDeMundo(accion)
+                                ? AccionesMundo.ejecutar(habbo, userId, accion, datos)
+                                : AccionesEntrenador.ejecutar(habbo, userId, accion, datos);
             };
         }
         catch(Exception error)

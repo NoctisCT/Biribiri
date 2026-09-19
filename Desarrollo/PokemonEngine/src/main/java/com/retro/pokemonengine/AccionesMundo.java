@@ -49,8 +49,11 @@ public final class AccionesMundo
         {
             case PokemonAcciones.ZONA_INFO -> zonaInfo(habbo);
             case PokemonAcciones.ENCUENTRO_BUSCAR -> buscarEncuentro(habbo, userId, datos);
-            case PokemonAcciones.CAPTURA_INTENTAR -> capturar(userId, entero(datos, "ballId", 0));
-            case PokemonAcciones.ENCUENTRO_HUIR -> huir(userId);
+            // El 61 y el 62 siguen existiendo para un cliente cacheado, pero
+            // desde el hito 6b lo que hay detras es el combate.
+            case PokemonAcciones.CAPTURA_INTENTAR ->
+                    ServicioCaptura.enCombate(userId, entero(datos, "ballId", 0));
+            case PokemonAcciones.ENCUENTRO_HUIR -> ServicioBatalla.huir(userId);
             case PokemonAcciones.TIENDA_VER -> verTienda(habbo, entero(datos, "tiendaId", 0));
             case PokemonAcciones.TIENDA_COMPRAR -> comprar(userId, datos);
             case PokemonAcciones.TIENDA_VENDER -> vender(userId, datos);
@@ -172,36 +175,6 @@ public final class AccionesMundo
         return Respuesta.bien(cuerpoSalvaje(salvaje));
     }
 
-    private static Respuesta huir(int userId)
-    {
-        boolean habia = ServicioEncuentros.activo(userId) != null;
-
-        ServicioEncuentros.limpiar(userId);
-
-        Map<String, Object> salida = new LinkedHashMap<>();
-
-        salida.put("habiaEncuentro", habia);
-
-        return Respuesta.bien(salida);
-    }
-
-    private static Respuesta capturar(int userId, int ballId) throws Exception
-    {
-        ServicioCaptura.Resultado resultado = ServicioCaptura.intentar(userId, ballId);
-
-        if(!resultado.ok()) return Respuesta.mal(resultado.codigo(), mensajeCaptura(resultado.codigo()));
-
-        Map<String, Object> salida = new LinkedHashMap<>();
-
-        salida.put("capturado", resultado.capturado());
-        salida.put("sacudidas", resultado.sacudidas());
-        salida.put("especieId", resultado.especieId());
-        salida.put("ubicacion", resultado.ubicacion());
-        salida.put("ballsRestantes", resultado.ballsRestantes());
-
-        return Respuesta.bien(salida);
-    }
-
     /** El cuerpo del encuentro. Lo usan la accion manual y el disparador de la hierba. */
     public static Map<String, Object> cuerpoSalvaje(ServicioEncuentros.Salvaje salvaje)
     {
@@ -220,18 +193,6 @@ public final class AccionesMundo
         salida.put("zonaId", salvaje.zonaId());
 
         return salida;
-    }
-
-    private static String mensajeCaptura(String codigo)
-    {
-        return switch(codigo)
-        {
-            case ServicioCaptura.SIN_ENCUENTRO -> "No hay ningun Pokemon delante";
-            case ServicioCaptura.NO_ES_BALL -> "Eso no es una ball";
-            case ServicioCaptura.NO_TIENES -> "No te quedan de esas";
-            case ServicioCaptura.ALMACEN_LLENO -> "No tienes donde meterlo";
-            default -> "No se ha podido lanzar la ball";
-        };
     }
 
     // --- Tiendas y centros ---

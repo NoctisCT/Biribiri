@@ -39,6 +39,13 @@ public final class PokemonAcciones
     public static final int ENCUENTRO_BUSCAR = 60;
     public static final int CAPTURA_INTENTAR = 61;
     public static final int ENCUENTRO_HUIR = 62;
+    public static final int BATALLA_ESTADO = 63;
+    public static final int BATALLA_ACCION = 64;
+    /** Solo del servidor al cliente: lo que ha pasado en el turno. */
+    public static final int BATALLA_EVENTOS = 65;
+    public static final int BATALLA_RETAR = 66;
+    public static final int BATALLA_RETO_RESPONDER = 67;
+    public static final int BATALLA_RENDIRSE = 68;
 
     // 100-119 pokedex
     public static final int DEX_RESUMEN = 100;

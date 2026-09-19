@@ -50,6 +50,15 @@ public final class MovimientoPoseido
         return true;
     }
 
+    /**
+     * Fija los PP que quedan. Lo usa el cierre del combate para bajar a la
+     * base lo que se gasto en el campo, de una vez en vez de contando golpes.
+     */
+    public void ponerPpActual(int pp)
+    {
+        this.ppActual = Math.max(0, Math.min(ppMaximo(), pp));
+    }
+
     public void gastarPp()
     {
         if(this.ppActual > 0) this.ppActual--;

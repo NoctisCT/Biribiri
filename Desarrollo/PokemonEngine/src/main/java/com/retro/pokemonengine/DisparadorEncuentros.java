@@ -37,8 +37,9 @@ public final class DisparadorEncuentros
 
         int userId = habbo.getHabboInfo().getId();
 
-        // Con un encuentro delante no se encadena otro.
+        // Con un encuentro o un combate delante no se encadena otro.
         if(ServicioEncuentros.activo(userId) != null) return;
+        if(ServicioBatalla.enCombate(userId)) return;
 
         // Segunda llave: que la baldosa de destino tenga un furni disparador.
         MetodoEncuentro metodo = metodoEn(room, hacia);
@@ -80,10 +81,23 @@ public final class DisparadorEncuentros
 
         ServicioEntrenador.registrarVisto(userId, salvaje.pokemon().especieId());
 
+        ServicioBatalla.Sesion sesion = ServicioBatalla.abrirSalvaje(habbo, salvaje);
+
+        // Sin Pokemon en pie no hay combate. El encuentro se descarta sin
+        // castigo y sin mensaje: lo contrario seria reganar al jugador por
+        // pisar hierba con el equipo hecho polvo.
+        if(sesion == null)
+        {
+            ServicioEncuentros.limpiar(userId);
+            return;
+        }
+
         habbo.getClient().sendResponse(PokemonPackets.resultado(
                 PokemonAcciones.ENCUENTRO_BUSCAR,
                 true,
                 PokemonCuerpo.datos(AccionesMundo.cuerpoSalvaje(salvaje))));
+
+        ServicioBatalla.empujarEstado(sesion);
     }
 
     private static MetodoEncuentro metodoEn(Room room, RoomTile baldosa)
