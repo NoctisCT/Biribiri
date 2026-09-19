@@ -81,6 +81,16 @@ public final class ServicioSeguidor
          */
         boolean enArena;
 
+        /** La identidad de fuera de combate, para devolverla al acabar. */
+        long ownedIdFuera;
+        int especieIdFuera;
+        int formaIdFuera;
+        boolean shinyFuera;
+        String nombreFuera;
+
+        /** Creado solo para el combate: al soltarlo desaparece del todo. */
+        boolean soloParaCombate;
+
         String ultimoEstado = CatalogoAnimaciones.PARADO;
         String ultimaAnimacion = "Idle";
         String ultimoRespaldo = "Walk";
@@ -405,36 +415,65 @@ public final class ServicioSeguidor
     }
 
     /**
-     * Lleva al seguidor a su hueco de la formacion.
+     * Pone en el hueco de combate **al Pokemon que pelea**.
      *
-     * No anda hasta alli: aparece. Un Pokemon que sale de su ball no camina
-     * desde detras de su entrenador, y ademas no hay ninguna garantia de que
-     * haya un camino libre entre una baldosa y la otra.
+     * Dentro del combate el que se ve delante es el que esta luchando, y el
+     * seguidor de siempre se esconde. Se hace reutilizando la misma entidad:
+     * se le cambia la identidad y se le devuelve la suya al acabar, para que
+     * el cliente no tenga que saber nada de esto y siga habiendo un Pokemon
+     * por jugador.
+     *
+     * No anda hasta el hueco: aparece. Un Pokemon que sale de su ball no
+     * camina desde detras de su entrenador, y ademas no hay ninguna garantia
+     * de que haya camino libre entre una baldosa y la otra.
      */
-    public static void aArena(int userId, int x, int y, int direccion)
+    public static void aArena(int userId, int x, int y, int direccion, PokemonPoseido quePelea)
     {
-        Seguidor seguidor = porUsuario.get(userId);
-
-        if(seguidor == null) return;
-
-        seguidor.enArena = true;
-
-        // La direccion que se manda es la correcta: mirando al rival. Que el
-        // cliente la pinte es otra cosa — hoy el sprite conserva la orientacion
-        // con la que venia siguiendo al entrenador y solo se gira al dar un
-        // paso. Eso se arregla en el cliente, no aqui.
-        seguidor.rastro.aparecer(x, y, direccion);
+        if(quePelea == null) return;
 
         Habbo habbo = Emulator.getGameEnvironment().getHabboManager().getHabbo(userId);
         Room room = habbo == null ? null : habbo.getHabboInfo().getCurrentRoom();
 
         if(room == null) return;
 
+        Seguidor seguidor = porUsuario.get(userId);
+
+        // Sin seguidor activo tambien hay que ver al que pelea: se crea uno
+        // para el combate y se retira al terminar.
+        if(seguidor == null)
+        {
+            seguidor = new Seguidor(userId);
+            seguidor.roomId = room.getId();
+            seguidor.soloParaCombate = true;
+
+            porUsuario.put(userId, seguidor);
+        }
+
+        if(!seguidor.enArena)
+        {
+            seguidor.ownedIdFuera = seguidor.ownedId;
+            seguidor.especieIdFuera = seguidor.especieId;
+            seguidor.formaIdFuera = seguidor.formaId;
+            seguidor.shinyFuera = seguidor.shiny;
+            seguidor.nombreFuera = seguidor.nombre;
+        }
+
+        EspecieCatalogo especie = ServicioPokedex.especie(quePelea.especieId());
+
+        seguidor.enArena = true;
+        seguidor.ownedId = quePelea.id();
+        seguidor.especieId = quePelea.especieId();
+        seguidor.formaId = quePelea.formaId();
+        seguidor.shiny = quePelea.shiny();
+        seguidor.nombre = quePelea.nombreMostrado(especie);
+
+        seguidor.rastro.aparecer(x, y, direccion);
+
         room.sendComposer(SeguidorPackets.mensaje(
                 SeguidorPackets.TIPO_ALTA, entradaDe(seguidor, room)));
     }
 
-    /** Lo devuelve a la espalda de su entrenador. */
+    /** Devuelve el seguidor de siempre a la espalda de su entrenador. */
     public static void fueraDeArena(int userId)
     {
         Seguidor seguidor = porUsuario.get(userId);
@@ -443,8 +482,35 @@ public final class ServicioSeguidor
 
         seguidor.enArena = false;
 
-        // El proximo latido lo recoloca detras solo, que es justo lo que hace
-        // `recolocar` cuando el rastro se queda lejos del jugador.
+        Habbo habbo = Emulator.getGameEnvironment().getHabboManager().getHabbo(userId);
+        Room room = habbo == null ? null : habbo.getHabboInfo().getCurrentRoom();
+
+        // El que solo existia para el combate se va con el combate.
+        if(seguidor.soloParaCombate)
+        {
+            porUsuario.remove(userId);
+
+            if(room != null)
+            {
+                room.sendComposer(SeguidorPackets.mensaje(
+                        SeguidorPackets.TIPO_BAJA, SeguidorPackets.Entrada.baja(userId)));
+            }
+
+            return;
+        }
+
+        seguidor.ownedId = seguidor.ownedIdFuera;
+        seguidor.especieId = seguidor.especieIdFuera;
+        seguidor.formaId = seguidor.formaIdFuera;
+        seguidor.shiny = seguidor.shinyFuera;
+        seguidor.nombre = seguidor.nombreFuera;
+
+        if(room == null) return;
+
+        // Vuelve de golpe a la espalda de su entrenador, sin pasear: el
+        // siguiente latido ya le lleva el ritmo.
+        room.sendComposer(SeguidorPackets.mensaje(
+                SeguidorPackets.TIPO_ALTA, entradaDe(seguidor, room)));
     }
 
     /** El Pokemon que va detras, o 0 si no hay ninguno. */

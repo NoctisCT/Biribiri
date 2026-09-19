@@ -309,11 +309,12 @@ public final class ServicioArena
     }
 
     /**
-     * El Pokemon que pelea se pone delante.
+     * El Pokemon que pelea se pone delante y el seguidor de siempre se esconde.
      *
-     * Solo si es el mismo que le sigue: si el jugador lleva detras a otro, el
-     * seguidor se queda donde esta y el combatiente no se ve — hasta que la
-     * fase 2 sepa dibujar un Pokemon que no sea el seguidor.
+     * Delante se ve **al que esta luchando**, sea o no el que iba detras. Que
+     * el seguidor y el combatiente coincidan es lo normal, pero con el primero
+     * del equipo debilitado deja de serlo, y entonces ensenar al Pokemon
+     * equivocado en la formacion seria mentir sobre quien pelea.
      */
     private static void sacarPokemon(Puesto puesto)
     {
@@ -325,10 +326,8 @@ public final class ServicioArena
 
         if(bando < 0 || sesion.propios[bando] == null) return;
 
-        if(ServicioSeguidor.ownedIdDe(puesto.userId) != sesion.propios[bando].id()) return;
-
         ServicioSeguidor.aArena(puesto.userId, puesto.pokemonX, puesto.pokemonY,
-                puesto.pokemonDireccion);
+                puesto.pokemonDireccion, sesion.propios[bando]);
     }
 
     private static void reservar(int roomId, PlanArena.Formacion formacion)
