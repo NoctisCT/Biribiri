@@ -49,6 +49,17 @@ interface Pintado
     anim: PokemonAnim | null;
     andar: PokemonAnim | null;
     estado: string;
+
+    /**
+     * De quien es la hoja cargada.
+     *
+     * No basta con el estado: en combate el Pokemon que se ve delante cambia
+     * sin que cambie el estado, y sin esto se seguiria dibujando al anterior.
+     */
+    especieId: number;
+    formaId: number;
+    shiny: boolean;
+
     desdeMs: number;
     peticion: number;
 }
@@ -202,21 +213,32 @@ export const PokemonFollowerLayer: FC<{}> = () =>
         }
     }, [ seguidores ]);
 
-    // Carga de la hoja que toca cada vez que un seguidor cambia de estado.
+    // Carga de la hoja que toca cada vez que un seguidor cambia de estado
+    // **o de Pokemon**: en combate sale delante el que pelea, que puede no ser
+    // el que venia siguiendo al entrenador.
     useEffect(() =>
     {
         for(const seguidor of seguidores)
         {
             const pintado = pintados.current.get(seguidor.userId);
 
-            if(pintado && pintado.estado === seguidor.state) continue;
+            const mismoPokemon = pintado
+                && pintado.especieId === seguidor.speciesId
+                && pintado.formaId === seguidor.formId
+                && pintado.shiny === seguidor.shiny;
+
+            if(mismoPokemon && pintado.estado === seguidor.state) continue;
 
             const peticion = ++peticiones.current;
 
             pintados.current.set(seguidor.userId, {
-                anim: pintado?.anim ?? null,
-                andar: pintado?.andar ?? null,
+                // Si ha cambiado de Pokemon, lo que hubiera cargado ya no vale.
+                anim: mismoPokemon ? (pintado?.anim ?? null) : null,
+                andar: mismoPokemon ? (pintado?.andar ?? null) : null,
                 estado: seguidor.state,
+                especieId: seguidor.speciesId,
+                formaId: seguidor.formId,
+                shiny: seguidor.shiny,
                 desdeMs: performance.now(),
                 peticion
             });
