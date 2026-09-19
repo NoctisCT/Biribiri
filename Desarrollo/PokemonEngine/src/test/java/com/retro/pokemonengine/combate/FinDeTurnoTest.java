@@ -88,6 +88,37 @@ class FinDeTurnoTest
     }
 
     @Test
+    void elGranizoDanaAQuienNoSeaDeHielo()
+    {
+        PokemonCombate normal = luchador("A");
+        PokemonCombate hielo = new PokemonCombate(2, 1, "B", 50, Tipos.HIELO, null, 160,
+                new int[] { 160, 100, 100, 100, 100, 100 });
+
+        EstadoCombate e = estado(normal, hielo);
+        e.ponerClima(Campo.GRANIZO, 5);
+
+        FinDeTurno.resolver(e);
+
+        assertEquals(150, normal.psActual(), "El granizo quita 1/16 a quien no es de Hielo");
+        assertEquals(160, hielo.psActual(), "Los de Hielo no sufren el granizo");
+    }
+
+    @Test
+    void laNieveNoHaceDanoANadie()
+    {
+        PokemonCombate a = luchador("A");
+        PokemonCombate b = luchador("B");
+
+        EstadoCombate e = estado(a, b);
+        e.ponerClima(Campo.NIEVE, 5);
+
+        FinDeTurno.resolver(e);
+
+        assertEquals(160, a.psActual(), "La nieve de novena generacion no hace dano");
+        assertEquals(160, b.psActual());
+    }
+
+    @Test
     void lasDrenadorasPasanLosPsDelRivalAlOtroBando()
     {
         PokemonCombate a = luchador("A");

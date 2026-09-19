@@ -13,6 +13,13 @@ public final class Campo
     public static final String TORMENTA_ARENA = "sandstorm";
     public static final String NIEVE = "snowscape";
 
+    /*
+     * Granizo y nieve son climas distintos, no dos nombres de lo mismo: el
+     * granizo de las generaciones 2 a 8 hace dano a quien no sea de Hielo, y la
+     * nieve de la novena no hace dano y les sube la Defensa. Los dos existen.
+     */
+    public static final String GRANIZO = "hail";
+
     public static final String TERRENO_ELECTRICO = "electricterrain";
     public static final String TERRENO_PLANTA = "grassyterrain";
     public static final String TERRENO_NIEBLA = "mistyterrain";
@@ -76,6 +83,11 @@ public final class Campo
         if(TORMENTA_ARENA.equals(c))
         {
             return !Tipos.es(p, Tipos.ROCA) && !Tipos.es(p, Tipos.TIERRA) && !Tipos.es(p, Tipos.ACERO);
+        }
+
+        if(GRANIZO.equals(c))
+        {
+            return !Tipos.es(p, Tipos.HIELO);
         }
 
         return false;
